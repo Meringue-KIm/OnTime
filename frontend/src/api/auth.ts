@@ -10,3 +10,6 @@ export const signup = (email: string, password: string) =>
 
 export const login = (email: string, password: string) =>
   client.post<TokenResponse>('/auth/login', { email, password });
+
+export const updateFcmToken = (fcmToken: string) =>
+  client.put('/auth/fcmtoken', { fcmToken });

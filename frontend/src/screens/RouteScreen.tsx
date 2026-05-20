@@ -1,7 +1,11 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../constants/colors';
+import { useRouteStore } from '../store/routeStore';
+import type { RouteRequest } from '../api/routes';
 
 const TRANSPORT_MODES = [
   { key: 'car',     label: '자가용',   icon: 'car' },
@@ -12,13 +16,60 @@ const TRANSPORT_MODES = [
 export default function RouteScreen() {
   const [transport, setTransport] = useState<'car' | 'transit' | 'walk'>('car');
   const [buffer, setBuffer] = useState(15);
-  const [homeAddr, setHomeAddr] = useState('서울특별시 강남구 테헤란로 123');
-  const [workAddr, setWorkAddr] = useState('서울특별시 종로구 세종대로 456');
+  const [homeAddr, setHomeAddr] = useState('');
+  const [workAddr, setWorkAddr] = useState('');
+  const [arrivalTime, setArrivalTime] = useState('09:00');
+  const [saving, setSaving] = useState(false);
+
+  const { routes, loading, fetchRoutes, saveRoute } = useRouteStore();
+
+  useEffect(() => {
+    fetchRoutes();
+  }, []);
+
+  useEffect(() => {
+    const active = routes.find(r => r.isActive) ?? routes[0];
+    if (active) {
+      setHomeAddr(active.homeAddress);
+      setWorkAddr(active.workAddress);
+      setBuffer(active.alarmBeforeMinutes);
+      setArrivalTime(active.arrivalTime.substring(0, 5)); // "HH:mm:ss" → "HH:mm"
+    }
+  }, [routes]);
+
+  const handleSave = async () => {
+    if (!homeAddr.trim() || !workAddr.trim()) {
+      Alert.alert('집과 직장 주소를 모두 입력해주세요.');
+      return;
+    }
+    const timeParts = arrivalTime.split(':');
+    if (timeParts.length !== 2 || timeParts.some(p => isNaN(Number(p)))) {
+      Alert.alert('시간 형식을 확인하세요 (HH:mm)');
+      return;
+    }
+
+    const routeData: RouteRequest = {
+      homeAddress: homeAddr.trim(),
+      workAddress: workAddr.trim(),
+      arrivalTime: `${arrivalTime}:00`,
+      alarmBeforeMinutes: buffer,
+    };
+
+    setSaving(true);
+    try {
+      const existingRoute = routes.find(r => r.isActive) ?? routes[0];
+      await saveRoute(routeData, existingRoute?.id);
+      Alert.alert('저장 완료', '루트가 업데이트되었습니다.');
+    } catch (e: any) {
+      Alert.alert('저장 실패', e.response?.data?.message ?? '다시 시도해주세요.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
-      {/* Header */}
       <View style={styles.header}>
         <Ionicons name="airplane" size={20} color={colors.primary} />
         <Text style={styles.appName}>OnTime</Text>
@@ -28,6 +79,12 @@ export default function RouteScreen() {
         <Text style={styles.heroTitle}>최적의 경로를{'\n'}설정하세요</Text>
         <Text style={styles.heroSub}>정확한 주소와 시간 목표로 맞춤 알람을 받아보세요</Text>
       </View>
+
+      {loading && (
+        <View style={styles.loadingWrap}>
+          <ActivityIndicator color={colors.primary} />
+        </View>
+      )}
 
       {/* Address */}
       <View style={styles.card}>
@@ -78,10 +135,17 @@ export default function RouteScreen() {
       {/* Arrival Time */}
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>⏰ 시간 목표</Text>
-        <Text style={styles.inputLabel}>도착 희망 시간</Text>
+        <Text style={styles.inputLabel}>도착 희망 시간 (HH:mm)</Text>
         <View style={styles.timeDisplayWrap}>
-          <Text style={styles.timeDisplay}>08:30</Text>
-          <Text style={styles.timeAmPm}>오전</Text>
+          <TextInput
+            style={styles.timeDisplay}
+            value={arrivalTime}
+            onChangeText={setArrivalTime}
+            placeholder="09:00"
+            keyboardType="numbers-and-punctuation"
+            maxLength={5}
+          />
+          <Text style={styles.timeAmPm}>시 도착</Text>
         </View>
 
         <Text style={[styles.inputLabel, { marginTop: 16 }]}>준비 여유 시간</Text>
@@ -99,12 +163,15 @@ export default function RouteScreen() {
         </View>
       </View>
 
-      {/* Estimated */}
+      {/* Save */}
       <View style={[styles.estimateCard, { marginBottom: 28 }]}>
-        <Text style={styles.estimateLabel}>예상 소요 시간</Text>
-        <Text style={styles.estimateTime}>42분</Text>
-        <TouchableOpacity style={styles.updateBtn}>
-          <Text style={styles.updateBtnText}>루트 업데이트 하기</Text>
+        <Text style={styles.estimateLabel}>알람 설정</Text>
+        <Text style={styles.estimateTime}>{arrivalTime} 도착</Text>
+        <TouchableOpacity style={styles.updateBtn} onPress={handleSave} disabled={saving}>
+          {saving
+            ? <ActivityIndicator color={colors.textPrimary} />
+            : <Text style={styles.updateBtnText}>루트 업데이트 하기</Text>
+          }
         </TouchableOpacity>
       </View>
 
@@ -119,6 +186,7 @@ const styles = StyleSheet.create({
   heroCard:           { margin: 20, backgroundColor: colors.primary, borderRadius: 16, padding: 24 },
   heroTitle:          { fontSize: 24, fontWeight: '800', color: '#fff', lineHeight: 32 },
   heroSub:            { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 8 },
+  loadingWrap:        { alignItems: 'center', paddingVertical: 8 },
   card:               { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   sectionTitle:       { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 14 },
   inputLabel:         { fontSize: 12, color: colors.textSecondary, marginBottom: 6 },
@@ -130,7 +198,7 @@ const styles = StyleSheet.create({
   transportLabel:     { fontSize: 12, color: colors.textSecondary, fontWeight: '600' },
   transportLabelActive: { color: '#fff' },
   timeDisplayWrap:    { flexDirection: 'row', alignItems: 'baseline', gap: 8, backgroundColor: colors.bg, borderRadius: 10, padding: 14 },
-  timeDisplay:        { fontSize: 32, fontWeight: '800', color: colors.textPrimary },
+  timeDisplay:        { fontSize: 32, fontWeight: '800', color: colors.textPrimary, minWidth: 100 },
   timeAmPm:           { fontSize: 16, color: colors.textSecondary },
   bufferRow:          { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
   bufferBtn:          { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
@@ -139,7 +207,7 @@ const styles = StyleSheet.create({
   bufferUnit:         { fontSize: 16, color: colors.textSecondary },
   estimateCard:       { marginHorizontal: 20, backgroundColor: colors.textPrimary, borderRadius: 16, padding: 24, alignItems: 'center', gap: 8 },
   estimateLabel:      { fontSize: 13, color: 'rgba(255,255,255,0.7)' },
-  estimateTime:       { fontSize: 42, fontWeight: '800', color: '#fff' },
+  estimateTime:       { fontSize: 32, fontWeight: '800', color: '#fff' },
   updateBtn:          { marginTop: 8, backgroundColor: colors.accent, borderRadius: 12, paddingHorizontal: 32, paddingVertical: 14, width: '100%', alignItems: 'center' },
   updateBtnText:      { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
 });

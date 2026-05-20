@@ -10,4 +10,5 @@ public interface CommuteRouteRepository extends JpaRepository<CommuteRoute, Long
     List<CommuteRoute> findByUserId(Long userId);
     Optional<CommuteRoute> findByIdAndUserId(Long id, Long userId);
     List<CommuteRoute> findByUserIdAndIsActiveTrue(Long userId);
+    List<CommuteRoute> findAllByIsActiveTrue();
 }

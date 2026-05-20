@@ -33,8 +33,21 @@ dependencies {
 	testImplementation 'org.springframework.security:spring-security-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testRuntimeOnly 'com.h2database:h2'
+	implementation 'com.google.firebase:firebase-admin:9.3.0'
 }
 
 tasks.named('test') {
 	useJUnitPlatform()
+}
+
+tasks.named('bootRun') {
+	def envFile = file("${projectDir}/.env")
+	if (envFile.exists()) {
+		envFile.eachLine { line ->
+			if (line && !line.startsWith('#') && line.contains('=')) {
+				def parts = line.split('=', 2)
+				environment(parts[0].trim(), parts[1].trim())
+			}
+		}
+	}
 }

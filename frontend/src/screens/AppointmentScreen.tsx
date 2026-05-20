@@ -1,13 +1,94 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import {
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors } from '../constants/colors';
+import { useAppointmentStore } from '../store/appointmentStore';
+import { geocodeAddress } from '../api/kakao';
+import KakaoMapView from '../components/KakaoMapView';
+import type { AppointmentRequest } from '../api/appointments';
+
+function formatAppointmentTime(isoStr: string): string {
+  const d = new Date(isoStr);
+  const month = d.getMonth() + 1;
+  const day = d.getDate();
+  const hour = d.getHours();
+  const min = String(d.getMinutes()).padStart(2, '0');
+  const ampm = hour < 12 ? '오전' : '오후';
+  const displayHour = hour % 12 || 12;
+  return `${month}/${day} ${ampm} ${displayHour}:${min}`;
+}
+
+function parseDateTimeInput(date: string, time: string): string | null {
+  const dateParts = date.split('/');
+  const timeParts = time.split(':');
+  if (dateParts.length !== 3 || timeParts.length !== 2) return null;
+  const [month, day, year] = dateParts;
+  const [hour, minute] = timeParts;
+  if ([month, day, year, hour, minute].some(p => isNaN(Number(p)))) return null;
+  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:00`;
+}
 
 export default function AppointmentScreen() {
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
-  const [dest, setDest] = useState('');
+  const [title, setTitle]   = useState('');
+  const [date, setDate]     = useState('');
+  const [time, setTime]     = useState('');
+  const [dest, setDest]     = useState('');
+  const [destLat, setDestLat] = useState<number | null>(null);
+  const [destLng, setDestLng] = useState<number | null>(null);
+  const [geocoding, setGeocoding]   = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+
+  const { appointments, loading, fetchAppointments, addAppointment } = useAppointmentStore();
+
+  useEffect(() => { fetchAppointments(); }, []);
+
+  const handleGeocode = async () => {
+    if (!dest.trim()) { Alert.alert('목적지 주소를 입력해주세요.'); return; }
+    setGeocoding(true);
+    try {
+      const { data } = await geocodeAddress(dest.trim());
+      setDestLat(data.lat);
+      setDestLng(data.lng);
+    } catch {
+      Alert.alert('위치 검색 실패', '주소를 다시 확인해주세요.');
+    } finally {
+      setGeocoding(false);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (!dest.trim() || !date.trim() || !time.trim()) {
+      Alert.alert('목적지, 날짜, 시간을 모두 입력해주세요.');
+      return;
+    }
+    const appointmentTime = parseDateTimeInput(date, time);
+    if (!appointmentTime) {
+      Alert.alert('날짜는 mm/dd/yyyy, 시간은 HH:mm 형식으로 입력해주세요.');
+      return;
+    }
+
+    const apptData: AppointmentRequest = {
+      destAddress: dest.trim(),
+      destLat: destLat ?? undefined,
+      destLng: destLng ?? undefined,
+      appointmentTime,
+      alarmBeforeMinutes: 30,
+    };
+
+    setSubmitting(true);
+    try {
+      await addAppointment(apptData);
+      setTitle(''); setDate(''); setTime('');
+      setDest(''); setDestLat(null); setDestLng(null);
+      Alert.alert('등록 완료', '약속이 추가되었습니다.');
+    } catch (e: any) {
+      Alert.alert('등록 실패', e.response?.data?.message ?? '다시 시도해주세요.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
@@ -24,7 +105,7 @@ export default function AppointmentScreen() {
 
       {/* Form */}
       <View style={styles.card}>
-        <Text style={styles.inputLabel}>약속 제목</Text>
+        <Text style={styles.inputLabel}>약속 제목 (메모용)</Text>
         <TextInput
           style={styles.input}
           value={title}
@@ -35,17 +116,31 @@ export default function AppointmentScreen() {
 
         <View style={styles.row}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.inputLabel}>날짜</Text>
+            <Text style={styles.inputLabel}>날짜 (mm/dd/yyyy)</Text>
             <View style={styles.inputWrap}>
-              <TextInput style={styles.inputInner} value={date} onChangeText={setDate} placeholder="mm/dd/yyyy" placeholderTextColor={colors.textMuted} />
+              <TextInput
+                style={styles.inputInner}
+                value={date}
+                onChangeText={setDate}
+                placeholder="05/21/2026"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numbers-and-punctuation"
+              />
               <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
             </View>
           </View>
           <View style={{ width: 12 }} />
           <View style={{ flex: 1 }}>
-            <Text style={styles.inputLabel}>시간</Text>
+            <Text style={styles.inputLabel}>시간 (HH:mm)</Text>
             <View style={styles.inputWrap}>
-              <TextInput style={styles.inputInner} value={time} onChangeText={setTime} placeholder="--:--" placeholderTextColor={colors.textMuted} />
+              <TextInput
+                style={styles.inputInner}
+                value={time}
+                onChangeText={setTime}
+                placeholder="14:30"
+                placeholderTextColor={colors.textMuted}
+                keyboardType="numbers-and-punctuation"
+              />
               <Ionicons name="time-outline" size={16} color={colors.textMuted} />
             </View>
           </View>
@@ -57,79 +152,82 @@ export default function AppointmentScreen() {
           <TextInput
             style={[styles.inputInner, { flex: 1 }]}
             value={dest}
-            onChangeText={setDest}
-            placeholder="장소 또는 주소 검색"
+            onChangeText={(t) => { setDest(t); setDestLat(null); setDestLng(null); }}
+            placeholder="장소 또는 주소 입력"
             placeholderTextColor={colors.textMuted}
           />
+          <TouchableOpacity onPress={handleGeocode} disabled={geocoding} style={styles.locateBtn}>
+            {geocoding
+              ? <ActivityIndicator size="small" color={colors.primary} />
+              : <Ionicons name="search" size={16} color={colors.primary} />
+            }
+          </TouchableOpacity>
         </View>
 
-        <View style={[styles.row, { marginTop: 20, gap: 12 }]}>
-          <TouchableOpacity style={styles.cancelBtn}>
+        {/* 지도 미리보기 */}
+        {destLat && destLng ? (
+          <View style={{ marginTop: 12 }}>
+            <KakaoMapView lat={destLat} lng={destLng} label={dest} height={160} />
+          </View>
+        ) : (
+          <View style={styles.mapPlaceholder}>
+            <Ionicons name="map" size={28} color={colors.textMuted} />
+            <Text style={styles.mapPlaceholderText}>
+              주소 입력 후 🔍 를 눌러 위치를 확인하세요
+            </Text>
+          </View>
+        )}
+
+        <View style={[styles.row, { marginTop: 16, gap: 12 }]}>
+          <TouchableOpacity
+            style={styles.cancelBtn}
+            onPress={() => { setTitle(''); setDate(''); setTime(''); setDest(''); setDestLat(null); setDestLng(null); }}
+          >
             <Text style={styles.cancelText}>취소</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.submitBtn}>
-            <Text style={styles.submitText}>등록하기</Text>
+          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={submitting}>
+            {submitting
+              ? <ActivityIndicator color={colors.textPrimary} />
+              : <Text style={styles.submitText}>등록하기</Text>
+            }
           </TouchableOpacity>
         </View>
       </View>
 
-      {/* Estimated Route Info */}
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.sectionTitle}>예상 이동 정보</Text>
-          <View style={styles.realTimeBadge}>
-            <Ionicons name="flash" size={11} color={colors.warning} />
-            <Text style={styles.realTimeText}>실시간 최적화</Text>
-          </View>
-        </View>
-
-        {/* Map placeholder */}
-        <View style={styles.mapPlaceholder}>
-          <Ionicons name="map" size={32} color={colors.textMuted} />
-          <Text style={styles.mapPlaceholderText}>지도 미리보기</Text>
-          <View style={styles.mapLabel}>
-            <Ionicons name="location" size={12} color="#fff" />
-            <Text style={styles.mapLabelText}>강남역 2번 출구</Text>
-          </View>
-        </View>
-
-        <View style={styles.routeInfoRow}>
-          <View style={styles.routeInfoItem}>
-            <Text style={styles.routeInfoValue}>35분</Text>
-            <Text style={styles.routeInfoLabel}>예상 이동 시간</Text>
-            <Text style={styles.routeInfoSub}>대중교통 기준</Text>
-          </View>
-          <View style={styles.divider} />
-          <View style={styles.routeInfoItem}>
-            <Text style={[styles.routeInfoValue, { color: colors.primary }]}>08:25</Text>
-            <Text style={styles.routeInfoLabel}>권장 출발 시간</Text>
-            <Text style={styles.routeInfoSub}>여유 5분 포함</Text>
-          </View>
-        </View>
-
-        <View style={styles.warningBanner}>
-          <Ionicons name="alert-circle-outline" size={16} color={colors.warning} />
-          <Text style={styles.warningText}>현재 해당 구간에 약간의 지체가 있습니다. 5분 일찍 출발하는 것을 추천해드려요!</Text>
-        </View>
-      </View>
-
-      {/* Existing Appointments */}
+      {/* 등록된 약속 목록 */}
       <View style={[styles.card, { marginBottom: 28 }]}>
         <Text style={styles.sectionTitle}>등록된 약속</Text>
-        {[
-          { title: '저녁 약속 - 이태원', time: '이내 오후 07:05', status: '지각', statusColor: colors.danger },
-          { title: '헬스장 - 피트니스센터', time: '이내 오전 06:20', status: '정시 도착', statusColor: colors.success },
-        ].map((item, i) => (
-          <View key={i} style={styles.apptItem}>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.apptTitle}>{item.title}</Text>
-              <Text style={styles.apptTime}>{item.time}</Text>
+
+        {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 8 }} />}
+
+        {!loading && appointments.length === 0 && (
+          <Text style={styles.emptyText}>등록된 약속이 없습니다.</Text>
+        )}
+
+        {appointments.map((item) => {
+          const timeStr = formatAppointmentTime(item.appointmentTime);
+          const dDayText = item.isDone
+            ? '완료'
+            : item.dDay === 0 ? 'D-Day'
+            : item.dDay > 0  ? `D-${item.dDay}`
+            : '종료';
+          const statusColor = item.isDone
+            ? colors.success
+            : item.dDay < 0 ? colors.danger
+            : colors.primary;
+
+          return (
+            <View key={item.id} style={styles.apptItem}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.apptTitle}>{item.destAddress}</Text>
+                <Text style={styles.apptTime}>{timeStr}</Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+                <Text style={[styles.statusText, { color: statusColor }]}>{dDayText}</Text>
+              </View>
             </View>
-            <View style={[styles.statusBadge, { backgroundColor: item.statusColor + '20' }]}>
-              <Text style={[styles.statusText, { color: item.statusColor }]}>{item.status}</Text>
-            </View>
-          </View>
-        ))}
+          );
+        })}
       </View>
 
     </ScrollView>
@@ -137,40 +235,29 @@ export default function AppointmentScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: colors.bg },
-  header:           { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingTop: 52, paddingBottom: 8 },
-  appName:          { fontSize: 18, fontWeight: '700', color: colors.primary },
-  titleRow:         { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12 },
-  pageTitle:        { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
-  card:             { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-  inputLabel:       { fontSize: 12, color: colors.textSecondary, marginBottom: 6, marginTop: 12 },
-  input:            { backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: colors.textPrimary },
-  inputWrap:        { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
-  inputInner:       { fontSize: 14, color: colors.textPrimary },
-  row:              { flexDirection: 'row' },
-  cancelBtn:        { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.bg, alignItems: 'center' },
-  cancelText:       { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
-  submitBtn:        { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center' },
-  submitText:       { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
-  sectionTitle:     { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 },
-  rowBetween:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  realTimeBadge:    { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.warning + '20', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
-  realTimeText:     { fontSize: 11, color: colors.warning, fontWeight: '600' },
-  mapPlaceholder:   { height: 140, backgroundColor: colors.bg, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginBottom: 12, gap: 6, position: 'relative' },
-  mapPlaceholderText: { color: colors.textMuted, fontSize: 13 },
-  mapLabel:         { position: 'absolute', bottom: 10, left: 10, flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.textPrimary, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 },
-  mapLabelText:     { color: '#fff', fontSize: 11 },
-  routeInfoRow:     { flexDirection: 'row', marginBottom: 12 },
-  routeInfoItem:    { flex: 1, alignItems: 'center', gap: 2 },
-  routeInfoValue:   { fontSize: 24, fontWeight: '800', color: colors.textPrimary },
-  routeInfoLabel:   { fontSize: 12, color: colors.textSecondary },
-  routeInfoSub:     { fontSize: 11, color: colors.textMuted },
-  divider:          { width: 1, backgroundColor: colors.border, marginVertical: 4 },
-  warningBanner:    { flexDirection: 'row', gap: 8, backgroundColor: colors.warning + '15', borderRadius: 10, padding: 10 },
-  warningText:      { flex: 1, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
-  apptItem:         { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
-  apptTitle:        { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
-  apptTime:         { fontSize: 12, color: colors.textMuted, marginTop: 2 },
-  statusBadge:      { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  statusText:       { fontSize: 12, fontWeight: '600' },
+  container:          { flex: 1, backgroundColor: colors.bg },
+  header:             { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingTop: 52, paddingBottom: 8 },
+  appName:            { fontSize: 18, fontWeight: '700', color: colors.primary },
+  titleRow:           { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12 },
+  pageTitle:          { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
+  card:               { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
+  inputLabel:         { fontSize: 12, color: colors.textSecondary, marginBottom: 6, marginTop: 12 },
+  input:              { backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: colors.textPrimary },
+  inputWrap:          { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  inputInner:         { fontSize: 14, color: colors.textPrimary },
+  locateBtn:          { padding: 4 },
+  row:                { flexDirection: 'row' },
+  mapPlaceholder:     { height: 120, backgroundColor: colors.bg, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 12, gap: 8, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' },
+  mapPlaceholderText: { fontSize: 12, color: colors.textMuted, textAlign: 'center', paddingHorizontal: 16 },
+  cancelBtn:          { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.bg, alignItems: 'center' },
+  cancelText:         { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
+  submitBtn:          { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center' },
+  submitText:         { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
+  sectionTitle:       { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 },
+  emptyText:          { fontSize: 13, color: colors.textMuted, textAlign: 'center', paddingVertical: 12 },
+  apptItem:           { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  apptTitle:          { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
+  apptTime:           { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  statusBadge:        { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  statusText:         { fontSize: 12, fontWeight: '600' },
 });

@@ -1,6 +1,7 @@
 # ========================
 # Backend
 # ========================
+backend/.env
 backend/.gradle/
 backend/build/
 backend/out/
@@ -12,6 +13,8 @@ backend/.vscode/
 backend/src/main/resources/application.yml
 backend/src/main/resources/application-*.yml
 !backend/src/main/resources/application-example.yml
+!backend/src/main/resources/application-prod.yml
+backend/src/main/resources/*-firebase-adminsdk-*.json
 
 # ========================
 # Frontend
@@ -26,6 +29,12 @@ frontend/.env*.local
 frontend/*.tsbuildinfo
 frontend/ios/
 frontend/android/
+
+# ========================
+# 배포
+# ========================
+.env.prod
+certbot/
 
 # ========================
 # 공통
