@@ -30,7 +30,7 @@ public class FcmService {
             InputStream credentialsStream;
             if (firebaseCredentialsJson != null && !firebaseCredentialsJson.isBlank()) {
                 credentialsStream = new ByteArrayInputStream(
-                        Base64.getDecoder().decode(firebaseCredentialsJson)
+                        Base64.getMimeDecoder().decode(firebaseCredentialsJson)
                 );
             } else {
                 credentialsStream = new ClassPathResource("ontime-77adf-firebase-adminsdk-fbsvc-55f04cd693.json").getInputStream();
