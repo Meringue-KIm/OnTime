@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image } from 'react-native';
+
+const logo = require('../../assets/logo.png');
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../constants/colors';
+import { colors, fonts, cardShadow } from '../constants/colors';
 import { getLogs, type CommuteLog } from '../api/logs';
 
 export default function StatsScreen() {
@@ -36,8 +38,7 @@ export default function StatsScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
       <View style={styles.header}>
-        <Ionicons name="airplane" size={20} color={colors.primary} />
-        <Text style={styles.appName}>OnTime</Text>
+        <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
       {/* Insight Card */}
@@ -180,8 +181,8 @@ function getWeekLabel(d: Date): string {
 const styles = StyleSheet.create({
   container:        { flex: 1, backgroundColor: colors.bg },
   center:           { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  header:           { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingTop: 52, paddingBottom: 8 },
-  appName:          { fontSize: 18, fontWeight: '700', color: colors.primary },
+  header:           { paddingHorizontal: 20, paddingTop: 52, paddingBottom: 8 },
+  logoImg:          { width: 180, height: 81 },
   insightCard:      { margin: 20, backgroundColor: colors.primary, borderRadius: 16, padding: 20 },
   insightBadge:     { backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 10 },
   insightBadgeText: { fontSize: 12, color: '#fff' },

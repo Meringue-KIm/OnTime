@@ -7,7 +7,10 @@ import org.springframework.web.client.RestClient;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 @Slf4j
@@ -37,6 +40,122 @@ public class WeatherService {
         double temperature,
         int    bufferMinutes
     ) {}
+
+    public record HourlyWeatherInfo(String time, String condition, String icon, double temperature) {}
+
+    public record WeatherSummary(
+        double currentTemp,
+        String condition,
+        String icon,
+        double highTemp,
+        double lowTemp,
+        List<HourlyWeatherInfo> hourly
+    ) {}
+
+    public WeatherSummary getWeatherSummary(Double lat, Double lng) {
+        WeatherInfo current = getWeather(lat, lng)
+                .orElse(new WeatherInfo(0, "맑음", "sunny", 0.0, 0));
+        List<HourlyWeatherInfo> hourly = getHourlyForecast(lat, lng);
+
+        double high = hourly.stream().mapToDouble(HourlyWeatherInfo::temperature)
+                .max().orElse(current.temperature());
+        double low  = hourly.stream().mapToDouble(HourlyWeatherInfo::temperature)
+                .min().orElse(current.temperature());
+        high = Math.max(high, current.temperature());
+        low  = Math.min(low,  current.temperature());
+
+        return new WeatherSummary(current.temperature(), current.condition(), current.icon(), high, low, hourly);
+    }
+
+    public List<HourlyWeatherInfo> getHourlyForecast(Double lat, Double lng) {
+        if (serviceKey == null || serviceKey.isBlank() || lat == null || lng == null) {
+            return List.of();
+        }
+        try {
+            int[] grid = latLngToGrid(lat, lng);
+
+            // 단기예보 base time: 02,05,08,11,14,17,20,23시 (발표 10분 후부터 유효)
+            int[] baseTimes = {2, 5, 8, 11, 14, 17, 20, 23};
+            LocalDateTime now = LocalDateTime.now();
+            int effectiveHour = (now.getMinute() >= 10) ? now.getHour() : now.getHour() - 1;
+
+            int baseHour = 23;
+            LocalDateTime baseDay = now;
+            boolean found = false;
+            for (int i = baseTimes.length - 1; i >= 0; i--) {
+                if (effectiveHour >= baseTimes[i]) {
+                    baseHour = baseTimes[i];
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) baseDay = now.minusDays(1);
+
+            String baseDate = baseDay.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+            String baseTime = String.format("%02d00", baseHour);
+
+            KmaFcstApiResponse response = restClient.get()
+                    .uri(b -> b
+                            .scheme("https")
+                            .host("apis.data.go.kr")
+                            .path("/1360000/VilageFcstInfoService_2.0/getVilageFcst")
+                            .queryParam("serviceKey", serviceKey)
+                            .queryParam("numOfRows", 400)
+                            .queryParam("pageNo", 1)
+                            .queryParam("dataType", "JSON")
+                            .queryParam("base_date", baseDate)
+                            .queryParam("base_time", baseTime)
+                            .queryParam("nx", grid[0])
+                            .queryParam("ny", grid[1])
+                            .build())
+                    .retrieve()
+                    .body(KmaFcstApiResponse.class);
+
+            if (response == null || response.response() == null
+                    || response.response().body() == null
+                    || response.response().body().items() == null
+                    || response.response().body().items().item() == null) {
+                return List.of();
+            }
+
+            // fcstDate+fcstTime 기준으로 그룹핑
+            Map<String, Map<String, String>> byDateTime = new LinkedHashMap<>();
+            for (KmaFcstItem item : response.response().body().items().item()) {
+                String key = item.fcstDate() + item.fcstTime();
+                byDateTime.computeIfAbsent(key, k -> new HashMap<>())
+                          .put(item.category(), item.fcstValue());
+            }
+
+            String nowKey = now.format(DateTimeFormatter.ofPattern("yyyyMMddHH")) + "00";
+
+            return byDateTime.entrySet().stream()
+                    .filter(e -> e.getKey().compareTo(nowKey) >= 0)
+                    .limit(24)
+                    .map(entry -> {
+                        String key  = entry.getKey();
+                        Map<String, String> cats = entry.getValue();
+                        int pty  = cats.containsKey("PTY") ? (int) Double.parseDouble(cats.get("PTY")) : 0;
+                        double tmp = cats.containsKey("TMP") ? Double.parseDouble(cats.get("TMP")) : 0.0;
+                        int sky  = cats.containsKey("SKY") ? (int) Double.parseDouble(cats.get("SKY")) : 1;
+                        WeatherInfo info = pty != 0 ? buildWeatherInfo(pty, tmp) : buildSkyInfo(sky, tmp);
+                        String displayTime = key.substring(8, 10) + ":" + key.substring(10, 12);
+                        return new HourlyWeatherInfo(displayTime, info.condition(), info.icon(), info.temperature());
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+
+        } catch (Exception e) {
+            log.warn("단기예보 API 호출 실패: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private WeatherInfo buildSkyInfo(int sky, double temperature) {
+        return switch (sky) {
+            case 3 -> new WeatherInfo(0, "구름많음", "cloudy", temperature, 0);
+            case 4 -> new WeatherInfo(0, "흐림",    "cloudy", temperature, 0);
+            default -> new WeatherInfo(0, "맑음",   "sunny",  temperature, 0);
+        };
+    }
 
     public Optional<WeatherInfo> getWeather(Double lat, Double lng) {
         if (serviceKey == null || serviceKey.isBlank() || lat == null || lng == null) {
@@ -145,4 +264,10 @@ public class WeatherService {
     record KmaApiBody(KmaApiItems items) {}
     record KmaApiItems(List<KmaItem> item) {}
     record KmaItem(String category, String obsrValue) {}
+
+    record KmaFcstApiResponse(KmaFcstApiResult response) {}
+    record KmaFcstApiResult(KmaHeader header, KmaFcstApiBody body) {}
+    record KmaFcstApiBody(KmaFcstApiItems items) {}
+    record KmaFcstApiItems(List<KmaFcstItem> item) {}
+    record KmaFcstItem(String category, String fcstDate, String fcstTime, String fcstValue) {}
 }

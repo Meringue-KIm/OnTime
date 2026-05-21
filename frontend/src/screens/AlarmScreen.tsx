@@ -1,7 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, ActivityIndicator } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Image } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../constants/colors';
+import { colors, fonts, cardShadow } from '../constants/colors';
+
+const logo = require('../../assets/logo.png');
 import { getToday } from '../api/today';
 import { useRouteStore } from '../store/routeStore';
 
@@ -61,8 +63,7 @@ export default function AlarmScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
       <View style={styles.header}>
-        <Ionicons name="airplane" size={20} color={colors.primary} />
-        <Text style={styles.appName}>OnTime</Text>
+        <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
       {/* Wake Time */}
@@ -168,7 +169,7 @@ export default function AlarmScreen() {
 const styles = StyleSheet.create({
   container:          { flex: 1, backgroundColor: colors.bg },
   header:             { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingTop: 52, paddingBottom: 8 },
-  appName:            { fontSize: 18, fontWeight: '700', color: colors.primary },
+  logoImg:            { width: 180, height: 81 },
   wakeCard:           { margin: 20, backgroundColor: colors.primary, borderRadius: 16, padding: 24, alignItems: 'center' },
   wakeLabel:          { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginBottom: 4 },
   wakeTime:           { fontSize: 48, fontWeight: '800', color: '#fff', letterSpacing: -1 },

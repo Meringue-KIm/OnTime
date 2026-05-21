@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Image,
 } from 'react-native';
+
+const logo = require('../../assets/logo.png');
 import { Ionicons } from '@expo/vector-icons';
-import { colors } from '../constants/colors';
+import { colors, fonts, cardShadow } from '../constants/colors';
 import { useAppointmentStore } from '../store/appointmentStore';
 import { geocodeAddress } from '../api/kakao';
 import KakaoMapView from '../components/KakaoMapView';
@@ -94,8 +96,7 @@ export default function AppointmentScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
       <View style={styles.header}>
-        <Ionicons name="airplane" size={20} color={colors.primary} />
-        <Text style={styles.appName}>OnTime</Text>
+        <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
       <View style={styles.titleRow}>
@@ -236,8 +237,8 @@ export default function AppointmentScreen() {
 
 const styles = StyleSheet.create({
   container:          { flex: 1, backgroundColor: colors.bg },
-  header:             { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingTop: 52, paddingBottom: 8 },
-  appName:            { fontSize: 18, fontWeight: '700', color: colors.primary },
+  header:             { paddingHorizontal: 20, paddingTop: 52, paddingBottom: 8 },
+  logoImg:            { width: 180, height: 81 },
   titleRow:           { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12 },
   pageTitle:          { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
   card:               { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
