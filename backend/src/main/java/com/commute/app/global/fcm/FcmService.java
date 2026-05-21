@@ -8,21 +8,35 @@ import com.google.firebase.messaging.Message;
 import com.google.firebase.messaging.Notification;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.util.Base64;
 
 @Slf4j
 @Service
 public class FcmService {
 
+    @Value("${FIREBASE_CREDENTIALS_JSON:}")
+    private String firebaseCredentialsJson;
+
     @PostConstruct
     public void initialize() {
         try {
-            ClassPathResource resource = new ClassPathResource("ontime-77adf-firebase-adminsdk-fbsvc-55f04cd693.json");
+            InputStream credentialsStream;
+            if (firebaseCredentialsJson != null && !firebaseCredentialsJson.isBlank()) {
+                credentialsStream = new ByteArrayInputStream(
+                        Base64.getDecoder().decode(firebaseCredentialsJson)
+                );
+            } else {
+                credentialsStream = new ClassPathResource("ontime-77adf-firebase-adminsdk-fbsvc-55f04cd693.json").getInputStream();
+            }
             GoogleCredentials credentials = GoogleCredentials
-                    .fromStream(resource.getInputStream())
+                    .fromStream(credentialsStream)
                     .createScoped("https://www.googleapis.com/auth/firebase.messaging");
 
             if (FirebaseApp.getApps().isEmpty()) {
