@@ -1,5 +1,6 @@
 package com.commute.app.domain.user.controller;
 
+import com.commute.app.domain.user.dto.FcmTokenRequest;
 import com.commute.app.domain.user.dto.LoginRequest;
 import com.commute.app.domain.user.dto.SignupRequest;
 import com.commute.app.domain.user.dto.TokenResponse;
@@ -10,7 +11,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -39,8 +39,8 @@ public class AuthController {
     @PutMapping("/fcmtoken")
     public ResponseEntity<Void> updateFcmToken(
             @AuthenticationPrincipal Long userId,
-            @RequestBody Map<String, String> body) {
-        authService.updateFcmToken(userId, body.get("fcmToken"));
+            @Valid @RequestBody FcmTokenRequest request) {
+        authService.updateFcmToken(userId, request.fcmToken());
         return ResponseEntity.ok().build();
     }
 }

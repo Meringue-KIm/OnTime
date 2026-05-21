@@ -6,6 +6,7 @@ import com.commute.app.domain.appointment.entity.Appointment;
 import com.commute.app.domain.appointment.repository.AppointmentRepository;
 import com.commute.app.domain.user.entity.User;
 import com.commute.app.domain.user.repository.UserRepository;
+import com.commute.app.global.exception.ErrorMessage;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -43,7 +44,7 @@ public class AppointmentService {
     @Transactional
     public AppointmentResponse update(Long userId, Long id, AppointmentRequest request) {
         Appointment appointment = appointmentRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new IllegalArgumentException("약속을 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.APPOINTMENT_NOT_FOUND));
         appointment.update(request.destAddress(), request.destLat(), request.destLng(),
                 request.appointmentTime(), request.alarmBeforeMinutes());
         return AppointmentResponse.from(appointment);
@@ -52,14 +53,14 @@ public class AppointmentService {
     @Transactional
     public void delete(Long userId, Long id) {
         Appointment appointment = appointmentRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new IllegalArgumentException("약속을 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.APPOINTMENT_NOT_FOUND));
         appointmentRepository.delete(appointment);
     }
 
     @Transactional
     public void markDone(Long userId, Long id) {
         Appointment appointment = appointmentRepository.findByIdAndUserId(id, userId)
-                .orElseThrow(() -> new IllegalArgumentException("약속을 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.APPOINTMENT_NOT_FOUND));
         appointment.markDone();
     }
 }

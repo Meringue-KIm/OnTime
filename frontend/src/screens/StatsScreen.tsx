@@ -5,6 +5,8 @@ const logo = require('../../assets/logo.png');
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
 import { getLogs, type CommuteLog } from '../api/logs';
+import { formatDate } from '../utils/timeFormat';
+import { extractTimeHHmm } from '../utils/timeFormat';
 
 export default function StatsScreen() {
   const [logs, setLogs] = useState<CommuteLog[]>([]);
@@ -123,7 +125,7 @@ export default function StatsScreen() {
               <View style={{ flex: 1 }}>
                 <Text style={styles.tripTitle}>{formatDate(log.logDate)}</Text>
                 <Text style={styles.tripSub}>
-                  추천 출발: {log.recommendedDeparture?.substring(0, 5) ?? '--:--'}
+                  추천 출발: {log.recommendedDeparture ? extractTimeHHmm(log.recommendedDeparture) : '--:--'}
                 </Text>
               </View>
               {log.isLate === null ? (
@@ -146,10 +148,6 @@ export default function StatsScreen() {
   );
 }
 
-function formatDate(dateStr: string): string {
-  const d = new Date(dateStr);
-  return `${d.getMonth() + 1}/${d.getDate()}(${['일','월','화','수','목','금','토'][d.getDay()]})`;
-}
 
 function buildWeeklyData(logs: CommuteLog[]) {
   if (logs.length === 0) return [];

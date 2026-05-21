@@ -8,6 +8,9 @@ import { colors, fonts, cardShadow } from '../constants/colors';
 const logo = require('../../assets/logo.png');
 import { useRouteStore } from '../store/routeStore';
 import type { RouteRequest } from '../api/routes';
+import { BUFFER_MIN, BUFFER_MAX, BUFFER_STEP } from '../constants/defaults';
+import { extractTimeHHmm } from '../utils/timeFormat';
+import { getErrorMessage } from '../utils/errors';
 
 const TRANSPORT_MODES = [
   { key: 'car',     label: '자가용',   icon: 'car' },
@@ -35,7 +38,7 @@ export default function RouteScreen() {
       setHomeAddr(active.homeAddress);
       setWorkAddr(active.workAddress);
       setBuffer(active.alarmBeforeMinutes);
-      setArrivalTime(active.arrivalTime.substring(0, 5)); // "HH:mm:ss" → "HH:mm"
+      setArrivalTime(extractTimeHHmm(active.arrivalTime));
     }
   }, [routes]);
 
@@ -63,7 +66,7 @@ export default function RouteScreen() {
       await saveRoute(routeData, existingRoute?.id);
       Alert.alert('저장 완료', '루트가 업데이트되었습니다.');
     } catch (e: any) {
-      Alert.alert('저장 실패', e.response?.data?.message ?? '다시 시도해주세요.');
+      Alert.alert('저장 실패', getErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -151,14 +154,14 @@ export default function RouteScreen() {
 
         <Text style={[styles.inputLabel, { marginTop: 16 }]}>준비 여유 시간</Text>
         <View style={styles.bufferRow}>
-          <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.max(0, b - 5))}>
+          <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.max(BUFFER_MIN, b - BUFFER_STEP))}>
             <Ionicons name="remove" size={20} color={colors.primary} />
           </TouchableOpacity>
           <View style={styles.bufferValueWrap}>
             <Text style={styles.bufferValue}>{buffer}</Text>
             <Text style={styles.bufferUnit}>분</Text>
           </View>
-          <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.min(60, b + 5))}>
+          <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.min(BUFFER_MAX, b + BUFFER_STEP))}>
             <Ionicons name="add" size={20} color={colors.primary} />
           </TouchableOpacity>
         </View>

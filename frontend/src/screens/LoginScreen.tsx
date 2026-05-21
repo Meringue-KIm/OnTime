@@ -57,13 +57,14 @@ export default function LoginScreen({ navigation }: any) {
         <Text style={styles.link}>계정이 없으신가요? 회원가입</Text>
       </TouchableOpacity>
 
-      {/* 개발자 우회 */}
-      <TouchableOpacity
-        style={styles.devButton}
-        onPress={() => setTokens('dev-access-token', 'dev-refresh-token')}
-      >
-        <Text style={styles.devButtonText}>🛠 개발자 모드로 진입</Text>
-      </TouchableOpacity>
+      {__DEV__ && (
+        <TouchableOpacity
+          style={styles.devButton}
+          onPress={() => setTokens('dev-access-token', 'dev-refresh-token')}
+        >
+          <Text style={styles.devButtonText}>🛠 개발자 모드로 진입</Text>
+        </TouchableOpacity>
+      )}
     </View>
   );
 }

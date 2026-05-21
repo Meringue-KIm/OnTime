@@ -6,6 +6,7 @@ import com.commute.app.domain.route.entity.CommuteRoute;
 import com.commute.app.domain.route.repository.CommuteRouteRepository;
 import com.commute.app.domain.user.entity.User;
 import com.commute.app.domain.user.repository.UserRepository;
+import com.commute.app.global.exception.ErrorMessage;
 import com.commute.app.global.kakao.KakaoMapService;
 import com.commute.app.global.kakao.KakaoMapService.Coordinates;
 import lombok.RequiredArgsConstructor;
@@ -29,23 +30,23 @@ public class RouteService {
                 .toList();
     }
 
+    private double[] resolveCoordinates(Double lat, Double lng, String address) {
+        if (lat != null && lng != null) return new double[]{lat, lng};
+        return kakaoMapService.geocode(address)
+                .map(c -> new double[]{c.lat(), c.lng()})
+                .orElse(new double[]{0.0, 0.0});
+    }
+
     @Transactional
     public RouteResponse createRoute(Long userId, RouteRequest request) {
         User user = userRepository.getReferenceById(userId);
 
-        Double homeLat = request.homeLat();
-        Double homeLng = request.homeLng();
-        Double workLat = request.workLat();
-        Double workLng = request.workLng();
-
-        if (homeLat == null || homeLng == null) {
-            Coordinates c = kakaoMapService.geocode(request.homeAddress()).orElse(null);
-            if (c != null) { homeLat = c.lat(); homeLng = c.lng(); }
-        }
-        if (workLat == null || workLng == null) {
-            Coordinates c = kakaoMapService.geocode(request.workAddress()).orElse(null);
-            if (c != null) { workLat = c.lat(); workLng = c.lng(); }
-        }
+        double[] home = resolveCoordinates(request.homeLat(), request.homeLng(), request.homeAddress());
+        double[] work = resolveCoordinates(request.workLat(), request.workLng(), request.workAddress());
+        Double homeLat = home[0] != 0.0 ? home[0] : null;
+        Double homeLng = home[1] != 0.0 ? home[1] : null;
+        Double workLat = work[0] != 0.0 ? work[0] : null;
+        Double workLng = work[1] != 0.0 ? work[1] : null;
 
         CommuteRoute route = CommuteRoute.builder()
                 .user(user)
@@ -64,21 +65,14 @@ public class RouteService {
     @Transactional
     public RouteResponse updateRoute(Long userId, Long routeId, RouteRequest request) {
         CommuteRoute route = routeRepository.findByIdAndUserId(routeId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("루트를 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.ROUTE_NOT_FOUND));
 
-        Double homeLat = request.homeLat();
-        Double homeLng = request.homeLng();
-        Double workLat = request.workLat();
-        Double workLng = request.workLng();
-
-        if (homeLat == null || homeLng == null) {
-            Coordinates c = kakaoMapService.geocode(request.homeAddress()).orElse(null);
-            if (c != null) { homeLat = c.lat(); homeLng = c.lng(); }
-        }
-        if (workLat == null || workLng == null) {
-            Coordinates c = kakaoMapService.geocode(request.workAddress()).orElse(null);
-            if (c != null) { workLat = c.lat(); workLng = c.lng(); }
-        }
+        double[] home = resolveCoordinates(request.homeLat(), request.homeLng(), request.homeAddress());
+        double[] work = resolveCoordinates(request.workLat(), request.workLng(), request.workAddress());
+        Double homeLat = home[0] != 0.0 ? home[0] : null;
+        Double homeLng = home[1] != 0.0 ? home[1] : null;
+        Double workLat = work[0] != 0.0 ? work[0] : null;
+        Double workLng = work[1] != 0.0 ? work[1] : null;
 
         route.update(request.homeAddress(), homeLat, homeLng,
                 request.workAddress(), workLat, workLng,
@@ -89,7 +83,7 @@ public class RouteService {
     @Transactional
     public void deleteRoute(Long userId, Long routeId) {
         CommuteRoute route = routeRepository.findByIdAndUserId(routeId, userId)
-                .orElseThrow(() -> new IllegalArgumentException("루트를 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.ROUTE_NOT_FOUND));
         route.deactivate();
     }
 }

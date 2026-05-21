@@ -3,13 +3,15 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
-import * as Device from 'expo-device';
 import { colors, fonts, cardShadow } from '../constants/colors';
 import { getToday, type TodayResponse } from '../api/today';
-import { updateFcmToken } from '../api/auth';
 import { getWeatherSummary, type WeatherSummary } from '../api/weather';
 import { useRouteStore } from '../store/routeStore';
 import { useAppointmentStore } from '../store/appointmentStore';
+import { useNotification } from '../hooks/useNotification';
+import { formatApptTime, extractTimeHHmm } from '../utils/timeFormat';
+import { getWeatherNavIcon, getWeatherIonicon } from '../utils/weather';
+import { DEFAULT_LOCATION } from '../constants/locations';
 
 const logo = require('../../assets/logo.png');
 
@@ -23,28 +25,6 @@ Notifications.setNotificationHandler({
   }),
 });
 
-function weatherEmoji(icon: string) {
-  if (icon === 'rainy' || icon === 'sleet') return '🌧';
-  if (icon === 'snowy') return '❄️';
-  return '☀️';
-}
-
-function weatherIconName(icon: string): 'sunny' | 'rainy' | 'snow' {
-  if (icon === 'rainy' || icon === 'sleet') return 'rainy';
-  if (icon === 'snowy') return 'snow';
-  return 'sunny';
-}
-
-function formatApptTime(isoStr: string) {
-  const d = new Date(isoStr);
-  const hour = d.getHours();
-  const min = String(d.getMinutes()).padStart(2, '0');
-  const ampm = hour < 12 ? 'AM' : 'PM';
-  const h = String(hour % 12 || 12).padStart(2, '0');
-  return `${h}:${min} ${ampm}`;
-}
-
-const SEOUL = { lat: 37.5665, lng: 126.9780 };
 
 export default function HomeScreen() {
   const navigation = useNavigation<any>();
@@ -62,9 +42,7 @@ export default function HomeScreen() {
       .then(({ data }) => setToday(data))
       .catch(() => setToday(null))
       .finally(() => setTodayLoading(false));
-    registerForPushNotifications();
-    // 날씨 초기 로드 (서울 기본값)
-    getWeatherSummary(SEOUL.lat, SEOUL.lng)
+    getWeatherSummary(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng)
       .then(({ data }) => setWeather(data))
       .catch(() => {});
   }, []);
@@ -78,16 +56,7 @@ export default function HomeScreen() {
     }
   }, [routes]);
 
-  async function registerForPushNotifications() {
-    if (!Device.isDevice) return;
-    const { status: existing } = await Notifications.getPermissionsAsync();
-    const { status } = existing === 'granted'
-      ? { status: existing }
-      : await Notifications.requestPermissionsAsync();
-    if (status !== 'granted') return;
-    const token = (await Notifications.getDevicePushTokenAsync()).data;
-    updateFcmToken(token).catch(() => {});
-  }
+  useNotification();
 
   const activeRoute = routes.find(r => r.isActive) ?? routes[0];
   const upcomingAppts = appointments
@@ -115,7 +84,7 @@ export default function HomeScreen() {
           <View style={styles.weatherTopRow}>
             <View style={styles.weatherLeft}>
               <Ionicons
-                name={weather.icon === 'sunny' ? 'sunny-outline' : weather.icon === 'snowy' ? 'snow-outline' : weather.icon === 'cloudy' ? 'cloudy-outline' : 'rainy-outline'}
+                name={getWeatherIonicon(weather.icon) as any}
                 size={36}
                 color={colors.textPrimary}
               />
@@ -161,7 +130,7 @@ export default function HomeScreen() {
         ) : today?.recommendedDeparture ? (
           <>
             <Text style={styles.departureTime}>
-              {today.recommendedDeparture.substring(0, 5)}
+              {extractTimeHHmm(today.recommendedDeparture)}
             </Text>
             <View style={styles.trafficRow}>
               <View style={styles.trafficBadge}>
@@ -172,7 +141,7 @@ export default function HomeScreen() {
               </View>
               {today.weather && (
                 <View style={[styles.trafficBadge, { marginTop: 6 }]}>
-                  <Ionicons name={weatherIconName(today.weather.icon)} size={13} color="#fff" />
+                  <Ionicons name={getWeatherNavIcon(today.weather.icon)} size={13} color="#fff" />
                   <Text style={styles.trafficBadgeText}>
                     {today.weather.condition} {today.weather.temperature}°C
                     {today.weather.bufferMinutes > 0 ? `  +${today.weather.bufferMinutes}분` : ''}

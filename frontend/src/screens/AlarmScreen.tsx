@@ -6,8 +6,9 @@ import { colors, fonts, cardShadow } from '../constants/colors';
 const logo = require('../../assets/logo.png');
 import { getToday } from '../api/today';
 import { useRouteStore } from '../store/routeStore';
-
-const DAYS = ['일', '월', '화', '수', '목', '금', '토'];
+import { DAYS_OF_WEEK } from '../constants/dates';
+import { BUFFER_MIN, BUFFER_MAX, BUFFER_STEP } from '../constants/defaults';
+import { extractTimeHHmm } from '../utils/timeFormat';
 
 export default function AlarmScreen() {
   const [departureTime, setDepartureTime] = useState<string | null>(null);
@@ -27,7 +28,7 @@ export default function AlarmScreen() {
     fetchRoutes();
     getToday()
       .then(({ data }) => {
-        if (data.recommendedDeparture) setDepartureTime(data.recommendedDeparture.substring(0, 5));
+        if (data.recommendedDeparture) setDepartureTime(extractTimeHHmm(data.recommendedDeparture));
       })
       .catch(() => {})
       .finally(() => setLoading(false));
@@ -89,7 +90,7 @@ export default function AlarmScreen() {
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>📅 반복 일정 설정</Text>
         <View style={styles.daysRow}>
-          {DAYS.map((day, i) => (
+          {DAYS_OF_WEEK.map((day, i) => (
             <TouchableOpacity
               key={i}
               style={[styles.dayBtn, activeDays.includes(i) && styles.dayBtnActive]}
@@ -126,11 +127,11 @@ export default function AlarmScreen() {
           </Text>
         </View>
         <View style={styles.bufferControls}>
-          <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.max(0, b - 5))}>
+          <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.max(BUFFER_MIN, b - BUFFER_STEP))}>
             <Ionicons name="remove" size={20} color={colors.primary} />
           </TouchableOpacity>
           <Text style={styles.bufferControlValue}>{buffer}분</Text>
-          <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.min(60, b + 5))}>
+          <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.min(BUFFER_MAX, b + BUFFER_STEP))}>
             <Ionicons name="add" size={20} color={colors.primary} />
           </TouchableOpacity>
         </View>

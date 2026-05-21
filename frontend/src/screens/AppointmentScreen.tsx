@@ -10,17 +10,9 @@ import { useAppointmentStore } from '../store/appointmentStore';
 import { geocodeAddress } from '../api/kakao';
 import KakaoMapView from '../components/KakaoMapView';
 import type { AppointmentRequest } from '../api/appointments';
-
-function formatAppointmentTime(isoStr: string): string {
-  const d = new Date(isoStr);
-  const month = d.getMonth() + 1;
-  const day = d.getDate();
-  const hour = d.getHours();
-  const min = String(d.getMinutes()).padStart(2, '0');
-  const ampm = hour < 12 ? '오전' : '오후';
-  const displayHour = hour % 12 || 12;
-  return `${month}/${day} ${ampm} ${displayHour}:${min}`;
-}
+import { DEFAULT_ALARM_MINUTES } from '../constants/defaults';
+import { formatKoreanDateTime } from '../utils/timeFormat';
+import { getErrorMessage } from '../utils/errors';
 
 function parseDateTimeInput(date: string, time: string): string | null {
   const dateParts = date.split('/');
@@ -76,7 +68,7 @@ export default function AppointmentScreen() {
       destLat: destLat ?? undefined,
       destLng: destLng ?? undefined,
       appointmentTime,
-      alarmBeforeMinutes: 30,
+      alarmBeforeMinutes: DEFAULT_ALARM_MINUTES,
     };
 
     setSubmitting(true);
@@ -86,7 +78,7 @@ export default function AppointmentScreen() {
       setDest(''); setDestLat(null); setDestLng(null);
       Alert.alert('등록 완료', '약속이 추가되었습니다.');
     } catch (e: any) {
-      Alert.alert('등록 실패', e.response?.data?.message ?? '다시 시도해주세요.');
+      Alert.alert('등록 실패', getErrorMessage(e));
     } finally {
       setSubmitting(false);
     }
@@ -206,7 +198,7 @@ export default function AppointmentScreen() {
         )}
 
         {appointments.map((item) => {
-          const timeStr = formatAppointmentTime(item.appointmentTime);
+          const timeStr = formatKoreanDateTime(item.appointmentTime);
           const dDayText = item.isDone
             ? '완료'
             : item.dDay === 0 ? 'D-Day'
