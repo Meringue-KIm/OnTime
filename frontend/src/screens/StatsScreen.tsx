@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image, TouchableOpacity, Alert } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const logo = require('../../assets/logo.png');
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
-import { getLogs, type CommuteLog } from '../api/logs';
+import { getLogs, submitFeedback, type CommuteLog } from '../api/logs';
 import { formatDate } from '../utils/timeFormat';
 import { extractTimeHHmm } from '../utils/timeFormat';
 
@@ -29,6 +29,31 @@ export default function StatsScreen() {
 
   const weeklyData = buildWeeklyData(logs);
   const recentLogs = logs.slice(0, 5);
+
+  const handleFeedback = (log: CommuteLog) => {
+    if (log.isLate !== null) return;
+    Alert.alert(
+      '출근 결과 입력',
+      `${formatDate(log.logDate)} 출근은 어떠셨나요?`,
+      [
+        {
+          text: '정시 도착 ✅',
+          onPress: async () => {
+            await submitFeedback(log.id, false);
+            setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: false } : l));
+          },
+        },
+        {
+          text: '지각 😅',
+          onPress: async () => {
+            await submitFeedback(log.id, true);
+            setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: true } : l));
+          },
+        },
+        { text: '취소', style: 'cancel' },
+      ],
+    );
+  };
 
   if (loading) {
     return (
@@ -119,7 +144,7 @@ export default function StatsScreen() {
         {recentLogs.length === 0 ? (
           <Text style={styles.emptyText}>기록이 없습니다.</Text>
         ) : (
-          recentLogs.map((log, i) => (
+          recentLogs.map((log) => (
             <View key={log.id} style={styles.tripItem}>
               <View style={styles.tripIconWrap}>
                 <Ionicons name="briefcase-outline" size={18} color={colors.primary} />
@@ -131,9 +156,13 @@ export default function StatsScreen() {
                 </Text>
               </View>
               {log.isLate === null ? (
-                <View style={[styles.tripBadge, { backgroundColor: colors.border }]}>
-                  <Text style={[styles.tripStatus, { color: colors.textMuted }]}>미입력</Text>
-                </View>
+                <TouchableOpacity
+                  style={[styles.tripBadge, styles.feedbackBtn]}
+                  onPress={() => handleFeedback(log)}
+                >
+                  <Ionicons name="pencil-outline" size={11} color={colors.primary} />
+                  <Text style={[styles.tripStatus, { color: colors.primary }]}>입력</Text>
+                </TouchableOpacity>
               ) : (
                 <View style={[styles.tripBadge, { backgroundColor: log.isLate ? colors.danger + '20' : colors.success + '20' }]}>
                   <Text style={[styles.tripStatus, { color: log.isLate ? colors.danger : colors.success }]}>
@@ -216,4 +245,5 @@ const styles = StyleSheet.create({
   tripSub:          { fontSize: 12, color: colors.textMuted, marginTop: 2 },
   tripBadge:        { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
   tripStatus:       { fontSize: 12, fontWeight: '600' },
+  feedbackBtn:      { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primaryLight },
 });

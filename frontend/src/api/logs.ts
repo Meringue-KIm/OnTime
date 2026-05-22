@@ -8,3 +8,5 @@ export interface CommuteLog {
 }
 
 export const getLogs = () => client.get<CommuteLog[]>('/logs');
+export const submitFeedback = (id: number, isLate: boolean) =>
+  client.post(`/logs/${id}/feedback`, { isLate });
