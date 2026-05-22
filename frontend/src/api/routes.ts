@@ -9,6 +9,7 @@ export interface RouteRequest {
   workLng?: number;
   arrivalTime: string; // "HH:mm:ss"
   alarmBeforeMinutes: number;
+  activeDays?: string; // "0,1,2,3,4,5,6" 중 선택 (0=일,1=월...6=토)
 }
 
 export interface RouteResponse {
@@ -22,6 +23,7 @@ export interface RouteResponse {
   arrivalTime: string;
   alarmBeforeMinutes: number;
   isActive: boolean;
+  activeDays: string;
 }
 
 export const getRoutes = () => client.get<RouteResponse[]>('/routes');

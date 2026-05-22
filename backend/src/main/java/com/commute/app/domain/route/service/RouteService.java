@@ -58,6 +58,7 @@ public class RouteService {
                 .workLng(workLng)
                 .arrivalTime(request.arrivalTime())
                 .alarmBeforeMinutes(request.alarmBeforeMinutes())
+                .activeDays(request.activeDays() != null ? request.activeDays() : "1,2,3,4,5")
                 .build();
         return RouteResponse.from(routeRepository.save(route));
     }
@@ -76,7 +77,7 @@ public class RouteService {
 
         route.update(request.homeAddress(), homeLat, homeLng,
                 request.workAddress(), workLat, workLng,
-                request.arrivalTime(), request.alarmBeforeMinutes());
+                request.arrivalTime(), request.alarmBeforeMinutes(), request.activeDays());
         return RouteResponse.from(route);
     }
 

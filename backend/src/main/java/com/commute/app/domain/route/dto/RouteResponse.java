@@ -13,7 +13,8 @@ public record RouteResponse(
         Double workLng,
         LocalTime arrivalTime,
         Integer alarmBeforeMinutes,
-        Boolean isActive
+        Boolean isActive,
+        String activeDays
 ) {
     public static RouteResponse from(CommuteRoute route) {
         return new RouteResponse(
@@ -26,7 +27,8 @@ public record RouteResponse(
                 route.getWorkLng(),
                 route.getArrivalTime(),
                 route.getAlarmBeforeMinutes(),
-                route.getIsActive()
+                route.getIsActive(),
+                route.getActiveDays()
         );
     }
 }

@@ -12,5 +12,6 @@ public record RouteRequest(
         Double workLat,
         Double workLng,
         @NotNull LocalTime arrivalTime,
-        @NotNull Integer alarmBeforeMinutes
+        @NotNull Integer alarmBeforeMinutes,
+        String activeDays
 ) {}

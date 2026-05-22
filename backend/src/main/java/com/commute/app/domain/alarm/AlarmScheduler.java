@@ -41,8 +41,12 @@ public class AlarmScheduler {
         LocalTime now   = LocalTime.now().withSecond(0).withNano(0);
         LocalDate today = LocalDate.now();
 
+        // 오늘 요일 (프론트 인덱스 기준: 0=일,1=월...6=토)
+        int todayIndex = LocalDate.now().getDayOfWeek().getValue() % 7;
+
         List<CommuteRoute> routes = routeRepository.findAllByIsActiveTrue();
         for (CommuteRoute route : routes) {
+            if (!route.isActiveDay(todayIndex)) continue;
             String fcmToken = route.getUser().getFcmToken();
             if (fcmToken == null || fcmToken.isBlank()) continue;
 

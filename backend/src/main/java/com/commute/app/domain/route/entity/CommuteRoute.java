@@ -50,9 +50,21 @@ public class CommuteRoute {
     @Builder.Default
     private Boolean isActive = true;
 
+    // 알람 활성 요일 (프론트 인덱스 기준: 0=일,1=월...6=토), 콤마 구분
+    @Column(name = "active_days", nullable = false)
+    @Builder.Default
+    private String activeDays = "1,2,3,4,5";
+
+    public boolean isActiveDay(int frontendDayIndex) {
+        for (String d : activeDays.split(",")) {
+            if (d.trim().equals(String.valueOf(frontendDayIndex))) return true;
+        }
+        return false;
+    }
+
     public void update(String homeAddress, Double homeLat, Double homeLng,
                        String workAddress, Double workLat, Double workLng,
-                       LocalTime arrivalTime, Integer alarmBeforeMinutes) {
+                       LocalTime arrivalTime, Integer alarmBeforeMinutes, String activeDays) {
         this.homeAddress = homeAddress;
         this.homeLat = homeLat;
         this.homeLng = homeLng;
@@ -61,6 +73,7 @@ public class CommuteRoute {
         this.workLng = workLng;
         this.arrivalTime = arrivalTime;
         this.alarmBeforeMinutes = alarmBeforeMinutes;
+        if (activeDays != null && !activeDays.isBlank()) this.activeDays = activeDays;
     }
 
     public void deactivate() {
