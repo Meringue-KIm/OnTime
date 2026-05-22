@@ -2,6 +2,8 @@ package com.commute.app.domain.alarm;
 
 import com.commute.app.domain.appointment.entity.Appointment;
 import com.commute.app.domain.appointment.repository.AppointmentRepository;
+import com.commute.app.domain.log.entity.CommuteLog;
+import com.commute.app.domain.log.repository.CommuteLogRepository;
 import com.commute.app.domain.route.entity.CommuteRoute;
 import com.commute.app.domain.route.repository.CommuteRouteRepository;
 import com.commute.app.global.fcm.FcmService;
@@ -14,6 +16,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
@@ -26,15 +29,17 @@ public class AlarmScheduler {
 
     private final CommuteRouteRepository routeRepository;
     private final AppointmentRepository appointmentRepository;
+    private final CommuteLogRepository logRepository;
     private final KakaoMapService kakaoMapService;
     private final WeatherService weatherService;
     private final FcmService fcmService;
 
-    // 매 분마다 실행 — 출발 알람 시간이 된 루트에 푸시 알림 발송
+    // 매 분마다 실행 — 출발 알람 시간이 된 루트에 푸시 알림 발송 + 로그 생성
     @Scheduled(cron = "0 * * * * *")
-    @Transactional(readOnly = true)
+    @Transactional
     public void sendDepartureAlarms() {
-        LocalTime now = LocalTime.now().withSecond(0).withNano(0);
+        LocalTime now   = LocalTime.now().withSecond(0).withNano(0);
+        LocalDate today = LocalDate.now();
 
         List<CommuteRoute> routes = routeRepository.findAllByIsActiveTrue();
         for (CommuteRoute route : routes) {
@@ -58,6 +63,18 @@ public class AlarmScheduler {
                 String body  = buildAlarmBody(drivingMinutes, weatherOpt.orElse(null));
                 fcmService.sendPushNotification(fcmToken, title, body);
                 log.info("알람 발송 — userId={}, 출발={}", route.getUser().getId(), departureTime);
+
+                // 오늘 로그가 없을 때만 생성 (중복 방지)
+                Long userId = route.getUser().getId();
+                if (logRepository.findByUserIdAndLogDate(userId, today).isEmpty()) {
+                    logRepository.save(CommuteLog.builder()
+                            .user(route.getUser())
+                            .route(route)
+                            .logDate(today)
+                            .recommendedDeparture(departureTime)
+                            .build());
+                    log.info("출근 로그 생성 — userId={}, 출발={}", userId, departureTime);
+                }
             }
         }
     }
