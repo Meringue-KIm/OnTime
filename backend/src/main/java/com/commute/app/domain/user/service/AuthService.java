@@ -1,6 +1,7 @@
 package com.commute.app.domain.user.service;
 
 import com.commute.app.domain.user.dto.LoginRequest;
+import com.commute.app.domain.user.dto.RefreshRequest;
 import com.commute.app.domain.user.dto.SignupRequest;
 import com.commute.app.domain.user.dto.TokenResponse;
 import com.commute.app.domain.user.entity.User;
@@ -42,6 +43,20 @@ public class AuthService {
         return new TokenResponse(
                 jwtProvider.createAccessToken(user.getId()),
                 jwtProvider.createRefreshToken(user.getId())
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public TokenResponse refresh(RefreshRequest request) {
+        if (!jwtProvider.isValid(request.refreshToken())) {
+            throw new IllegalArgumentException("만료되었거나 유효하지 않은 Refresh Token입니다.");
+        }
+        Long userId = jwtProvider.getUserId(request.refreshToken());
+        userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.USER_NOT_FOUND));
+        return new TokenResponse(
+                jwtProvider.createAccessToken(userId),
+                request.refreshToken()
         );
     }
 

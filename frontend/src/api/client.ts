@@ -13,4 +13,56 @@ client.interceptors.request.use(async (config) => {
   return config;
 });
 
+// 토큰 갱신 중 중복 요청 방지
+let isRefreshing = false;
+let refreshQueue: Array<(token: string) => void> = [];
+
+client.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const original = error.config;
+
+    if (error.response?.status !== 401 || original._retry) {
+      return Promise.reject(error);
+    }
+
+    original._retry = true;
+
+    // 이미 갱신 중이면 완료될 때까지 대기
+    if (isRefreshing) {
+      return new Promise((resolve) => {
+        refreshQueue.push((newToken) => {
+          original.headers.Authorization = `Bearer ${newToken}`;
+          resolve(client(original));
+        });
+      });
+    }
+
+    isRefreshing = true;
+
+    try {
+      const refreshToken = await AsyncStorage.getItem('refreshToken');
+      if (!refreshToken) throw new Error('no refresh token');
+
+      const { data } = await axios.post(`${BASE_URL}/auth/refresh`, { refreshToken });
+
+      await AsyncStorage.setItem('accessToken', data.accessToken);
+      original.headers.Authorization = `Bearer ${data.accessToken}`;
+
+      refreshQueue.forEach((cb) => cb(data.accessToken));
+      refreshQueue = [];
+
+      return client(original);
+    } catch {
+      // Refresh Token도 만료 → 강제 로그아웃
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
+      const { useAuthStore } = await import('../store/authStore');
+      useAuthStore.getState().logout();
+      return Promise.reject(error);
+    } finally {
+      isRefreshing = false;
+    }
+  },
+);
+
 export default client;

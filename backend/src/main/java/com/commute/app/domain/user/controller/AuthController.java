@@ -2,6 +2,7 @@ package com.commute.app.domain.user.controller;
 
 import com.commute.app.domain.user.dto.FcmTokenRequest;
 import com.commute.app.domain.user.dto.LoginRequest;
+import com.commute.app.domain.user.dto.RefreshRequest;
 import com.commute.app.domain.user.dto.SignupRequest;
 import com.commute.app.domain.user.dto.TokenResponse;
 import com.commute.app.domain.user.service.AuthService;
@@ -28,6 +29,11 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<TokenResponse> login(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authService.login(request));
+    }
+
+    @PostMapping("/refresh")
+    public ResponseEntity<TokenResponse> refresh(@Valid @RequestBody RefreshRequest request) {
+        return ResponseEntity.ok(authService.refresh(request));
     }
 
     @PostMapping("/logout")
