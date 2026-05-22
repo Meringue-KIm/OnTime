@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Platform } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Platform, Modal, TextInput } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -14,6 +14,9 @@ import { useLocation } from '../hooks/useLocation';
 import { formatApptTime, extractTimeHHmm } from '../utils/timeFormat';
 import { getWeatherNavIcon, getWeatherIonicon } from '../utils/weather';
 import { DEFAULT_LOCATION } from '../constants/locations';
+import { scheduleLocalAlarm } from '../utils/localAlarm';
+import { changePassword, deleteAccount } from '../api/auth';
+import { useAuthStore } from '../store/authStore';
 
 const logo = require('../../assets/logo.png');
 
@@ -40,12 +43,23 @@ export default function HomeScreen() {
   const { routes, fetchRoutes } = useRouteStore();
   const { appointments, fetchAppointments } = useAppointmentStore();
   const { coords: gpsCoords, status: locationStatus } = useLocation();
+  const { logout } = useAuthStore();
+
+  const [showSettings, setShowSettings] = useState(false);
+  const [curPw, setCurPw]   = useState('');
+  const [newPw, setNewPw]   = useState('');
+  const [pwSaving, setPwSaving] = useState(false);
 
   useEffect(() => {
     fetchRoutes();
     fetchAppointments();
     getToday()
-      .then(({ data }) => setToday(data))
+      .then(({ data }) => {
+        setToday(data);
+        if (data.recommendedDeparture) {
+          scheduleLocalAlarm(String(data.recommendedDeparture)).catch(() => {});
+        }
+      })
       .catch(() => setToday(null))
       .finally(() => setTodayLoading(false));
   }, []);
@@ -62,6 +76,35 @@ export default function HomeScreen() {
 
   useNotification();
 
+  const handleChangePassword = async () => {
+    if (!curPw || !newPw) { Alert.alert('비밀번호를 모두 입력해주세요.'); return; }
+    if (newPw.length < 8) { Alert.alert('새 비밀번호는 8자 이상이어야 합니다.'); return; }
+    setPwSaving(true);
+    try {
+      await changePassword(curPw, newPw);
+      Alert.alert('변경 완료', '비밀번호가 변경되었습니다.');
+      setCurPw(''); setNewPw('');
+    } catch {
+      Alert.alert('오류', '현재 비밀번호가 올바르지 않습니다.');
+    } finally {
+      setPwSaving(false);
+    }
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert('회원 탈퇴', '탈퇴하면 모든 데이터가 삭제됩니다. 계속하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      { text: '탈퇴', style: 'destructive', onPress: async () => {
+        try {
+          await deleteAccount();
+          await logout();
+        } catch {
+          Alert.alert('오류', '탈퇴 처리 중 문제가 발생했습니다.');
+        }
+      }},
+    ]);
+  };
+
   const activeRoute = routes.find(r => r.isActive) ?? routes[0];
   const upcomingAppts = appointments
     .filter(a => !a.isDone && a.dDay >= 0)
@@ -74,6 +117,9 @@ export default function HomeScreen() {
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
+        <TouchableOpacity onPress={() => setShowSettings(true)} style={styles.settingsBtn}>
+          <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
       {/* Greeting */}
@@ -139,8 +185,14 @@ export default function HomeScreen() {
               {extractTimeHHmm(today.recommendedDeparture)}
             </Text>
             <View style={styles.trafficRow}>
+              {today.logDate && (
+                <View style={[styles.trafficBadge, { backgroundColor: 'rgba(255,255,255,0.35)', marginBottom: 4 }]}>
+                  <Ionicons name="checkmark-circle" size={13} color="#fff" />
+                  <Text style={styles.trafficBadgeText}>오늘 알람 발송 완료</Text>
+                </View>
+              )}
               <View style={styles.trafficBadge}>
-                <Ionicons name="car" size={13} color="#fff" />
+                <Ionicons name="flag-outline" size={13} color="#fff" />
                 <Text style={styles.trafficBadgeText}>
                   도착 목표: {today.arrivalTime?.substring(0, 5) ?? '--:--'}
                 </Text>
@@ -150,16 +202,21 @@ export default function HomeScreen() {
                   <Ionicons name={getWeatherNavIcon(today.weather.icon)} size={13} color="#fff" />
                   <Text style={styles.trafficBadgeText}>
                     {today.weather.condition} {today.weather.temperature}°C
-                    {today.weather.bufferMinutes > 0 ? `  +${today.weather.bufferMinutes}분` : ''}
+                    {today.weather.bufferMinutes > 0 ? ` · 날씨로 +${today.weather.bufferMinutes}분 추가` : ''}
                   </Text>
                 </View>
               )}
             </View>
           </>
         ) : (
-          <Text style={styles.noRouteText}>
-            {today?.message ?? '루트를 먼저 설정해주세요'}
-          </Text>
+          <View style={styles.onboardingWrap}>
+            <Ionicons name="map-outline" size={32} color="rgba(255,255,255,0.7)" />
+            <Text style={styles.noRouteText}>아직 루트가 없어요</Text>
+            <Text style={styles.noRouteSubText}>집·직장 주소를 등록하면 매일 맞춤 출발 알람을 받을 수 있어요.</Text>
+            <TouchableOpacity style={styles.onboardingBtn} onPress={() => navigation.navigate('Route')}>
+              <Text style={styles.onboardingBtnText}>루트 설정하러 가기 →</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 
@@ -224,6 +281,60 @@ export default function HomeScreen() {
         )}
       </View>
 
+      {/* 설정 모달 */}
+      <Modal visible={showSettings} animationType="slide" transparent onRequestClose={() => setShowSettings(false)}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalBox}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>설정</Text>
+              <TouchableOpacity onPress={() => setShowSettings(false)}>
+                <Ionicons name="close" size={22} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalSection}>비밀번호 변경</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="현재 비밀번호"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry
+              value={curPw}
+              onChangeText={setCurPw}
+            />
+            <TextInput
+              style={[styles.modalInput, { marginTop: 8 }]}
+              placeholder="새 비밀번호 (8자 이상)"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry
+              value={newPw}
+              onChangeText={setNewPw}
+            />
+            <TouchableOpacity
+              style={[styles.modalBtn, pwSaving && { opacity: 0.6 }]}
+              onPress={handleChangePassword}
+              disabled={pwSaving}
+            >
+              {pwSaving
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={styles.modalBtnText}>비밀번호 변경</Text>
+              }
+            </TouchableOpacity>
+
+            <View style={styles.modalDivider} />
+
+            <TouchableOpacity style={styles.modalLogoutBtn} onPress={() => { setShowSettings(false); logout(); }}>
+              <Ionicons name="log-out-outline" size={18} color={colors.textSecondary} />
+              <Text style={styles.modalLogoutText}>로그아웃</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity style={styles.modalDeleteBtn} onPress={handleDeleteAccount}>
+              <Ionicons name="trash-outline" size={18} color={colors.danger} />
+              <Text style={styles.modalDeleteText}>회원 탈퇴</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       {/* Footer */}
       <View style={styles.footer}>
         <Text style={styles.footerText}>날씨 제공: 기상청 · 지도: 카카오맵</Text>
@@ -236,8 +347,22 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container:        { flex: 1, backgroundColor: colors.bg },
-  header:           { paddingHorizontal: 20, paddingBottom: 4 },
+  header:           { paddingHorizontal: 20, paddingBottom: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   logoImg:          { width: 180, height: 81 },
+  settingsBtn:      { padding: 6 },
+  modalOverlay:     { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  modalBox:         { backgroundColor: colors.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 24, paddingBottom: 40 },
+  modalHeader:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 },
+  modalTitle:       { fontSize: 18, fontFamily: fonts.bold, color: colors.textPrimary },
+  modalSection:     { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textSecondary, marginBottom: 10 },
+  modalInput:       { backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: fonts.regular, color: colors.textPrimary },
+  modalBtn:         { backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 13, alignItems: 'center', marginTop: 12 },
+  modalBtnText:     { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },
+  modalDivider:     { height: 1, backgroundColor: colors.border, marginVertical: 20 },
+  modalLogoutBtn:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
+  modalLogoutText:  { fontSize: 15, fontFamily: fonts.semiBold, color: colors.textSecondary },
+  modalDeleteBtn:   { flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 12 },
+  modalDeleteText:  { fontSize: 15, fontFamily: fonts.semiBold, color: colors.danger },
   greetingSection:  { paddingHorizontal: 20, paddingBottom: 12 },
   greeting:         { fontSize: 16, fontFamily: fonts.semiBold, color: colors.textSecondary },
   weatherWrap:        { marginHorizontal: 20, marginBottom: 12, backgroundColor: colors.card, borderRadius: 16, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 10, ...cardShadow },
@@ -255,7 +380,11 @@ const styles = StyleSheet.create({
   departureCard:    { marginHorizontal: 20, borderRadius: 20, backgroundColor: colors.primary, padding: 20, marginBottom: 16 },
   departureLabel:   { fontSize: 13, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.8)', marginBottom: 4 },
   departureTime:    { fontSize: 44, fontFamily: fonts.extraBold, color: '#fff', letterSpacing: -1 },
-  noRouteText:      { fontSize: 16, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.8)', marginVertical: 12 },
+  onboardingWrap:   { alignItems: 'center', gap: 8, paddingVertical: 8 },
+  noRouteText:      { fontSize: 18, fontFamily: fonts.bold, color: '#fff' },
+  noRouteSubText:   { fontSize: 13, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.75)', textAlign: 'center' },
+  onboardingBtn:    { marginTop: 4, backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
+  onboardingBtnText:{ fontSize: 14, fontFamily: fonts.semiBold, color: '#fff' },
   trafficRow:       { marginTop: 8 },
   trafficBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   trafficBadgeText: { color: '#fff', fontSize: 12, fontFamily: fonts.regular },

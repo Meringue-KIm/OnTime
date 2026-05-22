@@ -4,9 +4,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { setupNotificationChannel } from '../hooks/useNotification';
+import { sendTestAlarm } from '../api/auth';
 import { colors, fonts, cardShadow } from '../constants/colors';
 
 const logo = require('../../assets/logo.png');
+import { Alert } from 'react-native';
 import { getToday } from '../api/today';
 import { useRouteStore } from '../store/routeStore';
 import { DAYS_OF_WEEK } from '../constants/dates';
@@ -171,6 +173,23 @@ export default function AlarmScreen() {
         </View>
       </View>
 
+      {/* 테스트 알람 */}
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>🧪 알람 테스트</Text>
+        <Text style={styles.testDesc}>설정이 올바른지 즉시 FCM 알림을 보내 확인합니다.</Text>
+        <TouchableOpacity
+          style={styles.testBtn}
+          onPress={() =>
+            sendTestAlarm()
+              .then(() => Alert.alert('전송 완료', '테스트 알람이 발송되었습니다.'))
+              .catch(() => Alert.alert('오류', 'FCM 토큰을 먼저 등록해주세요.'))
+          }
+        >
+          <Ionicons name="notifications-outline" size={18} color="#fff" />
+          <Text style={styles.testBtnText}>테스트 알람 보내기</Text>
+        </TouchableOpacity>
+      </View>
+
       {/* 사운드 설정 */}
       <View style={[styles.card, { marginBottom: 28 }]}>
         <Text style={styles.sectionTitle}>🔔 사운드 설정</Text>
@@ -234,4 +253,7 @@ const styles = StyleSheet.create({
   settingIconWrap:     { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   settingLabel:        { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },
   settingSub:          { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
+  testDesc:            { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, marginBottom: 12 },
+  testBtn:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 13 },
+  testBtnText:         { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },
 });

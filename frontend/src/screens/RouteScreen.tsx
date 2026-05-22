@@ -243,21 +243,44 @@ export default function RouteScreen() {
 
           {/* 도착 시간 */}
           <Text style={[styles.inputLabel, { marginTop: 12 }]}>⏰ 도착 희망 시간</Text>
-          <View style={styles.timeRow}>
-            <TouchableOpacity style={styles.timeBtn} onPress={() => {
-              const [h, m] = arrivalTime.split(':').map(Number);
-              setArrivalTime(`${String(h > 0 ? h - 1 : 23).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-            }}>
-              <Ionicons name="remove" size={18} color={colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.timeValue}>{arrivalTime}</Text>
-            <TouchableOpacity style={styles.timeBtn} onPress={() => {
-              const [h, m] = arrivalTime.split(':').map(Number);
-              setArrivalTime(`${String(h < 23 ? h + 1 : 0).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-            }}>
-              <Ionicons name="add" size={18} color={colors.primary} />
-            </TouchableOpacity>
+          <View style={styles.timeGrid}>
+            <View style={styles.timeColumn}>
+              <Text style={styles.timeUnit}>시</Text>
+              <View style={styles.timeRow}>
+                <TouchableOpacity style={styles.timeBtn} onPress={() => {
+                  const [h, m] = arrivalTime.split(':').map(Number);
+                  setArrivalTime(`${String((h + 23) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+                }}><Ionicons name="remove" size={18} color={colors.primary} /></TouchableOpacity>
+                <Text style={styles.timeValue}>{arrivalTime.split(':')[0]}</Text>
+                <TouchableOpacity style={styles.timeBtn} onPress={() => {
+                  const [h, m] = arrivalTime.split(':').map(Number);
+                  setArrivalTime(`${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
+                }}><Ionicons name="add" size={18} color={colors.primary} /></TouchableOpacity>
+              </View>
+            </View>
+            <Text style={styles.timeSep}>:</Text>
+            <View style={styles.timeColumn}>
+              <Text style={styles.timeUnit}>분 (10분 단위)</Text>
+              <View style={styles.timeRow}>
+                <TouchableOpacity style={styles.timeBtn} onPress={() => {
+                  const [h, m] = arrivalTime.split(':').map(Number);
+                  setArrivalTime(`${String(h).padStart(2, '0')}:${String((m - 10 + 60) % 60).padStart(2, '0')}`);
+                }}><Ionicons name="remove" size={18} color={colors.primary} /></TouchableOpacity>
+                <Text style={styles.timeValue}>{arrivalTime.split(':')[1]}</Text>
+                <TouchableOpacity style={styles.timeBtn} onPress={() => {
+                  const [h, m] = arrivalTime.split(':').map(Number);
+                  setArrivalTime(`${String(h).padStart(2, '0')}:${String((m + 10) % 60).padStart(2, '0')}`);
+                }}><Ionicons name="add" size={18} color={colors.primary} /></TouchableOpacity>
+              </View>
+            </View>
           </View>
+
+          {transport === 'transit' && (
+            <View style={styles.transitNote}>
+              <Ionicons name="information-circle-outline" size={14} color={colors.warning} />
+              <Text style={styles.transitNoteText}>대중교통 시간은 자동차 기준 추정값입니다. 실제와 다를 수 있어요.</Text>
+            </View>
+          )}
 
           {/* 여유 시간 */}
           <Text style={[styles.inputLabel, { marginTop: 12 }]}>⏱ 여유 시간</Text>
@@ -334,9 +357,13 @@ const styles = StyleSheet.create({
   transportBtnActive:   { backgroundColor: colors.primary },
   transportLabel:       { fontSize: 11, color: colors.textSecondary, fontWeight: '600' },
   transportLabelActive: { color: '#fff' },
-  timeRow:              { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
+  timeGrid:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  timeColumn:           { alignItems: 'center', gap: 4 },
+  timeUnit:             { fontSize: 11, color: colors.textMuted },
+  timeSep:              { fontSize: 28, fontWeight: '800', color: colors.textPrimary, marginTop: 16 },
+  timeRow:              { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16 },
   timeBtn:              { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  timeValue:            { fontSize: 28, fontWeight: '800', color: colors.textPrimary, minWidth: 80, textAlign: 'center' },
+  timeValue:            { fontSize: 28, fontWeight: '800', color: colors.textPrimary, minWidth: 52, textAlign: 'center' },
   bufferRow:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
   bufferBtn:            { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   bufferValue:          { fontSize: 22, fontWeight: '700', color: colors.textPrimary, minWidth: 60, textAlign: 'center' },
@@ -345,6 +372,8 @@ const styles = StyleSheet.create({
   dayBtnActive:         { backgroundColor: colors.primary },
   dayText:              { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
   dayTextActive:        { color: '#fff' },
+  transitNote:          { flexDirection: 'row', gap: 6, alignItems: 'flex-start', backgroundColor: '#FFF3E0', borderRadius: 8, padding: 10, marginTop: 8 },
+  transitNoteText:      { flex: 1, fontSize: 11, color: '#E65100' },
   formBtns:             { flexDirection: 'row', gap: 10, marginTop: 20 },
   cancelBtn:            { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.bg, alignItems: 'center' },
   cancelText:           { fontSize: 14, fontWeight: '600', color: colors.textSecondary },

@@ -13,3 +13,12 @@ export const login = (email: string, password: string) =>
 
 export const updateFcmToken = (fcmToken: string) =>
   client.put('/auth/fcmtoken', { fcmToken });
+
+export const changePassword = (currentPassword: string, newPassword: string) =>
+  client.put('/auth/password', { currentPassword, newPassword });
+
+export const deleteAccount = () =>
+  client.delete('/auth/account');
+
+export const sendTestAlarm = () =>
+  client.post('/alarm/test');

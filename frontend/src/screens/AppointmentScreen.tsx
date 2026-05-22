@@ -9,6 +9,7 @@ import { colors, fonts, cardShadow } from '../constants/colors';
 import { useAppointmentStore } from '../store/appointmentStore';
 import KakaoMapView from '../components/KakaoMapView';
 import AddressInput from '../components/AddressInput';
+import { getErrorMessage } from '../utils/errors';
 import type { AppointmentRequest } from '../api/appointments';
 import { DEFAULT_ALARM_MINUTES } from '../constants/defaults';
 import { formatKoreanDateTime } from '../utils/timeFormat';
@@ -53,8 +54,22 @@ export default function AppointmentScreen() {
   const [webDate, setWebDate] = useState('');
   const [webTime, setWebTime] = useState('09:00');
 
-  const { appointments, loading, fetchAppointments, addAppointment } = useAppointmentStore();
+  const { appointments, loading, fetchAppointments, addAppointment, completeDone, removeAppointment } = useAppointmentStore();
   useEffect(() => { fetchAppointments(); }, []);
+
+  const handleComplete = (id: number) => {
+    Alert.alert('약속 완료', '이 약속을 완료 처리하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      { text: '완료', onPress: () => completeDone(id).catch((e: any) => Alert.alert('오류', getErrorMessage(e))) },
+    ]);
+  };
+
+  const handleDelete = (id: number) => {
+    Alert.alert('약속 삭제', '이 약속을 삭제하시겠습니까?', [
+      { text: '취소', style: 'cancel' },
+      { text: '삭제', style: 'destructive', onPress: () => removeAppointment(id).catch((e: any) => Alert.alert('오류', getErrorMessage(e))) },
+    ]);
+  };
 
   const getAppointmentTimeISO = (): string | null => {
     if (Platform.OS === 'web') {
@@ -268,6 +283,14 @@ export default function AppointmentScreen() {
               <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
                 <Text style={[styles.statusText, { color: statusColor }]}>{dDayText}</Text>
               </View>
+              {!item.isDone && (
+                <TouchableOpacity style={styles.apptActionBtn} onPress={() => handleComplete(item.id)}>
+                  <Ionicons name="checkmark-circle-outline" size={22} color={colors.success} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.apptActionBtn} onPress={() => handleDelete(item.id)}>
+                <Ionicons name="trash-outline" size={20} color={colors.danger} />
+              </TouchableOpacity>
             </View>
           );
         })}
@@ -304,4 +327,5 @@ const styles = StyleSheet.create({
   apptTime:           { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
   statusBadge:        { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusText:         { fontSize: 12, fontFamily: fonts.semiBold },
+  apptActionBtn:      { padding: 6, marginLeft: 2 },
 });

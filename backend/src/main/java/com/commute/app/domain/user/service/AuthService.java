@@ -66,4 +66,19 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.USER_NOT_FOUND));
         user.updateFcmToken(fcmToken);
     }
+
+    @Transactional
+    public void changePassword(Long userId, String currentPassword, String newPassword) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.USER_NOT_FOUND));
+        if (!passwordEncoder.matches(currentPassword, user.getPassword())) {
+            throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
+        }
+        user.changePassword(passwordEncoder.encode(newPassword));
+    }
+
+    @Transactional
+    public void deleteAccount(Long userId) {
+        userRepository.deleteById(userId);
+    }
 }

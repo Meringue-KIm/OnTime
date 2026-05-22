@@ -1,5 +1,6 @@
 package com.commute.app.domain.user.controller;
 
+import com.commute.app.domain.user.dto.ChangePasswordRequest;
 import com.commute.app.domain.user.dto.FcmTokenRequest;
 import com.commute.app.domain.user.dto.LoginRequest;
 import com.commute.app.domain.user.dto.RefreshRequest;
@@ -39,6 +40,20 @@ public class AuthController {
     @PostMapping("/logout")
     public ResponseEntity<Void> logout() {
         // 클라이언트에서 토큰 삭제로 처리 (추후 Redis 블랙리스트 적용 가능)
+        return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/password")
+    public ResponseEntity<Void> changePassword(
+            @AuthenticationPrincipal Long userId,
+            @Valid @RequestBody ChangePasswordRequest request) {
+        authService.changePassword(userId, request.currentPassword(), request.newPassword());
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/account")
+    public ResponseEntity<Void> deleteAccount(@AuthenticationPrincipal Long userId) {
+        authService.deleteAccount(userId);
         return ResponseEntity.ok().build();
     }
 
