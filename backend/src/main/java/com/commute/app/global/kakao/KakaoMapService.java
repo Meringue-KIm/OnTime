@@ -130,9 +130,37 @@ public class KakaoMapService {
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
+    public record PlaceSuggestion(String name, String address, double lat, double lng) {}
+
+    public List<PlaceSuggestion> searchPlaces(String query) {
+        if (restApiKey.isBlank() || query == null || query.isBlank()) return List.of();
+        try {
+            KeywordResponse response = restClient.get()
+                    .uri("https://dapi.kakao.com/v2/local/search/keyword.json?query={q}&size=5", query)
+                    .header("Authorization", "KakaoAK " + restApiKey)
+                    .retrieve()
+                    .body(KeywordResponse.class);
+            if (response == null || response.documents() == null) return List.of();
+            return response.documents().stream()
+                    .map(d -> new PlaceSuggestion(
+                            d.place_name(),
+                            d.road_address_name().isBlank() ? d.address_name() : d.road_address_name(),
+                            Double.parseDouble(d.y()),
+                            Double.parseDouble(d.x())))
+                    .toList();
+        } catch (Exception e) {
+            log.warn("Kakao keyword search failed for '{}': {}", query, e.getMessage());
+            return List.of();
+        }
+    }
+
     // ─── Kakao Geocode response ────────────────────────────────────────────────
     record GeocodeResponse(List<GeocodeDocument> documents) {}
     record GeocodeDocument(String x, String y) {} // x=경도(lng), y=위도(lat)
+
+    // ─── Kakao Keyword search response ────────────────────────────────────────
+    record KeywordResponse(List<KeywordDocument> documents) {}
+    record KeywordDocument(String place_name, String road_address_name, String address_name, String x, String y) {}
 
     // ─── Kakao Directions response ─────────────────────────────────────────────
     record DirectionsResponse(List<Route> routes) {}

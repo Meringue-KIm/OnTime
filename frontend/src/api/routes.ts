@@ -31,4 +31,5 @@ export interface RouteResponse {
 export const getRoutes = () => client.get<RouteResponse[]>('/routes');
 export const createRoute = (data: RouteRequest) => client.post<RouteResponse>('/routes', data);
 export const updateRoute = (id: number, data: RouteRequest) => client.put<RouteResponse>(`/routes/${id}`, data);
+export const activateRoute = (id: number) => client.put<RouteResponse>(`/routes/${id}/activate`);
 export const deleteRoute = (id: number) => client.delete(`/routes/${id}`);

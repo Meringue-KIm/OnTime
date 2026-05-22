@@ -83,6 +83,10 @@ public class CommuteRoute {
         if (transportMode != null && !transportMode.isBlank()) this.transportMode = transportMode;
     }
 
+    public void activate() {
+        this.isActive = true;
+    }
+
     public void deactivate() {
         this.isActive = false;
     }

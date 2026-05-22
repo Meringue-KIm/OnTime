@@ -38,6 +38,13 @@ public class RouteController {
         return ResponseEntity.ok(routeService.updateRoute(userId, id, request));
     }
 
+    @PutMapping("/{id}/activate")
+    public ResponseEntity<RouteResponse> activateRoute(
+            @AuthenticationPrincipal Long userId,
+            @PathVariable Long id) {
+        return ResponseEntity.ok(routeService.activateRoute(userId, id));
+    }
+
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteRoute(
             @AuthenticationPrincipal Long userId,

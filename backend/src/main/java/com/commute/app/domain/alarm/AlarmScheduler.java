@@ -110,6 +110,18 @@ public class AlarmScheduler {
         }
     }
 
+    // 매시 정각 — 지난 약속 자동 종료
+    @Scheduled(cron = "0 0 * * * *")
+    @Transactional
+    public void autoClosePastAppointments() {
+        LocalDateTime now = LocalDateTime.now();
+        List<Appointment> past = appointmentRepository.findByIsDoneFalseAndAppointmentTimeBefore(now);
+        past.forEach(Appointment::markDone);
+        if (!past.isEmpty()) {
+            log.info("과거 약속 자동 종료 — {}건", past.size());
+        }
+    }
+
     private String buildAlarmBody(int drivingMinutes, WeatherInfo weather) {
         StringBuilder sb = new StringBuilder();
         sb.append("이동 시간 약 ").append(drivingMinutes).append("분");

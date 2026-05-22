@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, ActivityI
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { setupNotificationChannel } from '../hooks/useNotification';
 import { colors, fonts, cardShadow } from '../constants/colors';
 
 const logo = require('../../assets/logo.png');
@@ -87,6 +88,10 @@ export default function AlarmScreen() {
 
   const handleSoundToggle = async (key: string, value: boolean) => {
     await AsyncStorage.setItem(key, String(value));
+    // 진동 설정 변경 시 Android 알림 채널 재적용
+    if (key === STORAGE_KEYS.vibration) {
+      await setupNotificationChannel();
+    }
   };
 
   return (
@@ -170,9 +175,9 @@ export default function AlarmScreen() {
       <View style={[styles.card, { marginBottom: 28 }]}>
         <Text style={styles.sectionTitle}>🔔 사운드 설정</Text>
         {[
-          { label: '진동 알림',   sub: '부드러운 기상 진동',       icon: 'phone-portrait-outline', key: STORAGE_KEYS.vibration,     value: vibration,     set: setVibration },
-          { label: '점진적 음량', sub: '서서히 커지는 알람 소리',   icon: 'volume-medium-outline',  key: STORAGE_KEYS.gradualVolume, value: gradualVolume, set: setGradualVolume },
-          { label: '기상 라이트', sub: '화면 밝기로 서서히 밝힘',   icon: 'sunny-outline',          key: STORAGE_KEYS.wakeLight,     value: wakeLight,     set: setWakeLight },
+          { label: '진동 알림',   sub: 'Android 알림 채널 진동 활성화',     icon: 'phone-portrait-outline', key: STORAGE_KEYS.vibration,     value: vibration,     set: setVibration },
+          { label: '점진적 음량', sub: '준비됨 — 사운드 파일 연결 시 동작',  icon: 'volume-medium-outline',  key: STORAGE_KEYS.gradualVolume, value: gradualVolume, set: setGradualVolume },
+          { label: '기상 라이트', sub: '알림 수신 시 화면 최대 밝기 (1분)',   icon: 'sunny-outline',          key: STORAGE_KEYS.wakeLight,     value: wakeLight,     set: setWakeLight },
         ].map((item, i) => (
           <View key={i} style={styles.settingRow}>
             <View style={styles.settingIconWrap}>

@@ -7,8 +7,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
 import { useAppointmentStore } from '../store/appointmentStore';
-import { geocodeAddress } from '../api/kakao';
 import KakaoMapView from '../components/KakaoMapView';
+import AddressInput from '../components/AddressInput';
 import type { AppointmentRequest } from '../api/appointments';
 import { DEFAULT_ALARM_MINUTES } from '../constants/defaults';
 import { formatKoreanDateTime } from '../utils/timeFormat';
@@ -47,7 +47,6 @@ export default function AppointmentScreen() {
   const [dest, setDest]               = useState('');
   const [destLat, setDestLat]         = useState<number | null>(null);
   const [destLng, setDestLng]         = useState<number | null>(null);
-  const [geocoding, setGeocoding]     = useState(false);
   const [submitting, setSubmitting]   = useState(false);
 
   // 웹용 날짜/시간 텍스트 상태
@@ -56,20 +55,6 @@ export default function AppointmentScreen() {
 
   const { appointments, loading, fetchAppointments, addAppointment } = useAppointmentStore();
   useEffect(() => { fetchAppointments(); }, []);
-
-  const handleGeocode = async () => {
-    if (!dest.trim()) { Alert.alert('목적지 주소를 입력해주세요.'); return; }
-    setGeocoding(true);
-    try {
-      const { data } = await geocodeAddress(dest.trim());
-      setDestLat(data.lat);
-      setDestLng(data.lng);
-    } catch {
-      Alert.alert('위치 검색 실패', '주소를 다시 확인해주세요.');
-    } finally {
-      setGeocoding(false);
-    }
-  };
 
   const getAppointmentTimeISO = (): string | null => {
     if (Platform.OS === 'web') {
@@ -222,22 +207,13 @@ export default function AppointmentScreen() {
 
         {/* 목적지 */}
         <Text style={styles.inputLabel}>목적지 주소</Text>
-        <View style={styles.inputWrap}>
-          <Ionicons name="location-outline" size={16} color={colors.textMuted} />
-          <TextInput
-            style={[styles.inputInner, { flex: 1 }]}
-            value={dest}
-            onChangeText={(t) => { setDest(t); setDestLat(null); setDestLng(null); }}
-            placeholder="장소 또는 주소 입력"
-            placeholderTextColor={colors.textMuted}
-          />
-          <TouchableOpacity onPress={handleGeocode} disabled={geocoding} style={styles.locateBtn}>
-            {geocoding
-              ? <ActivityIndicator size="small" color={colors.primary} />
-              : <Ionicons name="search" size={16} color={colors.primary} />
-            }
-          </TouchableOpacity>
-        </View>
+        <AddressInput
+          value={dest}
+          onChange={(t) => { setDest(t); setDestLat(null); setDestLng(null); }}
+          onSelect={(address, lat, lng) => { setDest(address); setDestLat(lat); setDestLng(lng); }}
+          placeholder="장소 또는 주소 입력"
+          iconName="location-outline"
+        />
 
         {/* 지도 미리보기 */}
         {destLat && destLng ? (

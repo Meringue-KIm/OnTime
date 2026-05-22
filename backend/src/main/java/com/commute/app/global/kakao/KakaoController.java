@@ -7,6 +7,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -21,6 +22,11 @@ public class KakaoController {
         return kakaoMapService.geocode(address)
                 .map(c -> ResponseEntity.ok(Map.of("lat", c.lat(), "lng", c.lng())))
                 .orElse(ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<KakaoMapService.PlaceSuggestion>> searchPlaces(@RequestParam String query) {
+        return ResponseEntity.ok(kakaoMapService.searchPlaces(query));
     }
 
     @GetMapping("/directions")

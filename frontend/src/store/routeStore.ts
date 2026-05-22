@@ -7,6 +7,7 @@ interface RouteState {
   loading: boolean;
   fetchRoutes: () => Promise<void>;
   saveRoute: (data: RouteRequest, id?: number) => Promise<void>;
+  activateRoute: (id: number) => Promise<void>;
   removeRoute: (id: number) => Promise<void>;
 }
 
@@ -34,6 +35,13 @@ export const useRouteStore = create<RouteState>((set) => ({
       const { data: created } = await routeApi.createRoute(data);
       set(state => ({ routes: [...state.routes, created] }));
     }
+  },
+
+  activateRoute: async (id) => {
+    const { data: activated } = await routeApi.activateRoute(id);
+    set(state => ({
+      routes: state.routes.map(r => ({ ...r, isActive: r.id === activated.id })),
+    }));
   },
 
   removeRoute: async (id) => {

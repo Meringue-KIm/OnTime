@@ -26,7 +26,7 @@ class RouteControllerIntegrationTest extends IntegrationTestSupport {
     private RouteRequest sampleRoute() {
         return new RouteRequest("서울시 강남구", 37.495, 127.028,
                 "서울시 중구", 37.563, 126.997,
-                LocalTime.of(9, 0), 10);
+                LocalTime.of(9, 0), 10, null, null);
     }
 
     @Test
@@ -92,7 +92,7 @@ class RouteControllerIntegrationTest extends IntegrationTestSupport {
                 .get("id").asLong();
 
         RouteRequest updatedRoute = new RouteRequest("새 집 주소", 37.5, 127.0,
-                "새 회사 주소", 37.6, 127.1, LocalTime.of(8, 30), 15);
+                "새 회사 주소", 37.6, 127.1, LocalTime.of(8, 30), 15, null, null);
 
         mockMvc.perform(put("/api/routes/" + routeId)
                         .header("Authorization", bearerToken(token))

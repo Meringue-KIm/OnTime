@@ -40,7 +40,7 @@ class RouteServiceTest {
 
     private RouteRequest sampleRequest() {
         return new RouteRequest("집 주소", 37.5, 127.0, "회사 주소", 37.6, 127.1,
-                LocalTime.of(9, 0), 10);
+                LocalTime.of(9, 0), 10, null, null);
     }
 
     private CommuteRoute sampleRoute(User user) {
@@ -69,6 +69,7 @@ class RouteServiceTest {
     void createRoute_success() {
         User user = sampleUser();
         given(userRepository.getReferenceById(1L)).willReturn(user);
+        given(routeRepository.findByUserId(1L)).willReturn(List.of());
         given(routeRepository.save(any())).willReturn(sampleRoute(user));
 
         RouteResponse result = routeService.createRoute(1L, sampleRequest());
