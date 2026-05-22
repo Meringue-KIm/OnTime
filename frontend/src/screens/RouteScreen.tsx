@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
 
@@ -19,6 +20,7 @@ const TRANSPORT_MODES = [
 ] as const;
 
 export default function RouteScreen() {
+  const insets = useSafeAreaInsets();
   const [transport, setTransport] = useState<'car' | 'transit' | 'walk'>('car');
   const [buffer, setBuffer] = useState(15);
   const [homeAddr, setHomeAddr] = useState('');
@@ -75,7 +77,7 @@ export default function RouteScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
@@ -185,7 +187,7 @@ export default function RouteScreen() {
 
 const styles = StyleSheet.create({
   container:          { flex: 1, backgroundColor: colors.bg },
-  header:             { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingTop: 52, paddingBottom: 8 },
+  header:             { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingBottom: 8 },
   logoImg:            { width: 180, height: 81 },
   heroCard:           { margin: 20, backgroundColor: colors.primary, borderRadius: 16, padding: 24 },
   heroTitle:          { fontSize: 24, fontWeight: '800', color: '#fff', lineHeight: 32 },

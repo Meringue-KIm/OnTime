@@ -1,7 +1,9 @@
 package com.commute.app.global.weather;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
@@ -12,6 +14,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Service
@@ -21,6 +24,15 @@ public class WeatherService {
     private String serviceKey;
 
     private final RestClient restClient = RestClient.create();
+    private final StringRedisTemplate redisTemplate;
+    private final ObjectMapper objectMapper;
+
+    private static final long CACHE_TTL_MINUTES = 10;
+
+    public WeatherService(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
+        this.redisTemplate = redisTemplate;
+        this.objectMapper  = objectMapper;
+    }
 
     // Lambert 투영 상수 (기상청 격자 좌표 변환)
     private static final double RE     = 6371.00877;
@@ -52,7 +64,24 @@ public class WeatherService {
         List<HourlyWeatherInfo> hourly
     ) {}
 
+    // ─── 캐시 키 (소수점 2자리 반올림 → 약 1km 이내 동일 키) ──────────────────
+    private String currentKey(Double lat, Double lng) {
+        return String.format("weather:current:%.2f:%.2f", lat, lng);
+    }
+
+    private String summaryKey(Double lat, Double lng) {
+        return String.format("weather:summary:%.2f:%.2f", lat, lng);
+    }
+
+    // ─── Public API ──────────────────────────────────────────────────────────
+
     public WeatherSummary getWeatherSummary(Double lat, Double lng) {
+        String key = summaryKey(lat, lng);
+        try {
+            String cached = redisTemplate.opsForValue().get(key);
+            if (cached != null) return objectMapper.readValue(cached, WeatherSummary.class);
+        } catch (Exception ignored) {}
+
         WeatherInfo current = getWeather(lat, lng)
                 .orElse(new WeatherInfo(0, "맑음", "sunny", 0.0, 0));
         List<HourlyWeatherInfo> hourly = getHourlyForecast(lat, lng);
@@ -64,103 +93,40 @@ public class WeatherService {
         high = Math.max(high, current.temperature());
         low  = Math.min(low,  current.temperature());
 
-        return new WeatherSummary(current.temperature(), current.condition(), current.icon(), high, low, hourly);
-    }
+        WeatherSummary summary = new WeatherSummary(
+                current.temperature(), current.condition(), current.icon(), high, low, hourly);
 
-    public List<HourlyWeatherInfo> getHourlyForecast(Double lat, Double lng) {
-        if (serviceKey == null || serviceKey.isBlank() || lat == null || lng == null) {
-            return List.of();
-        }
         try {
-            int[] grid = latLngToGrid(lat, lng);
+            redisTemplate.opsForValue().set(
+                    key, objectMapper.writeValueAsString(summary), CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+        } catch (Exception ignored) {}
 
-            // 단기예보 base time: 02,05,08,11,14,17,20,23시 (발표 10분 후부터 유효)
-            int[] baseTimes = {2, 5, 8, 11, 14, 17, 20, 23};
-            LocalDateTime now = LocalDateTime.now();
-            int effectiveHour = (now.getMinute() >= 10) ? now.getHour() : now.getHour() - 1;
-
-            int baseHour = 23;
-            LocalDateTime baseDay = now;
-            boolean found = false;
-            for (int i = baseTimes.length - 1; i >= 0; i--) {
-                if (effectiveHour >= baseTimes[i]) {
-                    baseHour = baseTimes[i];
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) baseDay = now.minusDays(1);
-
-            String baseDate = baseDay.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-            String baseTime = String.format("%02d00", baseHour);
-
-            KmaFcstApiResponse response = restClient.get()
-                    .uri(b -> b
-                            .scheme("https")
-                            .host("apis.data.go.kr")
-                            .path("/1360000/VilageFcstInfoService_2.0/getVilageFcst")
-                            .queryParam("serviceKey", serviceKey)
-                            .queryParam("numOfRows", 400)
-                            .queryParam("pageNo", 1)
-                            .queryParam("dataType", "JSON")
-                            .queryParam("base_date", baseDate)
-                            .queryParam("base_time", baseTime)
-                            .queryParam("nx", grid[0])
-                            .queryParam("ny", grid[1])
-                            .build())
-                    .retrieve()
-                    .body(KmaFcstApiResponse.class);
-
-            if (response == null || response.response() == null
-                    || response.response().body() == null
-                    || response.response().body().items() == null
-                    || response.response().body().items().item() == null) {
-                return List.of();
-            }
-
-            // fcstDate+fcstTime 기준으로 그룹핑
-            Map<String, Map<String, String>> byDateTime = new LinkedHashMap<>();
-            for (KmaFcstItem item : response.response().body().items().item()) {
-                String key = item.fcstDate() + item.fcstTime();
-                byDateTime.computeIfAbsent(key, k -> new HashMap<>())
-                          .put(item.category(), item.fcstValue());
-            }
-
-            String nowKey = now.format(DateTimeFormatter.ofPattern("yyyyMMddHH")) + "00";
-
-            return byDateTime.entrySet().stream()
-                    .filter(e -> e.getKey().compareTo(nowKey) >= 0)
-                    .limit(24)
-                    .map(entry -> {
-                        String key  = entry.getKey();
-                        Map<String, String> cats = entry.getValue();
-                        int pty  = cats.containsKey("PTY") ? (int) Double.parseDouble(cats.get("PTY")) : 0;
-                        double tmp = cats.containsKey("TMP") ? Double.parseDouble(cats.get("TMP")) : 0.0;
-                        int sky  = cats.containsKey("SKY") ? (int) Double.parseDouble(cats.get("SKY")) : 1;
-                        WeatherInfo info = pty != 0 ? buildWeatherInfo(pty, tmp) : buildSkyInfo(sky, tmp);
-                        String displayTime = key.substring(8, 10) + ":" + key.substring(10, 12);
-                        return new HourlyWeatherInfo(displayTime, info.condition(), info.icon(), info.temperature());
-                    })
-                    .collect(java.util.stream.Collectors.toList());
-
-        } catch (Exception e) {
-            log.warn("단기예보 API 호출 실패: {}", e.getMessage());
-            return List.of();
-        }
-    }
-
-    private WeatherInfo buildSkyInfo(int sky, double temperature) {
-        return switch (sky) {
-            case 3 -> new WeatherInfo(0, "구름많음", "cloudy", temperature, 0);
-            case 4 -> new WeatherInfo(0, "흐림",    "cloudy", temperature, 0);
-            default -> new WeatherInfo(0, "맑음",   "sunny",  temperature, 0);
-        };
+        return summary;
     }
 
     public Optional<WeatherInfo> getWeather(Double lat, Double lng) {
         if (serviceKey == null || serviceKey.isBlank() || lat == null || lng == null) {
             return Optional.empty();
         }
+
+        String key = currentKey(lat, lng);
+        try {
+            String cached = redisTemplate.opsForValue().get(key);
+            if (cached != null) return Optional.of(objectMapper.readValue(cached, WeatherInfo.class));
+        } catch (Exception ignored) {}
+
+        Optional<WeatherInfo> result = fetchCurrentWeather(lat, lng);
+        result.ifPresent(info -> {
+            try {
+                redisTemplate.opsForValue().set(
+                        key, objectMapper.writeValueAsString(info), CACHE_TTL_MINUTES, TimeUnit.MINUTES);
+            } catch (Exception ignored) {}
+        });
+        return result;
+    }
+
+    // ─── 기상청 초단기실황 API 호출 ────────────────────────────────────────────
+    private Optional<WeatherInfo> fetchCurrentWeather(Double lat, Double lng) {
         try {
             int[] grid = latLngToGrid(lat, lng);
 
@@ -216,6 +182,94 @@ public class WeatherService {
             log.warn("기상청 API 호출 실패: {}", e.getMessage());
             return Optional.empty();
         }
+    }
+
+    public List<HourlyWeatherInfo> getHourlyForecast(Double lat, Double lng) {
+        if (serviceKey == null || serviceKey.isBlank() || lat == null || lng == null) {
+            return List.of();
+        }
+        try {
+            int[] grid = latLngToGrid(lat, lng);
+
+            int[] baseTimes = {2, 5, 8, 11, 14, 17, 20, 23};
+            LocalDateTime now = LocalDateTime.now();
+            int effectiveHour = (now.getMinute() >= 10) ? now.getHour() : now.getHour() - 1;
+
+            int baseHour = 23;
+            LocalDateTime baseDay = now;
+            boolean found = false;
+            for (int i = baseTimes.length - 1; i >= 0; i--) {
+                if (effectiveHour >= baseTimes[i]) {
+                    baseHour = baseTimes[i];
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) baseDay = now.minusDays(1);
+
+            String baseDate = baseDay.format(DateTimeFormatter.ofPattern("yyyyMMdd"));
+            String baseTime = String.format("%02d00", baseHour);
+
+            KmaFcstApiResponse response = restClient.get()
+                    .uri(b -> b
+                            .scheme("https")
+                            .host("apis.data.go.kr")
+                            .path("/1360000/VilageFcstInfoService_2.0/getVilageFcst")
+                            .queryParam("serviceKey", serviceKey)
+                            .queryParam("numOfRows", 400)
+                            .queryParam("pageNo", 1)
+                            .queryParam("dataType", "JSON")
+                            .queryParam("base_date", baseDate)
+                            .queryParam("base_time", baseTime)
+                            .queryParam("nx", grid[0])
+                            .queryParam("ny", grid[1])
+                            .build())
+                    .retrieve()
+                    .body(KmaFcstApiResponse.class);
+
+            if (response == null || response.response() == null
+                    || response.response().body() == null
+                    || response.response().body().items() == null
+                    || response.response().body().items().item() == null) {
+                return List.of();
+            }
+
+            Map<String, Map<String, String>> byDateTime = new LinkedHashMap<>();
+            for (KmaFcstItem item : response.response().body().items().item()) {
+                String key = item.fcstDate() + item.fcstTime();
+                byDateTime.computeIfAbsent(key, k -> new HashMap<>())
+                          .put(item.category(), item.fcstValue());
+            }
+
+            String nowKey = now.format(DateTimeFormatter.ofPattern("yyyyMMddHH")) + "00";
+
+            return byDateTime.entrySet().stream()
+                    .filter(e -> e.getKey().compareTo(nowKey) >= 0)
+                    .limit(24)
+                    .map(entry -> {
+                        String key  = entry.getKey();
+                        Map<String, String> cats = entry.getValue();
+                        int pty  = cats.containsKey("PTY") ? (int) Double.parseDouble(cats.get("PTY")) : 0;
+                        double tmp = cats.containsKey("TMP") ? Double.parseDouble(cats.get("TMP")) : 0.0;
+                        int sky  = cats.containsKey("SKY") ? (int) Double.parseDouble(cats.get("SKY")) : 1;
+                        WeatherInfo info = pty != 0 ? buildWeatherInfo(pty, tmp) : buildSkyInfo(sky, tmp);
+                        String displayTime = key.substring(8, 10) + ":" + key.substring(10, 12);
+                        return new HourlyWeatherInfo(displayTime, info.condition(), info.icon(), info.temperature());
+                    })
+                    .collect(java.util.stream.Collectors.toList());
+
+        } catch (Exception e) {
+            log.warn("단기예보 API 호출 실패: {}", e.getMessage());
+            return List.of();
+        }
+    }
+
+    private WeatherInfo buildSkyInfo(int sky, double temperature) {
+        return switch (sky) {
+            case 3 -> new WeatherInfo(0, "구름많음", "cloudy", temperature, 0);
+            case 4 -> new WeatherInfo(0, "흐림",    "cloudy", temperature, 0);
+            default -> new WeatherInfo(0, "맑음",   "sunny",  temperature, 0);
+        };
     }
 
     private WeatherInfo buildWeatherInfo(int pty, double temperature) {

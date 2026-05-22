@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
 
@@ -11,6 +12,7 @@ import { BUFFER_MIN, BUFFER_MAX, BUFFER_STEP } from '../constants/defaults';
 import { extractTimeHHmm } from '../utils/timeFormat';
 
 export default function AlarmScreen() {
+  const insets = useSafeAreaInsets();
   const [departureTime, setDepartureTime] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -63,7 +65,7 @@ export default function AlarmScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
@@ -169,7 +171,7 @@ export default function AlarmScreen() {
 
 const styles = StyleSheet.create({
   container:          { flex: 1, backgroundColor: colors.bg },
-  header:             { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingTop: 52, paddingBottom: 8 },
+  header:             { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingBottom: 8 },
   logoImg:            { width: 180, height: 81 },
   wakeCard:           { margin: 20, backgroundColor: colors.primary, borderRadius: 16, padding: 24, alignItems: 'center' },
   wakeLabel:          { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginBottom: 4 },

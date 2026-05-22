@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Image,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const logo = require('../../assets/logo.png');
 import { Ionicons } from '@expo/vector-icons';
@@ -25,6 +26,7 @@ function parseDateTimeInput(date: string, time: string): string | null {
 }
 
 export default function AppointmentScreen() {
+  const insets = useSafeAreaInsets();
   const [title, setTitle]   = useState('');
   const [date, setDate]     = useState('');
   const [time, setTime]     = useState('');
@@ -87,7 +89,7 @@ export default function AppointmentScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
@@ -229,7 +231,7 @@ export default function AppointmentScreen() {
 
 const styles = StyleSheet.create({
   container:          { flex: 1, backgroundColor: colors.bg },
-  header:             { paddingHorizontal: 20, paddingTop: 52, paddingBottom: 8 },
+  header:             { paddingHorizontal: 20, paddingBottom: 8 },
   logoImg:            { width: 180, height: 81 },
   titleRow:           { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12 },
   pageTitle:          { fontSize: 20, fontWeight: '700', color: colors.textPrimary },

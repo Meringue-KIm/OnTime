@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const logo = require('../../assets/logo.png');
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +10,7 @@ import { formatDate } from '../utils/timeFormat';
 import { extractTimeHHmm } from '../utils/timeFormat';
 
 export default function StatsScreen() {
+  const insets = useSafeAreaInsets();
   const [logs, setLogs] = useState<CommuteLog[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -39,7 +41,7 @@ export default function StatsScreen() {
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
@@ -179,7 +181,7 @@ function getWeekLabel(d: Date): string {
 const styles = StyleSheet.create({
   container:        { flex: 1, backgroundColor: colors.bg },
   center:           { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  header:           { paddingHorizontal: 20, paddingTop: 52, paddingBottom: 8 },
+  header:           { paddingHorizontal: 20, paddingBottom: 8 },
   logoImg:          { width: 180, height: 81 },
   insightCard:      { margin: 20, backgroundColor: colors.primary, borderRadius: 16, padding: 20 },
   insightBadge:     { backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 10 },

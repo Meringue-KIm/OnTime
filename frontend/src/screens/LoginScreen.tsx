@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  Text, TextInput, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { login } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 
@@ -29,7 +30,7 @@ export default function LoginScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.title}>✈ OnTime</Text>
       <Text style={styles.subtitle}>스마트 출발 시간 알람</Text>
 
@@ -65,7 +66,7 @@ export default function LoginScreen({ navigation }: any) {
           <Text style={styles.devButtonText}>🛠 개발자 모드로 진입</Text>
         </TouchableOpacity>
       )}
-    </View>
+    </SafeAreaView>
   );
 }
 

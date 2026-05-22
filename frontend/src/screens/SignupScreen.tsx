@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import {
-  View, Text, TextInput, TouchableOpacity,
+  Text, TextInput, TouchableOpacity,
   StyleSheet, Alert, ActivityIndicator,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { signup } from '../api/auth';
 
 export default function SignupScreen({ navigation }: any) {
@@ -38,7 +39,7 @@ export default function SignupScreen({ navigation }: any) {
   };
 
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <Text style={styles.title}>회원가입</Text>
 
       <TextInput
@@ -71,7 +72,7 @@ export default function SignupScreen({ navigation }: any) {
       <TouchableOpacity onPress={() => navigation.navigate('Login')}>
         <Text style={styles.link}>이미 계정이 있으신가요? 로그인</Text>
       </TouchableOpacity>
-    </View>
+    </SafeAreaView>
   );
 }
 

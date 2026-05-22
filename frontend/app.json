@@ -14,13 +14,17 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.ontime.app"
+      "bundleIdentifier": "com.ontime.app",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "현재 위치 기반 날씨를 제공하기 위해 위치 정보를 사용합니다."
+      }
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
+      "permissions": ["ACCESS_FINE_LOCATION", "ACCESS_COARSE_LOCATION"],
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false,
       "package": "com.ontime.app",

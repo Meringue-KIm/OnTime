@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
@@ -9,6 +10,7 @@ import { getWeatherSummary, type WeatherSummary } from '../api/weather';
 import { useRouteStore } from '../store/routeStore';
 import { useAppointmentStore } from '../store/appointmentStore';
 import { useNotification } from '../hooks/useNotification';
+import { useLocation } from '../hooks/useLocation';
 import { formatApptTime, extractTimeHHmm } from '../utils/timeFormat';
 import { getWeatherNavIcon, getWeatherIonicon } from '../utils/weather';
 import { DEFAULT_LOCATION } from '../constants/locations';
@@ -27,6 +29,7 @@ Notifications.setNotificationHandler({
 
 
 export default function HomeScreen() {
+  const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [todayLoading, setTodayLoading] = useState(true);
@@ -34,6 +37,7 @@ export default function HomeScreen() {
 
   const { routes, fetchRoutes } = useRouteStore();
   const { appointments, fetchAppointments } = useAppointmentStore();
+  const { coords: gpsCoords, status: locationStatus } = useLocation();
 
   useEffect(() => {
     fetchRoutes();
@@ -42,19 +46,17 @@ export default function HomeScreen() {
       .then(({ data }) => setToday(data))
       .catch(() => setToday(null))
       .finally(() => setTodayLoading(false));
-    getWeatherSummary(DEFAULT_LOCATION.lat, DEFAULT_LOCATION.lng)
-      .then(({ data }) => setWeather(data))
-      .catch(() => {});
   }, []);
 
+  // 날씨 우선순위: GPS 위치 > 활성 경로 집 주소 > 서울 기본값
   useEffect(() => {
     const active = routes.find(r => r.isActive) ?? routes[0];
-    if (active?.homeLat && active?.homeLng) {
-      getWeatherSummary(active.homeLat, active.homeLng)
-        .then(({ data }) => setWeather(data))
-        .catch(() => {});
-    }
-  }, [routes]);
+    const lat = gpsCoords?.lat ?? active?.homeLat ?? DEFAULT_LOCATION.lat;
+    const lng = gpsCoords?.lng ?? active?.homeLng ?? DEFAULT_LOCATION.lng;
+    getWeatherSummary(lat, lng)
+      .then(({ data }) => setWeather(data))
+      .catch(() => {});
+  }, [gpsCoords, routes]);
 
   useNotification();
 
@@ -68,7 +70,7 @@ export default function HomeScreen() {
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
 
       {/* Header */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
@@ -98,7 +100,9 @@ export default function HomeScreen() {
             <TouchableOpacity style={styles.weatherLocationBtn} onPress={() => navigation.navigate('Route')}>
               <Ionicons name="location-outline" size={12} color={colors.primary} />
               <Text style={styles.weatherLocation}>
-                {activeRoute?.homeAddress?.split(' ').slice(0, 2).join(' ') ?? '서울'}
+                {gpsCoords
+                  ? '현재 위치'
+                  : activeRoute?.homeAddress?.split(' ').slice(0, 2).join(' ') ?? '서울'}
               </Text>
               <Ionicons name="chevron-forward" size={11} color={colors.textMuted} />
             </TouchableOpacity>
@@ -230,7 +234,7 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container:        { flex: 1, backgroundColor: colors.bg },
-  header:           { paddingHorizontal: 20, paddingTop: 52, paddingBottom: 4 },
+  header:           { paddingHorizontal: 20, paddingBottom: 4 },
   logoImg:          { width: 180, height: 81 },
   greetingSection:  { paddingHorizontal: 20, paddingBottom: 12 },
   greeting:         { fontSize: 16, fontFamily: fonts.semiBold, color: colors.textSecondary },
