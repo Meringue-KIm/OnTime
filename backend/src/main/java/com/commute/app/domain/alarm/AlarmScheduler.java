@@ -1,5 +1,7 @@
 package com.commute.app.domain.alarm;
 
+import com.commute.app.domain.appointment.entity.Appointment;
+import com.commute.app.domain.appointment.repository.AppointmentRepository;
 import com.commute.app.domain.route.entity.CommuteRoute;
 import com.commute.app.domain.route.repository.CommuteRouteRepository;
 import com.commute.app.global.fcm.FcmService;
@@ -12,6 +14,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
@@ -22,6 +25,7 @@ import java.util.Optional;
 public class AlarmScheduler {
 
     private final CommuteRouteRepository routeRepository;
+    private final AppointmentRepository appointmentRepository;
     private final KakaoMapService kakaoMapService;
     private final WeatherService weatherService;
     private final FcmService fcmService;
@@ -54,6 +58,32 @@ public class AlarmScheduler {
                 String body  = buildAlarmBody(drivingMinutes, weatherOpt.orElse(null));
                 fcmService.sendPushNotification(fcmToken, title, body);
                 log.info("알람 발송 — userId={}, 출발={}", route.getUser().getId(), departureTime);
+            }
+        }
+    }
+
+    // 매 분마다 실행 — 약속 출발 알람
+    @Scheduled(cron = "0 * * * * *")
+    @Transactional(readOnly = true)
+    public void sendAppointmentAlarms() {
+        LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
+
+        List<Appointment> appointments = appointmentRepository
+                .findByIsDoneFalseAndAppointmentTimeAfter(now);
+
+        for (Appointment appt : appointments) {
+            String fcmToken = appt.getUser().getFcmToken();
+            if (fcmToken == null || fcmToken.isBlank()) continue;
+
+            LocalDateTime alarmAt = appt.getAppointmentTime()
+                    .minusMinutes(appt.getAlarmBeforeMinutes());
+
+            if (now.equals(alarmAt)) {
+                String title = "약속 시간이 다가와요!";
+                String body  = appt.getDestAddress() + " — "
+                             + appt.getAlarmBeforeMinutes() + "분 후 출발하세요";
+                fcmService.sendPushNotification(fcmToken, title, body);
+                log.info("약속 알람 발송 — apptId={}, 약속시각={}", appt.getId(), appt.getAppointmentTime());
             }
         }
     }
