@@ -1,6 +1,6 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 
 const BASE_URL = process.env.EXPO_PUBLIC_API_BASE_URL
   ?? (Platform.OS === 'android' ? 'http://10.0.2.2:8080/api' : 'http://localhost:8080/api');
@@ -54,10 +54,15 @@ client.interceptors.response.use(
 
       return client(original);
     } catch {
-      // Refresh Token도 만료 → 강제 로그아웃
+      // Refresh Token도 만료 → 안내 후 강제 로그아웃
       await AsyncStorage.multiRemove(['accessToken', 'refreshToken']);
       const { useAuthStore } = await import('../store/authStore');
       useAuthStore.getState().logout();
+      Alert.alert(
+        '세션이 만료되었습니다',
+        '보안을 위해 자동으로 로그아웃되었습니다. 다시 로그인해주세요.',
+        [{ text: '확인' }],
+      );
       return Promise.reject(error);
     } finally {
       isRefreshing = false;
