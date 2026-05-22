@@ -42,3 +42,4 @@ certbot/
 .DS_Store
 *.log
 *.orig
+firebase_b64.txt

@@ -195,7 +195,7 @@ export default function AlarmScreen() {
         <Text style={styles.sectionTitle}>🔔 사운드 설정</Text>
         {[
           { label: '진동 알림',   sub: 'Android 알림 채널 진동 활성화',     icon: 'phone-portrait-outline', key: STORAGE_KEYS.vibration,     value: vibration,     set: setVibration },
-          { label: '점진적 음량', sub: '준비됨 — 사운드 파일 연결 시 동작',  icon: 'volume-medium-outline',  key: STORAGE_KEYS.gradualVolume, value: gradualVolume, set: setGradualVolume },
+          { label: '점진적 음량', sub: '포그라운드 알림 수신 시 음량을 서서히 높입니다', icon: 'volume-medium-outline', key: STORAGE_KEYS.gradualVolume, value: gradualVolume, set: setGradualVolume },
           { label: '기상 라이트', sub: '알림 수신 시 화면 최대 밝기 (1분)',   icon: 'sunny-outline',          key: STORAGE_KEYS.wakeLight,     value: wakeLight,     set: setWakeLight },
         ].map((item, i) => (
           <View key={i} style={styles.settingRow}>
