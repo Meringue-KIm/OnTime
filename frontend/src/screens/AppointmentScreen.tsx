@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import {
-  View, Text, ScrollView, StyleSheet, TouchableOpacity, TextInput, Alert, ActivityIndicator, Image,
+  View, Text, ScrollView, StyleSheet, TouchableOpacity,
+  TextInput, Alert, ActivityIndicator, Image, Platform,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-const logo = require('../../assets/logo.png');
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
 import { useAppointmentStore } from '../store/appointmentStore';
@@ -15,29 +14,47 @@ import { DEFAULT_ALARM_MINUTES } from '../constants/defaults';
 import { formatKoreanDateTime } from '../utils/timeFormat';
 import { getErrorMessage } from '../utils/errors';
 
-function parseDateTimeInput(date: string, time: string): string | null {
-  const dateParts = date.split('/');
-  const timeParts = time.split(':');
-  if (dateParts.length !== 3 || timeParts.length !== 2) return null;
-  const [month, day, year] = dateParts;
-  const [hour, minute] = timeParts;
-  if ([month, day, year, hour, minute].some(p => isNaN(Number(p)))) return null;
-  return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}T${hour.padStart(2, '0')}:${minute.padStart(2, '0')}:00`;
+const logo = require('../../assets/logo.png');
+
+// 날짜 표시 포맷
+function formatDisplayDate(d: Date) {
+  return d.toLocaleDateString('ko-KR', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' });
+}
+function formatDisplayTime(d: Date) {
+  return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+function toISOLocal(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:00`;
+}
+
+// 웹에서 네이티브 DateTimePicker 대신 input 사용
+let DateTimePicker: any = null;
+if (Platform.OS !== 'web') {
+  DateTimePicker = require('@react-native-community/datetimepicker').default;
 }
 
 export default function AppointmentScreen() {
   const insets = useSafeAreaInsets();
-  const [title, setTitle]   = useState('');
-  const [date, setDate]     = useState('');
-  const [time, setTime]     = useState('');
-  const [dest, setDest]     = useState('');
-  const [destLat, setDestLat] = useState<number | null>(null);
-  const [destLng, setDestLng] = useState<number | null>(null);
-  const [geocoding, setGeocoding]   = useState(false);
-  const [submitting, setSubmitting] = useState(false);
+
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(9, 0, 0, 0);
+
+  const [apptDate, setApptDate]       = useState<Date>(tomorrow);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [dest, setDest]               = useState('');
+  const [destLat, setDestLat]         = useState<number | null>(null);
+  const [destLng, setDestLng]         = useState<number | null>(null);
+  const [geocoding, setGeocoding]     = useState(false);
+  const [submitting, setSubmitting]   = useState(false);
+
+  // 웹용 날짜/시간 텍스트 상태
+  const [webDate, setWebDate] = useState('');
+  const [webTime, setWebTime] = useState('09:00');
 
   const { appointments, loading, fetchAppointments, addAppointment } = useAppointmentStore();
-
   useEffect(() => { fetchAppointments(); }, []);
 
   const handleGeocode = async () => {
@@ -54,14 +71,22 @@ export default function AppointmentScreen() {
     }
   };
 
+  const getAppointmentTimeISO = (): string | null => {
+    if (Platform.OS === 'web') {
+      if (!webDate || !webTime) return null;
+      return `${webDate}T${webTime}:00`;
+    }
+    return toISOLocal(apptDate);
+  };
+
   const handleSubmit = async () => {
-    if (!dest.trim() || !date.trim() || !time.trim()) {
-      Alert.alert('목적지, 날짜, 시간을 모두 입력해주세요.');
+    if (!dest.trim()) {
+      Alert.alert('목적지 주소를 입력해주세요.');
       return;
     }
-    const appointmentTime = parseDateTimeInput(date, time);
+    const appointmentTime = getAppointmentTimeISO();
     if (!appointmentTime) {
-      Alert.alert('날짜는 mm/dd/yyyy, 시간은 HH:mm 형식으로 입력해주세요.');
+      Alert.alert('날짜와 시간을 입력해주세요.');
       return;
     }
 
@@ -76,14 +101,21 @@ export default function AppointmentScreen() {
     setSubmitting(true);
     try {
       await addAppointment(apptData);
-      setTitle(''); setDate(''); setTime('');
       setDest(''); setDestLat(null); setDestLng(null);
+      setApptDate(tomorrow);
+      setWebDate(''); setWebTime('09:00');
       Alert.alert('등록 완료', '약속이 추가되었습니다.');
     } catch (e: any) {
       Alert.alert('등록 실패', getErrorMessage(e));
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleReset = () => {
+    setDest(''); setDestLat(null); setDestLng(null);
+    setApptDate(tomorrow);
+    setWebDate(''); setWebTime('09:00');
   };
 
   return (
@@ -98,49 +130,97 @@ export default function AppointmentScreen() {
         <Text style={styles.pageTitle}>새로운 약속 등록</Text>
       </View>
 
-      {/* Form */}
+      {/* 등록 폼 */}
       <View style={styles.card}>
-        <Text style={styles.inputLabel}>약속 제목 (메모용)</Text>
-        <TextInput
-          style={styles.input}
-          value={title}
-          onChangeText={setTitle}
-          placeholder="예: 팀 주간 회의"
-          placeholderTextColor={colors.textMuted}
-        />
 
-        <View style={styles.row}>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.inputLabel}>날짜 (mm/dd/yyyy)</Text>
-            <View style={styles.inputWrap}>
-              <TextInput
-                style={styles.inputInner}
-                value={date}
-                onChangeText={setDate}
-                placeholder="05/21/2026"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="numbers-and-punctuation"
-              />
-              <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
+        {/* 날짜/시간 선택 */}
+        {Platform.OS === 'web' ? (
+          // 웹: HTML input 사용
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>날짜</Text>
+              <View style={styles.inputWrap}>
+                <TextInput
+                  style={styles.inputInner}
+                  value={webDate}
+                  onChangeText={setWebDate}
+                  placeholder="2026-05-22"
+                  placeholderTextColor={colors.textMuted}
+                />
+                <Ionicons name="calendar-outline" size={16} color={colors.textMuted} />
+              </View>
+            </View>
+            <View style={{ width: 12 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>시간</Text>
+              <View style={styles.inputWrap}>
+                <TextInput
+                  style={styles.inputInner}
+                  value={webTime}
+                  onChangeText={setWebTime}
+                  placeholder="09:00"
+                  placeholderTextColor={colors.textMuted}
+                />
+                <Ionicons name="time-outline" size={16} color={colors.textMuted} />
+              </View>
             </View>
           </View>
-          <View style={{ width: 12 }} />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.inputLabel}>시간 (HH:mm)</Text>
-            <View style={styles.inputWrap}>
-              <TextInput
-                style={styles.inputInner}
-                value={time}
-                onChangeText={setTime}
-                placeholder="14:30"
-                placeholderTextColor={colors.textMuted}
-                keyboardType="numbers-and-punctuation"
-              />
-              <Ionicons name="time-outline" size={16} color={colors.textMuted} />
+        ) : (
+          // 모바일: DateTimePicker
+          <View style={styles.row}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>날짜</Text>
+              <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowDatePicker(true)}>
+                <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+                <Text style={styles.pickerText}>{formatDisplayDate(apptDate)}</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ width: 12 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.inputLabel}>시간</Text>
+              <TouchableOpacity style={styles.pickerBtn} onPress={() => setShowTimePicker(true)}>
+                <Ionicons name="time-outline" size={16} color={colors.primary} />
+                <Text style={styles.pickerText}>{formatDisplayTime(apptDate)}</Text>
+              </TouchableOpacity>
             </View>
           </View>
-        </View>
+        )}
 
+        {/* DateTimePicker 모달 (모바일) */}
+        {showDatePicker && DateTimePicker && (
+          <DateTimePicker
+            value={apptDate}
+            mode="date"
+            minimumDate={new Date()}
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(_: any, selected?: Date) => {
+              setShowDatePicker(false);
+              if (selected) {
+                const updated = new Date(apptDate);
+                updated.setFullYear(selected.getFullYear(), selected.getMonth(), selected.getDate());
+                setApptDate(updated);
+              }
+            }}
+          />
+        )}
+        {showTimePicker && DateTimePicker && (
+          <DateTimePicker
+            value={apptDate}
+            mode="time"
+            is24Hour
+            display={Platform.OS === 'ios' ? 'spinner' : 'default'}
+            onChange={(_: any, selected?: Date) => {
+              setShowTimePicker(false);
+              if (selected) {
+                const updated = new Date(apptDate);
+                updated.setHours(selected.getHours(), selected.getMinutes());
+                setApptDate(updated);
+              }
+            }}
+          />
+        )}
+
+        {/* 목적지 */}
         <Text style={styles.inputLabel}>목적지 주소</Text>
         <View style={styles.inputWrap}>
           <Ionicons name="location-outline" size={16} color={colors.textMuted} />
@@ -167,18 +247,13 @@ export default function AppointmentScreen() {
         ) : (
           <View style={styles.mapPlaceholder}>
             <Ionicons name="map" size={28} color={colors.textMuted} />
-            <Text style={styles.mapPlaceholderText}>
-              주소 입력 후 🔍 를 눌러 위치를 확인하세요
-            </Text>
+            <Text style={styles.mapPlaceholderText}>주소 입력 후 🔍 를 눌러 위치를 확인하세요</Text>
           </View>
         )}
 
         <View style={[styles.row, { marginTop: 16, gap: 12 }]}>
-          <TouchableOpacity
-            style={styles.cancelBtn}
-            onPress={() => { setTitle(''); setDate(''); setTime(''); setDest(''); setDestLat(null); setDestLng(null); }}
-          >
-            <Text style={styles.cancelText}>취소</Text>
+          <TouchableOpacity style={styles.cancelBtn} onPress={handleReset}>
+            <Text style={styles.cancelText}>초기화</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={submitting}>
             {submitting
@@ -194,20 +269,17 @@ export default function AppointmentScreen() {
         <Text style={styles.sectionTitle}>등록된 약속</Text>
 
         {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 8 }} />}
-
         {!loading && appointments.length === 0 && (
           <Text style={styles.emptyText}>등록된 약속이 없습니다.</Text>
         )}
 
         {appointments.map((item) => {
           const timeStr = formatKoreanDateTime(item.appointmentTime);
-          const dDayText = item.isDone
-            ? '완료'
+          const dDayText = item.isDone ? '완료'
             : item.dDay === 0 ? 'D-Day'
             : item.dDay > 0  ? `D-${item.dDay}`
             : '종료';
-          const statusColor = item.isDone
-            ? colors.success
+          const statusColor = item.isDone ? colors.success
             : item.dDay < 0 ? colors.danger
             : colors.primary;
 
@@ -234,25 +306,26 @@ const styles = StyleSheet.create({
   header:             { paddingHorizontal: 20, paddingBottom: 8 },
   logoImg:            { width: 180, height: 81 },
   titleRow:           { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12 },
-  pageTitle:          { fontSize: 20, fontWeight: '700', color: colors.textPrimary },
-  card:               { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
-  inputLabel:         { fontSize: 12, color: colors.textSecondary, marginBottom: 6, marginTop: 12 },
-  input:              { backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12, fontSize: 14, color: colors.textPrimary },
+  pageTitle:          { fontSize: 20, fontFamily: fonts.bold, color: colors.textPrimary },
+  card:               { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, ...cardShadow },
+  inputLabel:         { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary, marginBottom: 6, marginTop: 12 },
   inputWrap:          { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
-  inputInner:         { fontSize: 14, color: colors.textPrimary },
+  inputInner:         { fontSize: 14, fontFamily: fonts.regular, color: colors.textPrimary },
+  pickerBtn:          { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 12 },
+  pickerText:         { flex: 1, fontSize: 13, fontFamily: fonts.semiBold, color: colors.textPrimary },
   locateBtn:          { padding: 4 },
   row:                { flexDirection: 'row' },
   mapPlaceholder:     { height: 120, backgroundColor: colors.bg, borderRadius: 10, alignItems: 'center', justifyContent: 'center', marginTop: 12, gap: 8, borderWidth: 1, borderColor: colors.border, borderStyle: 'dashed' },
-  mapPlaceholderText: { fontSize: 12, color: colors.textMuted, textAlign: 'center', paddingHorizontal: 16 },
+  mapPlaceholderText: { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', paddingHorizontal: 16 },
   cancelBtn:          { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.bg, alignItems: 'center' },
-  cancelText:         { fontSize: 15, fontWeight: '600', color: colors.textSecondary },
-  submitBtn:          { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.accent, alignItems: 'center' },
-  submitText:         { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
-  sectionTitle:       { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 },
-  emptyText:          { fontSize: 13, color: colors.textMuted, textAlign: 'center', paddingVertical: 12 },
+  cancelText:         { fontSize: 15, fontFamily: fonts.semiBold, color: colors.textSecondary },
+  submitBtn:          { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' },
+  submitText:         { fontSize: 15, fontFamily: fonts.bold, color: '#fff' },
+  sectionTitle:       { fontSize: 15, fontFamily: fonts.bold, color: colors.textPrimary, marginBottom: 12 },
+  emptyText:          { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', paddingVertical: 12 },
   apptItem:           { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
-  apptTitle:          { fontSize: 14, fontWeight: '600', color: colors.textPrimary },
-  apptTime:           { fontSize: 12, color: colors.textMuted, marginTop: 2 },
+  apptTitle:          { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },
+  apptTime:           { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
   statusBadge:        { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  statusText:         { fontSize: 12, fontWeight: '600' },
+  statusText:         { fontSize: 12, fontFamily: fonts.semiBold },
 });
