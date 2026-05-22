@@ -65,10 +65,23 @@ public class KakaoMapService {
 
     public Optional<Integer> getDrivingMinutes(Double originLat, Double originLng,
                                                Double destLat, Double destLng) {
-        if (restApiKey.isBlank() || originLat == null || destLat == null) return Optional.empty();
+        return getTravelMinutes(originLat, originLng, destLat, destLng, "car");
+    }
 
-        String key = String.format("kakao:directions:%.4f:%.4f:%.4f:%.4f",
-                originLat, originLng, destLat, destLng);
+    public Optional<Integer> getTravelMinutes(Double originLat, Double originLng,
+                                              Double destLat, Double destLng, String transportMode) {
+        if (originLat == null || destLat == null) return Optional.empty();
+
+        if ("walk".equals(transportMode)) {
+            double distKm = haversineKm(originLat, originLng, destLat, destLng);
+            int minutes = (int) Math.ceil(distKm * 1.3 / 5.0 * 60);
+            return Optional.of(minutes);
+        }
+
+        if (restApiKey.isBlank()) return Optional.empty();
+
+        String key = String.format("kakao:directions:%s:%.4f:%.4f:%.4f:%.4f",
+                transportMode, originLat, originLng, destLat, destLng);
         try {
             String cached = redisTemplate.opsForValue().get(key);
             if (cached != null) return Optional.of(Integer.parseInt(cached));
@@ -91,7 +104,11 @@ public class KakaoMapService {
             RouteSummary summary = response.routes().get(0).summary();
             if (summary == null) return Optional.empty();
 
-            int minutes = (int) Math.ceil(summary.duration() / 60.0);
+            int carMinutes = (int) Math.ceil(summary.duration() / 60.0);
+            int minutes = "transit".equals(transportMode)
+                    ? (int) Math.ceil(carMinutes * 1.4)
+                    : carMinutes;
+
             try {
                 redisTemplate.opsForValue().set(key, String.valueOf(minutes), 30, TimeUnit.MINUTES);
             } catch (Exception ignored) {}
@@ -101,6 +118,16 @@ public class KakaoMapService {
             log.warn("Kakao directions failed: {}", e.getMessage());
             return Optional.empty();
         }
+    }
+
+    private double haversineKm(double lat1, double lng1, double lat2, double lng2) {
+        final double R = 6371.0;
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLng = Math.toRadians(lng2 - lng1);
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                 + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                 * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
     // ─── Kakao Geocode response ────────────────────────────────────────────────

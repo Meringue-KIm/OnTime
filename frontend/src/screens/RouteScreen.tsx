@@ -41,6 +41,7 @@ export default function RouteScreen() {
       setWorkAddr(active.workAddress);
       setBuffer(active.alarmBeforeMinutes);
       setArrivalTime(extractTimeHHmm(active.arrivalTime));
+      if (active.transportMode) setTransport(active.transportMode as 'car' | 'transit' | 'walk');
     }
   }, [routes]);
 
@@ -60,6 +61,7 @@ export default function RouteScreen() {
       workAddress: workAddr.trim(),
       arrivalTime: `${arrivalTime}:00`,
       alarmBeforeMinutes: buffer,
+      transportMode: transport,
     };
 
     setSaving(true);

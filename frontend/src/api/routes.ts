@@ -10,6 +10,7 @@ export interface RouteRequest {
   arrivalTime: string; // "HH:mm:ss"
   alarmBeforeMinutes: number;
   activeDays?: string; // "0,1,2,3,4,5,6" 중 선택 (0=일,1=월...6=토)
+  transportMode?: 'car' | 'transit' | 'walk';
 }
 
 export interface RouteResponse {
@@ -24,6 +25,7 @@ export interface RouteResponse {
   alarmBeforeMinutes: number;
   isActive: boolean;
   activeDays: string;
+  transportMode: string;
 }
 
 export const getRoutes = () => client.get<RouteResponse[]>('/routes');

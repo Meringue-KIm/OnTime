@@ -51,8 +51,9 @@ public class AlarmScheduler {
             if (fcmToken == null || fcmToken.isBlank()) continue;
 
             int drivingMinutes = kakaoMapService
-                    .getDrivingMinutes(route.getHomeLat(), route.getHomeLng(),
-                                       route.getWorkLat(), route.getWorkLng())
+                    .getTravelMinutes(route.getHomeLat(), route.getHomeLng(),
+                                      route.getWorkLat(), route.getWorkLng(),
+                                      route.getTransportMode())
                     .orElse(30);
 
             Optional<WeatherInfo> weatherOpt = weatherService.getWeather(

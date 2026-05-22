@@ -44,8 +44,9 @@ public class LogController {
                     CommuteRoute route = routes.get(0);
 
                     int drivingMinutes = kakaoMapService
-                            .getDrivingMinutes(route.getHomeLat(), route.getHomeLng(),
-                                               route.getWorkLat(), route.getWorkLng())
+                            .getTravelMinutes(route.getHomeLat(), route.getHomeLng(),
+                                              route.getWorkLat(), route.getWorkLng(),
+                                              route.getTransportMode())
                             .orElse(30);
 
                     Optional<WeatherInfo> weatherOpt = weatherService.getWeather(

@@ -13,5 +13,6 @@ public record RouteRequest(
         Double workLng,
         @NotNull LocalTime arrivalTime,
         @NotNull Integer alarmBeforeMinutes,
-        String activeDays
+        String activeDays,
+        String transportMode
 ) {}

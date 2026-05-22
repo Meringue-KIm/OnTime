@@ -46,6 +46,11 @@ public class CommuteRoute {
     @Column(name = "alarm_before_minutes", nullable = false)
     private Integer alarmBeforeMinutes;
 
+    // 이동 수단: car, transit, walk
+    @Column(name = "transport_mode", nullable = false)
+    @Builder.Default
+    private String transportMode = "car";
+
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
@@ -64,7 +69,8 @@ public class CommuteRoute {
 
     public void update(String homeAddress, Double homeLat, Double homeLng,
                        String workAddress, Double workLat, Double workLng,
-                       LocalTime arrivalTime, Integer alarmBeforeMinutes, String activeDays) {
+                       LocalTime arrivalTime, Integer alarmBeforeMinutes,
+                       String activeDays, String transportMode) {
         this.homeAddress = homeAddress;
         this.homeLat = homeLat;
         this.homeLng = homeLng;
@@ -74,6 +80,7 @@ public class CommuteRoute {
         this.arrivalTime = arrivalTime;
         this.alarmBeforeMinutes = alarmBeforeMinutes;
         if (activeDays != null && !activeDays.isBlank()) this.activeDays = activeDays;
+        if (transportMode != null && !transportMode.isBlank()) this.transportMode = transportMode;
     }
 
     public void deactivate() {
