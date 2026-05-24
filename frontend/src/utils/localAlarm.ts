@@ -28,8 +28,13 @@ export async function scheduleLocalAlarm(departureTimeStr: string): Promise<void
       title: '출발할 시간이에요! 🚀',
       body: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} 출발 — OnTime 알람`,
       sound: true,
+      priority: Notifications.AndroidNotificationPriority.MAX,
     },
-    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: alarm },
+    trigger: {
+      type: Notifications.SchedulableTriggerInputTypes.DATE,
+      date: alarm,
+      channelId: 'alarm',
+    } as any,
   });
 
   await AsyncStorage.setItem(ALARM_ID_KEY, id);

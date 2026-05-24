@@ -41,9 +41,6 @@ public class RouteService {
     public RouteResponse createRoute(Long userId, RouteRequest request) {
         User user = userRepository.getReferenceById(userId);
 
-        // 새 루트를 활성화하면서 기존 활성 루트를 모두 비활성화
-        routeRepository.findByUserId(userId).forEach(CommuteRoute::deactivate);
-
         double[] home = resolveCoordinates(request.homeLat(), request.homeLng(), request.homeAddress());
         double[] work = resolveCoordinates(request.workLat(), request.workLng(), request.workAddress());
         Double homeLat = home[0] != 0.0 ? home[0] : null;
@@ -69,7 +66,6 @@ public class RouteService {
 
     @Transactional
     public RouteResponse activateRoute(Long userId, Long routeId) {
-        routeRepository.findByUserId(userId).forEach(CommuteRoute::deactivate);
         CommuteRoute route = routeRepository.findByIdAndUserId(routeId, userId)
                 .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.ROUTE_NOT_FOUND));
         route.activate();

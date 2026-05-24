@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Alert, ActivityIndicator, Image, Platform,
+  Alert, ActivityIndicator, Image, Platform, TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -55,6 +55,7 @@ export default function RouteScreen() {
   const [transport, setTransport]   = useState<'car' | 'transit' | 'walk'>('car');
   const [activeDays, setActiveDays] = useState([1, 2, 3, 4, 5]);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [customTravelMin, setCustomTravelMin] = useState<string>('');
 
   useEffect(() => { fetchRoutes(); }, []);
 
@@ -193,12 +194,15 @@ export default function RouteScreen() {
             <View key={route.id} style={[styles.routeCard, route.isActive && styles.routeCardActive]}>
               <View style={styles.routeCardTop}>
                 <View style={styles.routeStatusRow}>
-                  {route.isActive
-                    ? <View style={styles.activeBadge}><Text style={styles.activeBadgeText}>활성</Text></View>
-                    : <TouchableOpacity style={styles.inactiveBadge} onPress={() => handleActivate(route.id)}>
-                        <Text style={styles.inactiveBadgeText}>활성화</Text>
-                      </TouchableOpacity>
-                  }
+                  <TouchableOpacity
+                    style={[styles.activeBadge, !route.isActive && styles.inactiveBadge]}
+                    onPress={() => !route.isActive && handleActivate(route.id)}
+                    disabled={route.isActive}
+                  >
+                    <Text style={[styles.activeBadgeText, !route.isActive && styles.inactiveBadgeText]}>
+                      {route.isActive ? '● 알람 켜짐' : '○ 알람 꺼짐'}
+                    </Text>
+                  </TouchableOpacity>
                   <View style={styles.routeActions}>
                     <TouchableOpacity style={styles.actionBtn} onPress={() => openEditForm(route)}>
                       <Ionicons name="pencil-outline" size={19} color={colors.textSecondary} />
@@ -228,9 +232,30 @@ export default function RouteScreen() {
                   </View>
                   <View style={styles.routeMetaChip}>
                     <Ionicons name="alarm-outline" size={12} color={colors.primary} />
-                    <Text style={styles.routeMetaText}>알람 여유 {route.alarmBeforeMinutes}분</Text>
+                    <Text style={styles.routeMetaText}>여유 {route.alarmBeforeMinutes}분</Text>
+                  </View>
+                  <View style={styles.routeMetaChip}>
+                    <Ionicons
+                      name={route.transportMode === 'car' ? 'car-outline' : route.transportMode === 'transit' ? 'bus-outline' : 'walk-outline'}
+                      size={12} color={colors.primary}
+                    />
+                    <Text style={styles.routeMetaText}>
+                      {route.transportMode === 'car' ? '자가용' : route.transportMode === 'transit' ? '대중교통' : '도보'}
+                    </Text>
                   </View>
                 </View>
+                {route.activeDays && (
+                  <View style={styles.routeDaysRow}>
+                    {['일','월','화','수','목','금','토'].map((d, i) => {
+                      const active = route.activeDays!.split(',').map(Number).includes(i);
+                      return (
+                        <View key={i} style={[styles.dayDot, active && styles.dayDotActive]}>
+                          <Text style={[styles.dayDotText, active && styles.dayDotTextActive]}>{d}</Text>
+                        </View>
+                      );
+                    })}
+                  </View>
+                )}
               </View>
             </View>
           ))}
@@ -310,8 +335,31 @@ export default function RouteScreen() {
 
           {transport === 'transit' && (
             <View style={styles.transitNote}>
-              <Ionicons name="information-circle-outline" size={14} color={colors.warning} />
-              <Text style={styles.transitNoteText}>대중교통 시간은 자동차 기준 추정값입니다. 실제와 다를 수 있어요.</Text>
+              <Ionicons name="warning-outline" size={16} color="#E65100" />
+              <View style={{ flex: 1, gap: 8 }}>
+                <Text style={styles.transitNoteText}>
+                  대중교통 시간은 자동차 기준 × 1.4 추정값이라 실제와 크게 다를 수 있어요.{'\n'}
+                  정확한 시간을 아신다면 직접 입력하세요.
+                </Text>
+                <View style={styles.customTravelRow}>
+                  <TextInput
+                    style={styles.customTravelInput}
+                    placeholder="예: 35"
+                    placeholderTextColor={colors.textMuted}
+                    keyboardType="number-pad"
+                    value={customTravelMin}
+                    onChangeText={setCustomTravelMin}
+                    maxLength={3}
+                  />
+                  <Text style={styles.customTravelUnit}>분 직접 입력 (비워두면 자동 계산)</Text>
+                </View>
+              </View>
+            </View>
+          )}
+          {transport === 'walk' && (
+            <View style={[styles.transitNote, { backgroundColor: '#E8F5E9' }]}>
+              <Ionicons name="information-circle-outline" size={14} color={colors.success} />
+              <Text style={[styles.transitNoteText, { color: '#2E7D32' }]}>도보 시간은 Haversine 직선거리 기준 5km/h로 계산됩니다.</Text>
             </View>
           )}
 
@@ -368,6 +416,11 @@ const styles = StyleSheet.create({
   routeMetaRow:         { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
   routeMetaChip:        { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primaryLight, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20 },
   routeMetaText:        { fontSize: 11, fontWeight: '600', color: colors.primary },
+  routeDaysRow:         { flexDirection: 'row', gap: 4, marginTop: 4 },
+  dayDot:               { width: 26, height: 26, borderRadius: 13, backgroundColor: colors.bg, alignItems: 'center', justifyContent: 'center' },
+  dayDotActive:         { backgroundColor: colors.primary },
+  dayDotText:           { fontSize: 10, fontFamily: fonts.semiBold, color: colors.textMuted },
+  dayDotTextActive:     { color: '#fff' },
   formCard:             { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginTop: 8, ...cardShadow },
   formTitle:            { fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginBottom: 16 },
   inputLabel:           { fontSize: 12, color: colors.textSecondary, marginBottom: 6 },
@@ -386,7 +439,10 @@ const styles = StyleSheet.create({
   timePickerBtn:        { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 14 },
   timePickerText:       { flex: 1, fontSize: 20, fontFamily: fonts.bold, color: colors.textPrimary },
   transitNote:          { flexDirection: 'row', gap: 6, alignItems: 'flex-start', backgroundColor: '#FFF3E0', borderRadius: 8, padding: 10, marginTop: 8 },
-  transitNoteText:      { flex: 1, fontSize: 11, color: '#E65100' },
+  transitNoteText:      { fontSize: 11, color: '#E65100', lineHeight: 16 },
+  customTravelRow:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  customTravelInput:    { width: 60, backgroundColor: '#fff', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, fontSize: 14, fontFamily: fonts.bold, color: colors.textPrimary, borderWidth: 1, borderColor: '#E65100' },
+  customTravelUnit:     { fontSize: 11, color: '#E65100', flex: 1 },
   alarmTip:             { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: colors.primaryLight, borderRadius: 8, padding: 10, marginTop: 12 },
   alarmTipText:         { flex: 1, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
   alarmTipBold:         { fontWeight: '700', color: colors.primary },

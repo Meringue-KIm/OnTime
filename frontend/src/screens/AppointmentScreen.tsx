@@ -57,6 +57,7 @@ export default function AppointmentScreen() {
 
   const [refreshing, setRefreshing] = useState(false);
   const [showDone, setShowDone] = useState(false);
+  const [showForm, setShowForm] = useState(false);
   const { appointments, loading, fetchAppointments, addAppointment, completeDone, removeAppointment } = useAppointmentStore();
   useEffect(() => { fetchAppointments(); }, []);
 
@@ -143,13 +144,67 @@ export default function AppointmentScreen() {
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
-      <View style={styles.titleRow}>
-        <Ionicons name="calendar" size={20} color={colors.primary} />
-        <Text style={styles.pageTitle}>새로운 약속 등록</Text>
+      {/* 목록 먼저 */}
+      <View style={[styles.card, { marginTop: 4 }]}>
+        <View style={styles.listHeader}>
+          <Text style={styles.sectionTitle}>등록된 약속</Text>
+          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+            <TouchableOpacity onPress={() => setShowDone(v => !v)}>
+              <Text style={styles.toggleBtn}>{showDone ? '활성만' : '전체'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.addApptBtn} onPress={() => setShowForm(v => !v)}>
+              <Ionicons name={showForm ? 'remove' : 'add'} size={16} color="#fff" />
+              <Text style={styles.addApptBtnText}>{showForm ? '닫기' : '새 약속'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 8 }} />}
+        {!loading && appointments.length === 0 && (
+          <View style={styles.emptyWrap}>
+            <Ionicons name="calendar-outline" size={28} color={colors.textMuted} />
+            <Text style={styles.emptyText}>등록된 약속이 없습니다.</Text>
+            <Text style={styles.emptySubText}>위 + 버튼으로 약속을 추가해보세요.</Text>
+          </View>
+        )}
+
+        {appointments
+          .filter(item => showDone || (!item.isDone && item.dDay >= 0))
+          .map((item) => {
+          const timeStr = formatKoreanDateTime(item.appointmentTime);
+          const dDayText = item.isDone ? '완료'
+            : item.dDay === 0 ? 'D-Day'
+            : item.dDay > 0  ? `D-${item.dDay}`
+            : '종료';
+          const statusColor = item.isDone ? colors.success
+            : item.dDay < 0 ? colors.danger
+            : colors.primary;
+
+          return (
+            <View key={item.id} style={styles.apptItem}>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.apptTitle}>{item.title || item.destAddress}</Text>
+                {item.title ? <Text style={styles.apptAddr} numberOfLines={1}>{item.destAddress}</Text> : null}
+                <Text style={styles.apptTime}>{timeStr}</Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+                <Text style={[styles.statusText, { color: statusColor }]}>{dDayText}</Text>
+              </View>
+              {!item.isDone && (
+                <TouchableOpacity style={styles.apptActionBtn} onPress={() => handleComplete(item.id)}>
+                  <Ionicons name="checkmark-circle-outline" size={22} color={colors.success} />
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity style={styles.apptActionBtn} onPress={() => handleDelete(item.id)}>
+                <Ionicons name="trash-outline" size={20} color={colors.danger} />
+              </TouchableOpacity>
+            </View>
+          );
+        })}
       </View>
 
-      {/* 등록 폼 */}
-      <View style={styles.card}>
+      {/* 등록 폼 (접기/펼치기) */}
+      {showForm && <View style={styles.card}>
 
         {/* 날짜/시간 선택 */}
         {Platform.OS === 'web' ? (
@@ -298,67 +353,14 @@ export default function AppointmentScreen() {
           <TouchableOpacity style={styles.cancelBtn} onPress={handleReset}>
             <Text style={styles.cancelText}>초기화</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.submitBtn} onPress={handleSubmit} disabled={submitting}>
+          <TouchableOpacity style={styles.submitBtn} onPress={async () => { await handleSubmit(); setShowForm(false); }} disabled={submitting}>
             {submitting
               ? <ActivityIndicator color={colors.textPrimary} />
               : <Text style={styles.submitText}>등록하기</Text>
             }
           </TouchableOpacity>
         </View>
-      </View>
-
-      {/* 등록된 약속 목록 */}
-      <View style={[styles.card, { marginBottom: 28 }]}>
-        <View style={styles.listHeader}>
-          <Text style={styles.sectionTitle}>등록된 약속</Text>
-          <TouchableOpacity onPress={() => setShowDone(v => !v)}>
-            <Text style={styles.toggleBtn}>{showDone ? '활성만 보기' : '완료 포함 보기'}</Text>
-          </TouchableOpacity>
-        </View>
-
-        {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 8 }} />}
-        {!loading && appointments.length === 0 && (
-          <View style={styles.emptyWrap}>
-            <Ionicons name="calendar-outline" size={28} color={colors.textMuted} />
-            <Text style={styles.emptyText}>등록된 약속이 없습니다.</Text>
-            <Text style={styles.emptySubText}>위 폼에서 약속을 추가해보세요.</Text>
-          </View>
-        )}
-
-        {appointments
-          .filter(item => showDone || (!item.isDone && item.dDay >= 0))
-          .map((item) => {
-          const timeStr = formatKoreanDateTime(item.appointmentTime);
-          const dDayText = item.isDone ? '완료'
-            : item.dDay === 0 ? 'D-Day'
-            : item.dDay > 0  ? `D-${item.dDay}`
-            : '종료';
-          const statusColor = item.isDone ? colors.success
-            : item.dDay < 0 ? colors.danger
-            : colors.primary;
-
-          return (
-            <View key={item.id} style={styles.apptItem}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.apptTitle}>{item.title || item.destAddress}</Text>
-                {item.title ? <Text style={styles.apptAddr} numberOfLines={1}>{item.destAddress}</Text> : null}
-                <Text style={styles.apptTime}>{timeStr}</Text>
-              </View>
-              <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-                <Text style={[styles.statusText, { color: statusColor }]}>{dDayText}</Text>
-              </View>
-              {!item.isDone && (
-                <TouchableOpacity style={styles.apptActionBtn} onPress={() => handleComplete(item.id)}>
-                  <Ionicons name="checkmark-circle-outline" size={22} color={colors.success} />
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity style={styles.apptActionBtn} onPress={() => handleDelete(item.id)}>
-                <Ionicons name="trash-outline" size={20} color={colors.danger} />
-              </TouchableOpacity>
-            </View>
-          );
-        })}
-      </View>
+      </View>}
 
     </ScrollView>
   );
@@ -404,4 +406,6 @@ const styles = StyleSheet.create({
   alarmOptionTextActive: { color: '#fff' },
   alarmNote:          { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: 6 },
   alarmNoteText:      { flex: 1, fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted, lineHeight: 16 },
+  addApptBtn:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
+  addApptBtnText:     { fontSize: 13, fontFamily: fonts.semiBold, color: '#fff' },
 });

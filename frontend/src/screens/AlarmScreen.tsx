@@ -167,6 +167,17 @@ export default function AlarmScreen() {
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
+      {/* 어떤 루트를 수정 중인지 안내 */}
+      {activeRoute && (
+        <View style={styles.routeInfoBanner}>
+          <Ionicons name="navigate-outline" size={14} color={colors.primary} />
+          <Text style={styles.routeInfoText} numberOfLines={1}>
+            <Text style={{ fontFamily: fonts.bold }}>수정 중인 루트:</Text>{'  '}
+            {activeRoute.homeAddress.split(' ').slice(0, 2).join(' ')} → {activeRoute.workAddress.split(' ').slice(0, 2).join(' ')}
+          </Text>
+        </View>
+      )}
+
       {notifStatus === 'denied' && (
         <TouchableOpacity style={styles.permissionBanner} onPress={() => Linking.openSettings()}>
           <Ionicons name="alert-circle-outline" size={16} color="#D32F2F" />
@@ -196,13 +207,25 @@ export default function AlarmScreen() {
         </View>
         {!loading && (() => {
           const label = getNextAlarmLabel(departureTime, activeDays);
-          return label ? (
-            <View style={styles.nextAlarmRow}>
-              <Ionicons name="alarm-outline" size={13} color="rgba(255,255,255,0.8)" />
-              <Text style={styles.nextAlarmText}>다음 알람 · {label}</Text>
+          if (!label) return null;
+          const isToday = label.startsWith('오늘');
+          return (
+            <View style={[styles.nextAlarmRow, isToday && styles.nextAlarmRowHighlight]}>
+              <Ionicons name="alarm" size={14} color="#fff" />
+              <Text style={[styles.nextAlarmText, isToday && { fontWeight: '700' }]}>
+                다음 알람 · {label}
+              </Text>
             </View>
-          ) : null;
+          );
         })()}
+        {!loading && !getNextAlarmLabel(departureTime, activeDays) && activeRoute && (
+          <View style={styles.nextAlarmRow}>
+            <Ionicons name="alert-circle-outline" size={13} color="rgba(255,255,255,0.7)" />
+            <Text style={[styles.nextAlarmText, { color: 'rgba(255,255,255,0.7)' }]}>
+              활성 요일이 설정되지 않았어요
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* 반복 요일 */}
@@ -301,6 +324,8 @@ export default function AlarmScreen() {
 const styles = StyleSheet.create({
   container:           { flex: 1, backgroundColor: colors.bg },
   header:              { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingBottom: 8 },
+  routeInfoBanner:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 20, marginBottom: 8, backgroundColor: colors.primaryLight, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
+  routeInfoText:       { flex: 1, fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
   permissionBanner:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginBottom: 8, backgroundColor: '#FFEBEE', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
   permissionBannerText:{ flex: 1, fontSize: 12, fontFamily: fonts.regular, color: '#D32F2F', lineHeight: 17 },
   logoImg:             { width: 180, height: 81 },
@@ -311,8 +336,9 @@ const styles = StyleSheet.create({
   badgeRow:            { flexDirection: 'row', gap: 8, marginTop: 12 },
   badge:               { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   badgeText:           { fontSize: 12, fontFamily: fonts.regular, color: '#fff' },
-  nextAlarmRow:        { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
-  nextAlarmText:       { fontSize: 12, fontFamily: fonts.semiBold, color: 'rgba(255,255,255,0.9)' },
+  nextAlarmRow:        { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10, backgroundColor: 'rgba(255,255,255,0.15)', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
+  nextAlarmRowHighlight:{ backgroundColor: 'rgba(255,255,255,0.3)' },
+  nextAlarmText:       { fontSize: 13, fontFamily: fonts.semiBold, color: '#fff' },
   card:                { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, ...cardShadow },
   sectionTitle:        { fontSize: 15, fontFamily: fonts.bold, color: colors.textPrimary, marginBottom: 14 },
   rowBetween:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
