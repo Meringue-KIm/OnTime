@@ -98,15 +98,25 @@ public class AlarmScheduler {
             String fcmToken = appt.getUser().getFcmToken();
             if (fcmToken == null || fcmToken.isBlank()) continue;
 
-            // 사용자 활성 루트의 집 좌표 → 약속 목적지 이동 시간 계산
+            // 출발지 결정: 약속 당일이 활성 요일이고 약속 시각이 출근 도착 시간 이후면 직장, 아니면 집
             int travelMinutes = 0;
             if (appt.getDestLat() != null && appt.getDestLng() != null) {
                 List<CommuteRoute> userRoutes = routeRepository.findByUserIdAndIsActiveTrue(appt.getUser().getId());
                 if (!userRoutes.isEmpty()) {
                     CommuteRoute activeRoute = userRoutes.get(0);
-                    if (activeRoute.getHomeLat() != null && activeRoute.getHomeLng() != null) {
+                    int apptDow = appt.getAppointmentTime().getDayOfWeek().getValue() % 7;
+                    boolean workday = activeRoute.isActiveDay(apptDow);
+                    boolean afterWork = appt.getAppointmentTime().toLocalTime()
+                            .isAfter(activeRoute.getArrivalTime());
+                    boolean useWork = workday && afterWork
+                            && activeRoute.getWorkLat() != null && activeRoute.getWorkLng() != null;
+
+                    double originLat = useWork ? activeRoute.getWorkLat()  : activeRoute.getHomeLat();
+                    double originLng = useWork ? activeRoute.getWorkLng()  : activeRoute.getHomeLng();
+
+                    if (originLat != 0 && originLng != 0) {
                         travelMinutes = kakaoMapService
-                                .getTravelMinutes(activeRoute.getHomeLat(), activeRoute.getHomeLng(),
+                                .getTravelMinutes(originLat, originLng,
                                                   appt.getDestLat(), appt.getDestLng(),
                                                   activeRoute.getTransportMode())
                                 .orElse(0);

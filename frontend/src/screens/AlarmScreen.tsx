@@ -11,7 +11,7 @@ import { colors, fonts, cardShadow } from '../constants/colors';
 
 const logo = require('../../assets/logo.png');
 import { Alert } from 'react-native';
-import { getToday } from '../api/today';
+import { useTodayStore } from '../store/todayStore';
 import { useRouteStore } from '../store/routeStore';
 import { DAYS_OF_WEEK } from '../constants/dates';
 import { BUFFER_MIN, BUFFER_MAX, BUFFER_STEP } from '../constants/defaults';
@@ -46,9 +46,8 @@ function getNextAlarmLabel(departureTimeStr: string | null, activeDays: number[]
 
 export default function AlarmScreen() {
   const insets = useSafeAreaInsets();
-  const [departureTime, setDepartureTime] = useState<string | null>(null);
-  const [loading, setLoading]             = useState(true);
-  const [todayError, setTodayError]       = useState(false);
+  const { today, loading, error: todayError, fetchToday } = useTodayStore();
+  const departureTime = today?.recommendedDeparture ? extractTimeHHmm(today.recommendedDeparture) : null;
 
   const [notifStatus, setNotifStatus]     = useState<string | null>(null);
   const [activeDays, setActiveDays]       = useState([1, 2, 3, 4, 5]);
@@ -61,43 +60,17 @@ export default function AlarmScreen() {
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialMount = useRef(true);
 
-  // 마운트 시 저장된 설정 불러오기
   useEffect(() => {
     Notifications.getPermissionsAsync().then(({ status }: { status: string }) => setNotifStatus(status));
   }, []);
 
   useEffect(() => {
     fetchRoutes();
-    getToday()
-      .then(({ data }) => {
-        if (data.recommendedDeparture) setDepartureTime(extractTimeHHmm(data.recommendedDeparture));
-        setTodayError(false);
-      })
-      .catch(() => setTodayError(true))
-      .finally(() => setLoading(false));
-
-
-
+    if (!today) fetchToday();
     AsyncStorage.getItem(STORAGE_KEYS.vibration)
       .then(v => { if (v !== null) setVibration(v === 'true'); })
       .catch(() => {});
   }, []);
-
-  // 로드 실패 시 5초 후 자동 재시도
-  useEffect(() => {
-    if (!todayError) return;
-    const timer = setTimeout(() => {
-      setLoading(true);
-      getToday()
-        .then(({ data }) => {
-          if (data.recommendedDeparture) setDepartureTime(extractTimeHHmm(data.recommendedDeparture));
-          setTodayError(false);
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false));
-    }, 5000);
-    return () => clearTimeout(timer);
-  }, [todayError]);
 
   // 루트 로드 후 설정 반영 (초기 1회만)
   useEffect(() => {

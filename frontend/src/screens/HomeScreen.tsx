@@ -5,16 +5,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { colors, fonts, cardShadow } from '../constants/colors';
-import { getToday, type TodayResponse } from '../api/today';
 import { getWeatherSummary, type WeatherSummary } from '../api/weather';
 import { useRouteStore } from '../store/routeStore';
 import { useAppointmentStore } from '../store/appointmentStore';
+import { useTodayStore } from '../store/todayStore';
 import { useNotification } from '../hooks/useNotification';
 import { useLocation } from '../hooks/useLocation';
 import { formatApptTime, extractTimeHHmm } from '../utils/timeFormat';
 import { getWeatherNavIcon, getWeatherIonicon } from '../utils/weather';
 import { DEFAULT_LOCATION } from '../constants/locations';
-import { scheduleLocalAlarm } from '../utils/localAlarm';
 import { useAuthStore } from '../store/authStore';
 
 const logo = require('../../assets/logo.png');
@@ -35,9 +34,7 @@ if (Platform.OS !== 'web') {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  const [today, setToday] = useState<TodayResponse | null>(null);
-  const [todayLoading, setTodayLoading] = useState(true);
-  const [todayError, setTodayError] = useState(false);
+  const { today, loading: todayLoading, error: todayError, fetchToday } = useTodayStore();
   const [weather, setWeather] = useState<WeatherSummary | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [weatherError, setWeatherError] = useState(false);
@@ -46,23 +43,6 @@ export default function HomeScreen() {
   const { appointments, fetchAppointments } = useAppointmentStore();
   const { coords: gpsCoords, status: locationStatus } = useLocation();
   const lastRefreshRef = useRef<number>(0);
-
-  const fetchToday = (): Promise<void> => {
-    setTodayLoading(true);
-    setTodayError(false);
-    return getToday()
-      .then(({ data }) => {
-        setToday(data);
-        if (data.recommendedDeparture) {
-          scheduleLocalAlarm(String(data.recommendedDeparture)).catch(() => {});
-        }
-      })
-      .catch(() => {
-        setToday(null);
-        setTodayError(true);
-      })
-      .finally(() => setTodayLoading(false));
-  };
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -104,12 +84,16 @@ export default function HomeScreen() {
       Alert.alert('위치 정보 없음', '루트의 직장 주소를 검색 목록에서 다시 선택해주세요.');
       return;
     }
-    const { workLat: lat, workLng: lng, workAddress } = route;
+    const { workLat: lat, workLng: lng, workAddress, transportMode } = route;
     const name = encodeURIComponent(workAddress);
 
-    const kakaoUrl = `kakaomap://route?ep=${lat},${lng}&by=CAR`;
-    const naverUrl = `nmap://route/car?dlat=${lat}&dlng=${lng}&dname=${name}&appname=app.ontime`;
-    const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+    const kakaoMode  = transportMode === 'transit' ? 'PUBLICTRANSIT' : transportMode === 'walk' ? 'FOOT' : 'CAR';
+    const naverPath  = transportMode === 'transit' ? 'public' : transportMode === 'walk' ? 'walk' : 'car';
+    const googleMode = transportMode === 'transit' ? 'transit' : transportMode === 'walk' ? 'walking' : 'driving';
+
+    const kakaoUrl  = `kakaomap://route?ep=${lat},${lng}&by=${kakaoMode}`;
+    const naverUrl  = `nmap://route/${naverPath}?dlat=${lat}&dlng=${lng}&dname=${name}&appname=app.ontime`;
+    const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=${googleMode}`;
 
     const tryOpen = async (url: string) => {
       const can = await Linking.canOpenURL(url).catch(() => false);
@@ -186,6 +170,12 @@ export default function HomeScreen() {
       </View>
 
       {/* Weather */}
+      {weatherError && !weather && (
+        <View style={styles.weatherErrorWrap}>
+          <Ionicons name="cloud-offline-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.weatherErrorText}>날씨 정보를 불러오지 못했습니다.</Text>
+        </View>
+      )}
       {weather && (
         <View style={styles.weatherWrap}>
           {/* 상단: 아이콘 + 기온 + 위치 */}

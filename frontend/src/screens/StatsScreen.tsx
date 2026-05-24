@@ -177,9 +177,12 @@ export default function StatsScreen() {
                 <Text style={[styles.barLabel, i === weeklyData.length - 1 && { color: colors.primary, fontWeight: '700' }]}>
                   {d.label}
                 </Text>
+                <Text style={styles.barCount}>{d.total}일</Text>
               </View>
             ))}
+
           </View>
+          <Text style={styles.chartNote}>* 피드백을 입력한 날만 집계됩니다</Text>
         </View>
       )}
 
@@ -290,6 +293,7 @@ function buildWeeklyData(logs: CommuteLog[]) {
     .slice(-5)
     .map(([label, { total, onTime }]) => ({
       label,
+      total,
       rate: total > 0 ? Math.round((onTime / total) * 100) : 0,
     }));
 }
@@ -329,6 +333,8 @@ const styles = StyleSheet.create({
   barBg:            { flex: 1, width: '100%', backgroundColor: colors.bg, borderRadius: 6, overflow: 'hidden', justifyContent: 'flex-end' },
   barFill:          { width: '100%', borderRadius: 6 },
   barLabel:         { fontSize: 11, color: colors.textSecondary },
+  barCount:         { fontSize: 9, color: colors.textMuted },
+  chartNote:        { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 8, textAlign: 'right' },
   goalRow:          { flexDirection: 'row', alignItems: 'center', gap: 20 },
   progressWrap:     { alignItems: 'center', width: 110 },
   progressValue:    { fontSize: 36, fontWeight: '800' },
