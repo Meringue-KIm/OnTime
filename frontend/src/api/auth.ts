@@ -22,3 +22,9 @@ export const deleteAccount = () =>
 
 export const sendTestAlarm = () =>
   client.post('/alarm/test');
+
+export const forgotPassword = (email: string) =>
+  client.post('/auth/forgot-password', { email });
+
+export const resetPassword = (email: string, code: string, newPassword: string) =>
+  client.post('/auth/reset-password', { email, code, newPassword });

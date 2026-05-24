@@ -2,8 +2,10 @@ package com.commute.app.domain.user.controller;
 
 import com.commute.app.domain.user.dto.ChangePasswordRequest;
 import com.commute.app.domain.user.dto.FcmTokenRequest;
+import com.commute.app.domain.user.dto.ForgotPasswordRequest;
 import com.commute.app.domain.user.dto.LoginRequest;
 import com.commute.app.domain.user.dto.RefreshRequest;
+import com.commute.app.domain.user.dto.ResetPasswordRequest;
 import com.commute.app.domain.user.dto.SignupRequest;
 import com.commute.app.domain.user.dto.TokenResponse;
 import com.commute.app.domain.user.service.AuthService;
@@ -54,6 +56,18 @@ public class AuthController {
     @DeleteMapping("/account")
     public ResponseEntity<Void> deleteAccount(@AuthenticationPrincipal Long userId) {
         authService.deleteAccount(userId);
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        authService.forgotPassword(request.email());
+        return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Void> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authService.resetPassword(request.email(), request.code(), request.newPassword());
         return ResponseEntity.ok().build();
     }
 

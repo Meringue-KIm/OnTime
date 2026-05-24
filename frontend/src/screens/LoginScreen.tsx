@@ -100,6 +100,10 @@ export default function LoginScreen({ navigation }: any) {
           <Text style={styles.link}>계정이 없으신가요? <Text style={styles.linkBold}>회원가입</Text></Text>
         </TouchableOpacity>
 
+        <TouchableOpacity style={{ marginTop: 12, alignItems: 'center' }} onPress={() => navigation.navigate('ForgotPassword')}>
+          <Text style={styles.forgotLink}>비밀번호를 잊으셨나요?</Text>
+        </TouchableOpacity>
+
         {__DEV__ && (
           <TouchableOpacity
             style={styles.devButton}
@@ -131,6 +135,7 @@ const styles = StyleSheet.create({
   buttonText:  { color: '#fff', fontSize: 16, fontFamily: fonts.bold },
   link:        { textAlign: 'center', fontSize: 14, fontFamily: fonts.regular, color: colors.textMuted },
   linkBold:    { fontFamily: fonts.semiBold, color: colors.primary },
+  forgotLink:  { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textDecorationLine: 'underline' },
   devButton:   { marginTop: 32, borderWidth: 1, borderColor: colors.border, borderRadius: 10, borderStyle: 'dashed', padding: 12, alignItems: 'center' },
   devButtonText: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.regular },
 });

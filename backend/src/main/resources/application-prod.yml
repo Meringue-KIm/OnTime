@@ -27,6 +27,16 @@ jwt:
   access-expiration: 1800000
   refresh-expiration: 604800000
 
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+
 kakao:
   rest-api-key: ${KAKAO_REST_API_KEY:}
 
