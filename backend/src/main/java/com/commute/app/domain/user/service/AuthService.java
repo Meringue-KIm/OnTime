@@ -66,7 +66,7 @@ public class AuthService {
                 .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.USER_NOT_FOUND));
         return new TokenResponse(
                 jwtProvider.createAccessToken(userId),
-                request.refreshToken()
+                jwtProvider.createRefreshToken(userId)
         );
     }
 

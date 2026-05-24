@@ -3,7 +3,6 @@ package com.commute.app.global.mail;
 import lombok.RequiredArgsConstructor;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 
 import jakarta.mail.internet.MimeMessage;
@@ -14,7 +13,6 @@ public class EmailService {
 
     private final JavaMailSender mailSender;
 
-    @Async
     public void sendPasswordResetCode(String to, String code) {
         try {
             MimeMessage message = mailSender.createMimeMessage();

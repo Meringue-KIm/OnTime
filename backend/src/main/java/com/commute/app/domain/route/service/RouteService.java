@@ -99,6 +99,6 @@ public class RouteService {
     public void deleteRoute(Long userId, Long routeId) {
         CommuteRoute route = routeRepository.findByIdAndUserId(routeId, userId)
                 .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.ROUTE_NOT_FOUND));
-        route.deactivate();
+        routeRepository.delete(route);
     }
 }
