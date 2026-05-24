@@ -21,6 +21,9 @@ public class Appointment {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
+    @Column(name = "title")
+    private String title;
+
     @Column(name = "dest_address", nullable = false)
     private String destAddress;
 
@@ -48,8 +51,9 @@ public class Appointment {
         createdAt = LocalDateTime.now();
     }
 
-    public void update(String destAddress, Double destLat, Double destLng,
+    public void update(String title, String destAddress, Double destLat, Double destLng,
                        LocalDateTime appointmentTime, Integer alarmBeforeMinutes) {
+        this.title = title;
         this.destAddress = destAddress;
         this.destLat = destLat;
         this.destLng = destLng;

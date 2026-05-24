@@ -6,6 +6,7 @@ import { useAuthStore } from '../store/authStore';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import SettingsScreen from '../screens/SettingsScreen';
 import TabNavigator from './TabNavigator';
 import { colors } from '../constants/colors';
 import { pingServer } from '../api/ping';
@@ -32,7 +33,10 @@ export default function AppNavigator() {
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isLoggedIn ? (
-          <Stack.Screen name="Main" component={TabNavigator} />
+          <>
+            <Stack.Screen name="Main"     component={TabNavigator} />
+            <Stack.Screen name="Settings" component={SettingsScreen} />
+          </>
         ) : (
           <>
             <Stack.Screen name="Login"          component={LoginScreen} />

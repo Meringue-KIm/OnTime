@@ -44,6 +44,7 @@ export default function AppointmentScreen() {
   const [apptDate, setApptDate]       = useState<Date>(tomorrow);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
+  const [title, setTitle]             = useState('');
   const [dest, setDest]               = useState('');
   const [destLat, setDestLat]         = useState<number | null>(null);
   const [destLng, setDestLng]         = useState<number | null>(null);
@@ -98,6 +99,7 @@ export default function AppointmentScreen() {
     }
 
     const apptData: AppointmentRequest = {
+      title: title.trim() || undefined,
       destAddress: dest.trim(),
       destLat: destLat ?? undefined,
       destLng: destLng ?? undefined,
@@ -108,6 +110,7 @@ export default function AppointmentScreen() {
     setSubmitting(true);
     try {
       await addAppointment(apptData);
+      setTitle('');
       setDest(''); setDestLat(null); setDestLng(null);
       setApptDate(tomorrow);
       setWebDate(''); setWebTime('09:00');
@@ -121,6 +124,7 @@ export default function AppointmentScreen() {
   };
 
   const handleReset = () => {
+    setTitle('');
     setDest(''); setDestLat(null); setDestLng(null);
     setApptDate(tomorrow);
     setWebDate(''); setWebTime('09:00');
@@ -233,6 +237,19 @@ export default function AppointmentScreen() {
           />
         )}
 
+        {/* 약속 제목 */}
+        <Text style={styles.inputLabel}>약속 이름 (선택)</Text>
+        <View style={styles.inputWrap}>
+          <TextInput
+            style={styles.inputInner}
+            placeholder="예: 팀 회식, 친구 생일"
+            placeholderTextColor={colors.textMuted}
+            value={title}
+            onChangeText={setTitle}
+            maxLength={30}
+          />
+        </View>
+
         {/* 목적지 */}
         <Text style={styles.inputLabel}>목적지 주소</Text>
         <AddressInput
@@ -315,7 +332,8 @@ export default function AppointmentScreen() {
           return (
             <View key={item.id} style={styles.apptItem}>
               <View style={{ flex: 1 }}>
-                <Text style={styles.apptTitle}>{item.destAddress}</Text>
+                <Text style={styles.apptTitle}>{item.title || item.destAddress}</Text>
+                {item.title ? <Text style={styles.apptAddr} numberOfLines={1}>{item.destAddress}</Text> : null}
                 <Text style={styles.apptTime}>{timeStr}</Text>
               </View>
               <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
@@ -364,6 +382,7 @@ const styles = StyleSheet.create({
   emptySubText:       { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center' },
   apptItem:           { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
   apptTitle:          { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },
+  apptAddr:           { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 1 },
   apptTime:           { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
   statusBadge:        { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusText:         { fontSize: 12, fontFamily: fonts.semiBold },

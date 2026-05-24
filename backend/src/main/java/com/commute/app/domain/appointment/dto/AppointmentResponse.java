@@ -6,6 +6,7 @@ import java.time.LocalDateTime;
 
 public record AppointmentResponse(
         Long id,
+        String title,
         String destAddress,
         Double destLat,
         Double destLng,
@@ -18,6 +19,7 @@ public record AppointmentResponse(
         long dDay = LocalDate.now().until(appointment.getAppointmentTime().toLocalDate()).getDays();
         return new AppointmentResponse(
                 appointment.getId(),
+                appointment.getTitle(),
                 appointment.getDestAddress(),
                 appointment.getDestLat(),
                 appointment.getDestLng(),

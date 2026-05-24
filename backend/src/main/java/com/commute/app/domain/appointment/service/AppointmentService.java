@@ -32,6 +32,7 @@ public class AppointmentService {
         User user = userRepository.getReferenceById(userId);
         Appointment appointment = Appointment.builder()
                 .user(user)
+                .title(request.title())
                 .destAddress(request.destAddress())
                 .destLat(request.destLat())
                 .destLng(request.destLng())
@@ -45,7 +46,7 @@ public class AppointmentService {
     public AppointmentResponse update(Long userId, Long id, AppointmentRequest request) {
         Appointment appointment = appointmentRepository.findByIdAndUserId(id, userId)
                 .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.APPOINTMENT_NOT_FOUND));
-        appointment.update(request.destAddress(), request.destLat(), request.destLng(),
+        appointment.update(request.title(), request.destAddress(), request.destLat(), request.destLng(),
                 request.appointmentTime(), request.alarmBeforeMinutes());
         return AppointmentResponse.from(appointment);
     }

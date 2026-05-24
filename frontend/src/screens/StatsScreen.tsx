@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const logo = require('../../assets/logo.png');
@@ -33,39 +34,52 @@ export default function StatsScreen() {
 
   useEffect(() => { setLoading(true); fetchLogs(); }, []);
 
+  const FEEDBACK_SHOWN_KEY = 'stats_feedback_shown_date';
+
   useFocusEffect(useCallback(() => {
     const pending = logs
       .filter(l => l.isLate === null)
-      .filter(l => {
-        const daysDiff = (Date.now() - new Date(l.logDate).getTime()) / 86400000;
-        return daysDiff <= 3;
-      });
+      .filter(l => (Date.now() - new Date(l.logDate).getTime()) / 86400000 <= 3);
     if (pending.length === 0) return;
-    const log = pending[0];
-    const timer = setTimeout(() => {
-      Alert.alert(
-        '출근 결과를 알려주세요 📝',
-        `${formatDate(log.logDate)} 출근은 어떠셨나요?\n기록해두면 정시율 통계가 쌓여요!`,
-        [
-          {
-            text: '정시 도착 ✅',
-            onPress: async () => {
-              await submitFeedback(log.id, false);
-              setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: false } : l));
+
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+    const today = new Date().toISOString().slice(0, 10);
+
+    AsyncStorage.getItem(FEEDBACK_SHOWN_KEY).then(lastShown => {
+      if (cancelled || lastShown === today) return;
+      const log = pending[0];
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        Alert.alert(
+          '출근 결과를 알려주세요 📝',
+          `${formatDate(log.logDate)} 출근은 어떠셨나요?\n기록해두면 정시율 통계가 쌓여요!`,
+          [
+            {
+              text: '정시 도착 ✅',
+              onPress: async () => {
+                await submitFeedback(log.id, false);
+                setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: false } : l));
+              },
             },
-          },
-          {
-            text: '지각 😅',
-            onPress: async () => {
-              await submitFeedback(log.id, true);
-              setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: true } : l));
+            {
+              text: '지각 😅',
+              onPress: async () => {
+                await submitFeedback(log.id, true);
+                setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: true } : l));
+              },
             },
-          },
-          { text: '나중에', style: 'cancel' },
-        ],
-      );
-    }, 500);
-    return () => clearTimeout(timer);
+            { text: '나중에', style: 'cancel' },
+          ],
+        );
+        AsyncStorage.setItem(FEEDBACK_SHOWN_KEY, today);
+      }, 500);
+    });
+
+    return () => {
+      cancelled = true;
+      if (timer) clearTimeout(timer);
+    };
   }, [logs]));
 
   const logsWithFeedback = logs.filter(l => l.isLate !== null);
@@ -181,28 +195,35 @@ export default function StatsScreen() {
       {/* Goal Achievement */}
       <View style={styles.card}>
         <Text style={styles.sectionTitle}>🎯 목표 달성률</Text>
-        <View style={styles.goalRow}>
-          <View style={styles.donutWrap}>
-            <View style={[styles.donutOuter, { borderColor: onTimeRate >= 80 ? colors.success : colors.primary }]}>
-              <View style={styles.donutInner}>
-                <Text style={styles.donutValue}>{onTimeRate}%</Text>
-                <Text style={styles.donutLabel}>정시율</Text>
+        {logsWithFeedback.length === 0 ? (
+          <View style={styles.emptyGoalWrap}>
+            <Ionicons name="analytics-outline" size={32} color={colors.textMuted} />
+            <Text style={styles.emptyGoalText}>출근 후 결과를 입력하면{'\n'}달성률이 표시됩니다.</Text>
+          </View>
+        ) : (
+          <View style={styles.goalRow}>
+            <View style={styles.donutWrap}>
+              <View style={[styles.donutOuter, { borderColor: onTimeRate >= 80 ? colors.success : colors.primary }]}>
+                <View style={styles.donutInner}>
+                  <Text style={styles.donutValue}>{onTimeRate}%</Text>
+                  <Text style={styles.donutLabel}>정시율</Text>
+                </View>
+              </View>
+            </View>
+            <View style={styles.goalStats}>
+              <View style={styles.goalStatItem}>
+                <Text style={styles.goalStatLabel}>정시 도착</Text>
+                <Text style={[styles.goalStatValue, { color: colors.success }]}>{onTimeCount}회</Text>
+              </View>
+              <View style={[styles.goalStatItem, { borderTopWidth: 1, borderTopColor: colors.border }]}>
+                <Text style={styles.goalStatLabel}>지각</Text>
+                <Text style={[styles.goalStatValue, { color: colors.danger }]}>
+                  {logsWithFeedback.length - onTimeCount}회
+                </Text>
               </View>
             </View>
           </View>
-          <View style={styles.goalStats}>
-            <View style={styles.goalStatItem}>
-              <Text style={styles.goalStatLabel}>정시 도착</Text>
-              <Text style={[styles.goalStatValue, { color: colors.success }]}>{onTimeCount}회</Text>
-            </View>
-            <View style={[styles.goalStatItem, { borderTopWidth: 1, borderTopColor: colors.border }]}>
-              <Text style={styles.goalStatLabel}>지각</Text>
-              <Text style={[styles.goalStatValue, { color: colors.danger }]}>
-                {logsWithFeedback.length - onTimeCount}회
-              </Text>
-            </View>
-          </View>
-        </View>
+        )}
       </View>
 
       {/* Recent Logs */}
@@ -309,6 +330,8 @@ const styles = StyleSheet.create({
   goalStatLabel:    { fontSize: 12, color: colors.textSecondary },
   goalStatValue:    { fontSize: 20, fontWeight: '700', marginTop: 2 },
   emptyText:        { fontSize: 13, color: colors.textMuted, textAlign: 'center', paddingVertical: 12 },
+  emptyGoalWrap:    { alignItems: 'center', paddingVertical: 20, gap: 10 },
+  emptyGoalText:    { fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
   tripItem:         { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
   tripIconWrap:     { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   tripTitle:        { fontSize: 14, fontWeight: '600', color: colors.textPrimary },

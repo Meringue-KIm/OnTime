@@ -1,6 +1,7 @@
 import client from './client';
 
 export interface AppointmentRequest {
+  title?: string;
   destAddress: string;
   destLat?: number;
   destLng?: number;
@@ -10,6 +11,7 @@ export interface AppointmentRequest {
 
 export interface AppointmentResponse {
   id: number;
+  title?: string;
   destAddress: string;
   destLat?: number;
   destLng?: number;

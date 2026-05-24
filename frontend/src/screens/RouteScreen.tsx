@@ -164,6 +164,9 @@ export default function RouteScreen() {
         <View style={styles.heroCard}>
           <Text style={styles.heroTitle}>경로를 설정하면{'\n'}매일 알람이 울려요</Text>
           <Text style={styles.heroSub}>집·직장 주소와 도착 목표 시간을 등록해보세요</Text>
+          <TouchableOpacity style={styles.heroBtn} onPress={openNewForm}>
+            <Text style={styles.heroBtnText}>루트 추가하기 →</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -341,6 +344,8 @@ const styles = StyleSheet.create({
   heroCard:             { margin: 20, backgroundColor: colors.primary, borderRadius: 16, padding: 24 },
   heroTitle:            { fontSize: 24, fontWeight: '800', color: '#fff', lineHeight: 32 },
   heroSub:              { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 8 },
+  heroBtn:              { marginTop: 16, alignSelf: 'flex-start', backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 16, paddingVertical: 9, borderRadius: 20 },
+  heroBtnText:          { fontSize: 14, fontWeight: '600', color: '#fff' },
   sectionHeader:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginHorizontal: 20, marginBottom: 8 },
   sectionLabel:         { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
   addBtn:               { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
