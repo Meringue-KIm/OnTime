@@ -153,13 +153,14 @@ export default function AppointmentScreen() {
     // 여유 시간 기준 알람 시각이 이미 지난 경우 경고
     const alarmMs = new Date(appointmentTime).getTime() - alarmMinutes * 60 * 1000;
     if (alarmMs <= Date.now()) {
+      const isEditing = editingId !== null;
       return new Promise(resolve => {
         Alert.alert(
           '알람이 오지 않을 수 있어요',
-          `여유 시간(${alarmMinutes}분) 기준 알람 시각이 이미 지났습니다.\n그래도 등록하시겠습니까?`,
+          `여유 시간(${alarmMinutes}분) 기준 알람 시각이 이미 지났습니다.\n그래도 ${isEditing ? '수정' : '등록'}하시겠습니까?`,
           [
             { text: '취소', style: 'cancel', onPress: () => resolve(false) },
-            { text: '등록', onPress: () => doSubmit(apptData).then(resolve) },
+            { text: isEditing ? '수정' : '등록', onPress: () => doSubmit(apptData).then(resolve) },
           ],
         );
       });
@@ -169,6 +170,7 @@ export default function AppointmentScreen() {
   };
 
   const handleReset = () => {
+    setEditingId(null);
     setTitle('');
     setDest(''); setDestLat(null); setDestLng(null);
     setApptDate(makeTomorrow());

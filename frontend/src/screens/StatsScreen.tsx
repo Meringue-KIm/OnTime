@@ -90,16 +90,6 @@ export default function StatsScreen() {
     );
   }
 
-  if (loadError) {
-    return (
-      <View style={styles.center}>
-        <Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />
-        <Text style={styles.errorText}>서버에 연결할 수 없습니다.</Text>
-        <Text style={[styles.errorText, { fontSize: 12 }]}>잠시 후 자동으로 다시 불러옵니다...</Text>
-      </View>
-    );
-  }
-
   return (
     <ScrollView
       style={styles.container}
@@ -111,6 +101,16 @@ export default function StatsScreen() {
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
+      {loadError && (
+        <View style={styles.errorInline}>
+          <Ionicons name="cloud-offline-outline" size={36} color={colors.textMuted} />
+          <Text style={styles.errorText}>서버에 연결할 수 없습니다.</Text>
+          <Text style={[styles.errorText, { fontSize: 12 }]}>당겨서 새로고침하거나 잠시 후 자동으로 재시도합니다.</Text>
+        </View>
+      )}
+
+      {!loadError && (
+      <>
       {/* Insight Card */}
       <View style={styles.insightCard}>
         <View style={styles.insightBadge}>
@@ -271,6 +271,8 @@ export default function StatsScreen() {
           ))
         )}
       </View>
+      </>
+      )}
 
     </ScrollView>
   );
@@ -308,7 +310,8 @@ function getWeekLabel(d: Date): string {
 const styles = StyleSheet.create({
   container:        { flex: 1, backgroundColor: colors.bg },
   center:           { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, gap: 12 },
-  errorText:        { fontSize: 14, fontFamily: fonts.regular, color: colors.textMuted },
+  errorInline:      { alignItems: 'center', paddingVertical: 48, gap: 8, marginHorizontal: 20 },
+  errorText:        { fontSize: 14, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center' },
   retryBtn:         { marginTop: 4, backgroundColor: colors.primaryLight, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
   retryBtnText:     { fontSize: 14, fontFamily: fonts.semiBold, color: colors.primary },
   header:           { paddingHorizontal: 20, paddingBottom: 8 },

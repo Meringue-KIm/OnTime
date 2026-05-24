@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Image, Linking } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Image, Linking, Platform, RefreshControl } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -53,7 +53,8 @@ export default function AlarmScreen() {
 
   const [notifStatus, setNotifStatus]     = useState<string | null>(null);
   const [activeDays, setActiveDays]       = useState([1, 2, 3, 4, 5]);
-  const [vibration, setVibration] = useState(true);
+  const [vibration, setVibration]         = useState(true);
+  const [refreshing, setRefreshing]       = useState(false);
 
   const { routes, fetchRoutes, saveRoute } = useRouteStore();
   const activeRoute = routes.find(r => r.isActive) ?? routes[0];
@@ -116,6 +117,12 @@ export default function AlarmScreen() {
     }, 1000);
   }, [activeRoute, saveRoute, fetchToday]);
 
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchRoutes(), fetchToday()]);
+    setRefreshing(false);
+  };
+
   const toggleDay = (i: number) =>
     setActiveDays(prev => prev.includes(i) ? prev.filter(d => d !== i) : [...prev, i]);
 
@@ -127,8 +134,20 @@ export default function AlarmScreen() {
     }
   };
 
+  const wakeLabel = (() => {
+    if (!today?.recommendedDeparture) return '추천 출발 시간';
+    const [hh, mm] = today.recommendedDeparture.split(':').map(Number);
+    const dep = new Date(); dep.setHours(hh, mm, 0, 0);
+    if (today.logDate && dep <= new Date()) return '오늘 출발 완료';
+    return '오늘 추천 출발 시간';
+  })();
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+    >
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
@@ -158,7 +177,7 @@ export default function AlarmScreen() {
 
       {/* 오늘 출발 시간 */}
       <View style={styles.wakeCard}>
-        <Text style={styles.wakeLabel}>오늘 추천 출발 시간</Text>
+        <Text style={styles.wakeLabel}>{wakeLabel}</Text>
         {loading ? (
           <ActivityIndicator color="#fff" size="large" style={{ marginVertical: 12 }} />
         ) : todayError ? (
@@ -280,21 +299,33 @@ export default function AlarmScreen() {
       {/* 사운드 설정 */}
       <View style={[styles.card, { marginBottom: 28 }]}>
         <Text style={styles.sectionTitle}>🔔 사운드 설정</Text>
-        <View style={styles.settingRow}>
-          <View style={styles.settingIconWrap}>
-            <Ionicons name="phone-portrait-outline" size={18} color={colors.primary} />
+        {Platform.OS === 'android' ? (
+          <View style={styles.settingRow}>
+            <View style={styles.settingIconWrap}>
+              <Ionicons name="phone-portrait-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.settingLabel}>진동 알림</Text>
+              <Text style={styles.settingSub}>알림 수신 시 진동 활성화</Text>
+            </View>
+            <Switch
+              value={vibration}
+              onValueChange={(v) => { setVibration(v); handleSoundToggle(STORAGE_KEYS.vibration, v); }}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#fff"
+            />
           </View>
-          <View style={{ flex: 1 }}>
-            <Text style={styles.settingLabel}>진동 알림</Text>
-            <Text style={styles.settingSub}>Android 알림 채널 진동 활성화</Text>
+        ) : (
+          <View style={[styles.settingRow, { alignItems: 'flex-start' }]}>
+            <View style={styles.settingIconWrap}>
+              <Ionicons name="settings-outline" size={18} color={colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.settingLabel}>소리 · 진동 설정</Text>
+              <Text style={styles.settingSub}>iOS 설정 → 알림 → OnTime에서 소리와 진동을 변경할 수 있습니다.</Text>
+            </View>
           </View>
-          <Switch
-            value={vibration}
-            onValueChange={(v) => { setVibration(v); handleSoundToggle(STORAGE_KEYS.vibration, v); }}
-            trackColor={{ false: colors.border, true: colors.primary }}
-            thumbColor="#fff"
-          />
-        </View>
+        )}
       </View>
 
     </ScrollView>

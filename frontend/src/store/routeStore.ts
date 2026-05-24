@@ -40,9 +40,9 @@ export const useRouteStore = create<RouteState>((set) => ({
 
   activateRoute: async (id) => {
     const { data: activated } = await routeApi.activateRoute(id);
-    // 활성화된 루트만 isActive=true로 — 다른 루트는 서버 상태 그대로 유지
+    // 활성화된 루트만 true, 나머지는 false — 로컬 상태가 서버와 즉시 동기화
     set(state => ({
-      routes: state.routes.map(r => r.id === activated.id ? { ...r, isActive: true } : r),
+      routes: state.routes.map(r => ({ ...r, isActive: r.id === activated.id })),
     }));
   },
 

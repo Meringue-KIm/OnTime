@@ -11,7 +11,7 @@ import { useAppointmentStore } from '../store/appointmentStore';
 import { useTodayStore } from '../store/todayStore';
 import { useNotification } from '../hooks/useNotification';
 import { useLocation } from '../hooks/useLocation';
-import { formatApptTime, extractTimeHHmm } from '../utils/timeFormat';
+import { formatApptTime, extractTimeHHmm, formatKoreanDateTime } from '../utils/timeFormat';
 import { getWeatherNavIcon, getWeatherIonicon } from '../utils/weather';
 import { DEFAULT_LOCATION } from '../constants/locations';
 
@@ -366,7 +366,9 @@ export default function HomeScreen() {
                   {item.title ? `${item.destAddress} · ` : ''}{item.dDay === 0 ? 'D-Day' : `D-${item.dDay}`}
                 </Text>
               </View>
-              <Text style={styles.scheduleTime}>{formatApptTime(item.appointmentTime)}</Text>
+              <Text style={styles.scheduleTime}>
+                {item.dDay === 0 ? formatApptTime(item.appointmentTime) : formatKoreanDateTime(item.appointmentTime)}
+              </Text>
             </View>
           ))
         )}
