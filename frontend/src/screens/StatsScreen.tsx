@@ -93,8 +93,9 @@ export default function StatsScreen() {
   if (loadError) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} size="large" />
-        <Text style={styles.errorText}>잠시 후 자동으로 다시 불러옵니다...</Text>
+        <Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />
+        <Text style={styles.errorText}>서버에 연결할 수 없습니다.</Text>
+        <Text style={[styles.errorText, { fontSize: 12 }]}>잠시 후 자동으로 다시 불러옵니다...</Text>
       </View>
     );
   }

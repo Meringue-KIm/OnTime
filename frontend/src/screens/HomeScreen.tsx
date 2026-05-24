@@ -14,7 +14,6 @@ import { useLocation } from '../hooks/useLocation';
 import { formatApptTime, extractTimeHHmm } from '../utils/timeFormat';
 import { getWeatherNavIcon, getWeatherIonicon } from '../utils/weather';
 import { DEFAULT_LOCATION } from '../constants/locations';
-import { useAuthStore } from '../store/authStore';
 
 const logo = require('../../assets/logo.png');
 

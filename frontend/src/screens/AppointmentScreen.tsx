@@ -92,6 +92,10 @@ export default function AppointmentScreen() {
       Alert.alert('목적지 주소를 입력해주세요.');
       return false;
     }
+    if (!destLat || !destLng) {
+      Alert.alert('목적지 주소 확인 필요', '검색 결과 목록에서 주소를 선택해주세요.\n직접 입력하면 이동 시간을 계산할 수 없습니다.');
+      return false;
+    }
     const appointmentTime = getAppointmentTimeISO();
     if (!appointmentTime) {
       Alert.alert('날짜와 시간을 입력해주세요.');

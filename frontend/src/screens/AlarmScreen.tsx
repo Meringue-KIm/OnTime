@@ -142,7 +142,7 @@ export default function AlarmScreen() {
         <View style={styles.routeInfoBanner}>
           <Ionicons name="navigate-outline" size={14} color={colors.primary} />
           <Text style={styles.routeInfoText} numberOfLines={1}>
-            <Text style={{ fontFamily: fonts.bold }}>수정 중인 루트:</Text>{'  '}
+            <Text style={{ fontFamily: fonts.bold }}>알람 적용 루트:</Text>{'  '}
             {activeRoute.homeAddress.split(' ').slice(0, 2).join(' ')} → {activeRoute.workAddress.split(' ').slice(0, 2).join(' ')}
           </Text>
         </View>
@@ -174,7 +174,7 @@ export default function AlarmScreen() {
         <View style={styles.badgeRow}>
           {activeRoute && (
             <View style={styles.badge}>
-              <Text style={styles.badgeText}>여유 {activeRoute.alarmBeforeMinutes}분 설정됨</Text>
+              <Text style={styles.badgeText}>여유 {buffer}분 설정됨</Text>
             </View>
           )}
         </View>
