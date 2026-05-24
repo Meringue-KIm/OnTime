@@ -22,7 +22,9 @@ client.interceptors.response.use(
   async (error) => {
     const original = error.config;
 
-    if (error.response?.status !== 401 || original._retry) {
+    // 403도 401과 동일하게 처리 (Spring Security 기본값이 미인증 요청에 403 반환)
+    const status = error.response?.status;
+    if ((status !== 401 && status !== 403) || original._retry) {
       return Promise.reject(error);
     }
 
