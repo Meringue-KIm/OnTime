@@ -7,6 +7,7 @@ import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import TabNavigator from './TabNavigator';
 import { colors } from '../constants/colors';
+import { pingServer } from '../api/ping';
 
 const Stack = createNativeStackNavigator();
 const logo = require('../../assets/logo.png');
@@ -22,7 +23,7 @@ function SplashScreen() {
 export default function AppNavigator() {
   const { isLoggedIn, isLoading, loadToken } = useAuthStore();
 
-  useEffect(() => { loadToken(); }, []);
+  useEffect(() => { pingServer(); loadToken(); }, []);
 
   if (isLoading) return <SplashScreen />;
 

@@ -53,6 +53,10 @@ export default function RouteScreen() {
 
   useEffect(() => { fetchRoutes(); }, []);
 
+  useEffect(() => {
+    if (!loading && routes.length === 0 && !showForm) openNewForm();
+  }, [loading, routes.length]);
+
   const openEditForm = (route: RouteResponse) => {
     setEditingId(route.id);
     setHomeAddr(route.homeAddress);
@@ -154,68 +158,76 @@ export default function RouteScreen() {
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
-      <View style={styles.heroCard}>
-        <Text style={styles.heroTitle}>최적의 경로를{'\n'}설정하세요</Text>
-        <Text style={styles.heroSub}>정확한 주소와 시간 목표로 맞춤 알람을 받아보세요</Text>
-      </View>
+      {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 40 }} />}
 
-      {/* 루트 목록 */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionLabel}>내 루트</Text>
-        <TouchableOpacity style={styles.addBtn} onPress={openNewForm}>
-          <Ionicons name="add" size={18} color="#fff" />
-          <Text style={styles.addBtnText}>추가</Text>
-        </TouchableOpacity>
-      </View>
-
-      {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 12 }} />}
-
-      {!loading && routes.length === 0 && (
-        <View style={styles.emptyCard}>
-          <Ionicons name="map-outline" size={36} color={colors.textMuted} />
-          <Text style={styles.emptyText}>등록된 루트가 없습니다</Text>
-          <TouchableOpacity style={styles.emptyAddBtn} onPress={openNewForm}>
-            <Text style={styles.emptyAddText}>첫 루트 추가하기</Text>
-          </TouchableOpacity>
+      {/* 루트 없음 — 폼 자동 열림 안내 */}
+      {!loading && routes.length === 0 && !showForm && (
+        <View style={styles.heroCard}>
+          <Text style={styles.heroTitle}>경로를 설정하면{'\n'}매일 알람이 울려요</Text>
+          <Text style={styles.heroSub}>집·직장 주소와 도착 목표 시간을 등록해보세요</Text>
         </View>
       )}
 
-      {sortedRoutes.map(route => (
-        <View key={route.id} style={[styles.routeCard, route.isActive && styles.routeCardActive]}>
-          {route.isActive && (
-            <View style={styles.activeBadge}>
-              <Text style={styles.activeBadgeText}>활성</Text>
-            </View>
-          )}
-          <View style={styles.routeInfo}>
-            <View style={styles.routeRow}>
-              <Ionicons name="home-outline" size={13} color={colors.textMuted} />
-              <Text style={styles.routeAddr} numberOfLines={1}>{route.homeAddress}</Text>
-            </View>
-            <Ionicons name="arrow-down" size={12} color={colors.textMuted} style={{ marginLeft: 2 }} />
-            <View style={styles.routeRow}>
-              <Ionicons name="business-outline" size={13} color={colors.textMuted} />
-              <Text style={styles.routeAddr} numberOfLines={1}>{route.workAddress}</Text>
-            </View>
-            <Text style={styles.routeMeta}>
-              {extractTimeHHmm(route.arrivalTime)} 도착 · {route.alarmBeforeMinutes}분 여유
-            </Text>
-          </View>
-          <View style={styles.routeActions}>
-            {!route.isActive && (
-              <TouchableOpacity style={styles.actionBtn} onPress={() => handleActivate(route.id)}>
-                <Ionicons name="checkmark-circle-outline" size={20} color={colors.primary} />
+      {/* 루트 있음 */}
+      {!loading && routes.length > 0 && !showForm && (
+        <>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionLabel}>내 루트</Text>
+            {routes.length < 3 && (
+              <TouchableOpacity style={styles.addBtn} onPress={openNewForm}>
+                <Ionicons name="add" size={16} color="#fff" />
+                <Text style={styles.addBtnText}>추가</Text>
               </TouchableOpacity>
             )}
-            <TouchableOpacity style={styles.actionBtn} onPress={() => openEditForm(route)}>
-              <Ionicons name="pencil-outline" size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(route.id)}>
-              <Ionicons name="trash-outline" size={20} color={colors.danger} />
-            </TouchableOpacity>
           </View>
-        </View>
-      ))}
+
+          {sortedRoutes.map(route => (
+            <View key={route.id} style={[styles.routeCard, route.isActive && styles.routeCardActive]}>
+              <View style={styles.routeCardTop}>
+                <View style={styles.routeStatusRow}>
+                  {route.isActive
+                    ? <View style={styles.activeBadge}><Text style={styles.activeBadgeText}>활성</Text></View>
+                    : <TouchableOpacity style={styles.inactiveBadge} onPress={() => handleActivate(route.id)}>
+                        <Text style={styles.inactiveBadgeText}>활성화</Text>
+                      </TouchableOpacity>
+                  }
+                  <View style={styles.routeActions}>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => openEditForm(route)}>
+                      <Ionicons name="pencil-outline" size={19} color={colors.textSecondary} />
+                    </TouchableOpacity>
+                    <TouchableOpacity style={styles.actionBtn} onPress={() => handleDelete(route.id)}>
+                      <Ionicons name="trash-outline" size={19} color={colors.danger} />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <View style={styles.routeAddressBlock}>
+                  <View style={styles.routeAddressRow}>
+                    <View style={[styles.dot, { backgroundColor: colors.primary }]} />
+                    <Text style={styles.routeAddrText} numberOfLines={1}>{route.homeAddress}</Text>
+                  </View>
+                  <View style={styles.routeLineDash} />
+                  <View style={styles.routeAddressRow}>
+                    <View style={[styles.dot, { backgroundColor: colors.secondary }]} />
+                    <Text style={styles.routeAddrText} numberOfLines={1}>{route.workAddress}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.routeMetaRow}>
+                  <View style={styles.routeMetaChip}>
+                    <Ionicons name="flag-outline" size={12} color={colors.primary} />
+                    <Text style={styles.routeMetaText}>{extractTimeHHmm(route.arrivalTime)} 도착 목표</Text>
+                  </View>
+                  <View style={styles.routeMetaChip}>
+                    <Ionicons name="alarm-outline" size={12} color={colors.primary} />
+                    <Text style={styles.routeMetaText}>알람 여유 {route.alarmBeforeMinutes}분</Text>
+                  </View>
+                </View>
+              </View>
+            </View>
+          ))}
+        </>
+      )}
 
       {/* 편집 / 추가 폼 */}
       {showForm && (
@@ -347,20 +359,24 @@ const styles = StyleSheet.create({
   sectionLabel:         { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
   addBtn:               { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   addBtnText:           { fontSize: 13, fontWeight: '600', color: '#fff' },
-  emptyCard:            { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 32, alignItems: 'center', gap: 10, marginBottom: 12, ...cardShadow },
-  emptyText:            { fontSize: 14, color: colors.textMuted },
-  emptyAddBtn:          { marginTop: 4, backgroundColor: colors.primaryLight, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
-  emptyAddText:         { fontSize: 14, fontWeight: '600', color: colors.primary },
-  routeCard:            { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 10, flexDirection: 'row', alignItems: 'center', ...cardShadow },
+  routeCard:            { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, ...cardShadow },
   routeCardActive:      { borderWidth: 2, borderColor: colors.primary },
-  activeBadge:          { position: 'absolute', top: 10, right: 10, backgroundColor: colors.primary, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
-  activeBadgeText:      { fontSize: 10, fontWeight: '700', color: '#fff' },
-  routeInfo:            { flex: 1 },
-  routeRow:             { flexDirection: 'row', alignItems: 'center', gap: 5 },
-  routeAddr:            { flex: 1, fontSize: 13, fontWeight: '600', color: colors.textPrimary },
-  routeMeta:            { fontSize: 11, color: colors.textMuted, marginTop: 4 },
-  routeActions:         { flexDirection: 'row', gap: 4 },
-  actionBtn:            { padding: 6 },
+  routeCardTop:         { gap: 12 },
+  routeStatusRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  activeBadge:          { backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
+  activeBadgeText:      { fontSize: 11, fontWeight: '700', color: '#fff' },
+  inactiveBadge:        { backgroundColor: colors.primaryLight, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10 },
+  inactiveBadgeText:    { fontSize: 11, fontWeight: '600', color: colors.primary },
+  routeActions:         { flexDirection: 'row', gap: 2 },
+  actionBtn:            { padding: 7 },
+  routeAddressBlock:    { backgroundColor: colors.bg, borderRadius: 10, padding: 12, gap: 6 },
+  routeAddressRow:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  dot:                  { width: 8, height: 8, borderRadius: 4 },
+  routeLineDash:        { width: 2, height: 14, backgroundColor: colors.border, marginLeft: 3 },
+  routeAddrText:        { flex: 1, fontSize: 13, fontWeight: '600', color: colors.textPrimary },
+  routeMetaRow:         { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
+  routeMetaChip:        { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primaryLight, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 20 },
+  routeMetaText:        { fontSize: 11, fontWeight: '600', color: colors.primary },
   formCard:             { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginTop: 8, ...cardShadow },
   formTitle:            { fontSize: 16, fontWeight: '700', color: colors.textPrimary, marginBottom: 16 },
   inputLabel:           { fontSize: 12, color: colors.textSecondary, marginBottom: 6 },
