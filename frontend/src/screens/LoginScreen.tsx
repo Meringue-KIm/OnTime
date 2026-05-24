@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Text, TextInput, TouchableOpacity, StyleSheet,
   Alert, ActivityIndicator, Image, View, ScrollView,
@@ -17,6 +17,7 @@ export default function LoginScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
   const setTokens = useAuthStore((s) => s.setTokens);
+  const passwordRef = useRef<any>(null);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -72,6 +73,9 @@ export default function LoginScreen({ navigation }: any) {
               placeholderTextColor={colors.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              blurOnSubmit={false}
               value={email}
               onChangeText={setEmail}
             />
@@ -80,10 +84,13 @@ export default function LoginScreen({ navigation }: any) {
           <Text style={[styles.inputLabel, { marginTop: 14 }]}>비밀번호</Text>
           <View style={styles.inputWrap}>
             <TextInput
+              ref={passwordRef}
               style={styles.input}
               placeholder="비밀번호 입력"
               placeholderTextColor={colors.textMuted}
               secureTextEntry
+              returnKeyType="done"
+              onSubmitEditing={handleLogin}
               value={password}
               onChangeText={setPassword}
             />

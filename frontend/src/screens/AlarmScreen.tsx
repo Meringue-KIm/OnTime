@@ -156,7 +156,10 @@ export default function AlarmScreen() {
         {loading ? (
           <ActivityIndicator color="#fff" size="large" style={{ marginVertical: 12 }} />
         ) : todayError ? (
-          <Text style={styles.wakeTimePlaceholder}>--:--</Text>
+          <View style={{ alignItems: 'center', gap: 4, marginVertical: 8 }}>
+            <Text style={styles.wakeTimePlaceholder}>--:--</Text>
+            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', textAlign: 'center' }}>서버 연결 실패 · 잠시 후 자동 재시도</Text>
+          </View>
         ) : departureTime ? (
           <Text style={styles.wakeTime}>{departureTime}</Text>
         ) : (
@@ -247,7 +250,7 @@ export default function AlarmScreen() {
           onPress={() =>
             sendTestAlarm()
               .then(() => Alert.alert('전송 완료', '잠시 후 알림이 도착합니다.\n알림이 오지 않으면 설정 → 알림에서 OnTime 알림이 허용되어 있는지 확인해주세요.'))
-              .catch(() => Alert.alert('알람 테스트 실패', '앱을 완전히 종료했다가 다시 열고 시도해주세요.\n문제가 계속되면 로그아웃 후 재로그인해주세요.'))
+              .catch((e: any) => Alert.alert('알람 테스트 실패', e?.response?.data ?? '앱을 완전히 종료했다가 다시 열고 시도해주세요.\n문제가 계속되면 로그아웃 후 재로그인해주세요.'))
           }
         >
           <Ionicons name="notifications-outline" size={18} color="#fff" />

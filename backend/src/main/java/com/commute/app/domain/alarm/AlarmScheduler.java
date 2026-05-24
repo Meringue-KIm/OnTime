@@ -44,6 +44,9 @@ public class AlarmScheduler {
         // 오늘 요일 (프론트 인덱스 기준: 0=일,1=월...6=토)
         int todayIndex = LocalDate.now().getDayOfWeek().getValue() % 7;
 
+        // 분당 1회만 발송 — 복수 루트 활성 시 중복 알람 방지
+        java.util.Set<Long> alarmedUsers = new java.util.HashSet<>();
+
         List<CommuteRoute> routes = routeRepository.findAllByIsActiveTrue();
         for (CommuteRoute route : routes) {
             if (!route.isActiveDay(todayIndex)) continue;
@@ -64,14 +67,15 @@ public class AlarmScheduler {
             LocalTime departureTime = route.getArrivalTime()
                     .minusMinutes(drivingMinutes + route.getAlarmBeforeMinutes() + weatherBuffer);
 
-            if (now.equals(departureTime)) {
+            Long userId = route.getUser().getId();
+            if (now.equals(departureTime) && !alarmedUsers.contains(userId)) {
                 String title = "출발할 시간이에요!";
                 String body  = buildAlarmBody(drivingMinutes, weatherOpt.orElse(null));
                 fcmService.sendPushNotification(fcmToken, title, body);
-                log.info("알람 발송 — userId={}, 출발={}", route.getUser().getId(), departureTime);
+                alarmedUsers.add(userId);
+                log.info("알람 발송 — userId={}, 출발={}", userId, departureTime);
 
                 // 오늘 로그가 없을 때만 생성 (중복 방지)
-                Long userId = route.getUser().getId();
                 if (logRepository.findByUserIdAndLogDate(userId, today).isEmpty()) {
                     logRepository.save(CommuteLog.builder()
                             .user(route.getUser())

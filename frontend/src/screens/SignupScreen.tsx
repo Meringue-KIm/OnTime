@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Text, TextInput, TouchableOpacity, StyleSheet,
   Alert, ActivityIndicator, Image, View, ScrollView,
@@ -17,6 +17,8 @@ export default function SignupScreen({ navigation }: any) {
   const [confirm, setConfirm]   = useState('');
   const [loading, setLoading]   = useState(false);
   const setTokens = useAuthStore((s) => s.setTokens);
+  const passwordRef = useRef<any>(null);
+  const confirmRef  = useRef<any>(null);
 
   const handleSignup = async () => {
     if (!email || !password || !confirm) {
@@ -66,6 +68,9 @@ export default function SignupScreen({ navigation }: any) {
               placeholderTextColor={colors.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
+              returnKeyType="next"
+              onSubmitEditing={() => passwordRef.current?.focus()}
+              blurOnSubmit={false}
               value={email}
               onChangeText={setEmail}
             />
@@ -74,10 +79,14 @@ export default function SignupScreen({ navigation }: any) {
           <Text style={[styles.inputLabel, { marginTop: 14 }]}>비밀번호</Text>
           <View style={styles.inputWrap}>
             <TextInput
+              ref={passwordRef}
               style={styles.input}
               placeholder="8자 이상 입력"
               placeholderTextColor={colors.textMuted}
               secureTextEntry
+              returnKeyType="next"
+              onSubmitEditing={() => confirmRef.current?.focus()}
+              blurOnSubmit={false}
               value={password}
               onChangeText={setPassword}
             />
@@ -86,10 +95,13 @@ export default function SignupScreen({ navigation }: any) {
           <Text style={[styles.inputLabel, { marginTop: 14 }]}>비밀번호 확인</Text>
           <View style={styles.inputWrap}>
             <TextInput
+              ref={confirmRef}
               style={styles.input}
               placeholder="비밀번호 재입력"
               placeholderTextColor={colors.textMuted}
               secureTextEntry
+              returnKeyType="done"
+              onSubmitEditing={handleSignup}
               value={confirm}
               onChangeText={setConfirm}
             />

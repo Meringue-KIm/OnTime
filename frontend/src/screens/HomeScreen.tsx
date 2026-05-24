@@ -193,7 +193,20 @@ export default function HomeScreen() {
                 </Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.weatherLocationBtn} onPress={() => navigation.navigate('Route')}>
+            <TouchableOpacity
+              style={styles.weatherLocationBtn}
+              onPress={() => {
+                const source = gpsCoords ? 'GPS 현재 위치' : (activeRoute?.homeAddress?.split(' ').slice(0, 2).join(' ') ?? '서울 기본값');
+                Alert.alert(
+                  '날씨 기준 위치',
+                  `현재 ${source} 기준으로 날씨를 표시합니다.\n\n위치를 변경하려면 루트 탭에서 집 주소를 수정하세요.`,
+                  [
+                    { text: '루트 수정', onPress: () => navigation.navigate('Route') },
+                    { text: '확인', style: 'cancel' },
+                  ],
+                );
+              }}
+            >
               <Ionicons name="location-outline" size={12} color={colors.primary} />
               <Text style={styles.weatherLocation}>
                 {gpsCoords
