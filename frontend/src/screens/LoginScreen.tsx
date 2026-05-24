@@ -6,9 +6,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { login } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
+import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
 
 const logo = require('../../assets/logo.png');
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function LoginScreen({ navigation }: any) {
   const [email, setEmail]       = useState('');
@@ -19,6 +21,10 @@ export default function LoginScreen({ navigation }: any) {
   const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert('이메일과 비밀번호를 입력해주세요.');
+      return;
+    }
+    if (!EMAIL_RE.test(email)) {
+      Alert.alert('이메일 형식을 확인해주세요.');
       return;
     }
     setLoading(true);
@@ -40,6 +46,20 @@ export default function LoginScreen({ navigation }: any) {
         <View style={styles.logoWrap}>
           <Image source={logo} style={styles.logo} resizeMode="contain" />
           <Text style={styles.subtitle}>스마트 출발 시간 알람</Text>
+          <View style={styles.featureRow}>
+            <View style={styles.featureItem}>
+              <Ionicons name="alarm-outline" size={14} color={colors.primary} />
+              <Text style={styles.featureText}>매일 자동 알람</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="car-outline" size={14} color={colors.primary} />
+              <Text style={styles.featureText}>실시간 교통 반영</Text>
+            </View>
+            <View style={styles.featureItem}>
+              <Ionicons name="cloudy-outline" size={14} color={colors.primary} />
+              <Text style={styles.featureText}>날씨 자동 계산</Text>
+            </View>
+          </View>
         </View>
 
         {/* 입력 카드 */}
@@ -100,6 +120,9 @@ const styles = StyleSheet.create({
   logoWrap:    { alignItems: 'center', marginBottom: 32 },
   logo:        { width: 160, height: 72 },
   subtitle:    { fontSize: 14, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 4 },
+  featureRow:  { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' },
+  featureItem: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primaryLight, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
+  featureText: { fontSize: 11, fontFamily: fonts.semiBold, color: colors.primary },
   card:        { backgroundColor: colors.card, borderRadius: 16, padding: 20, marginBottom: 20, ...cardShadow },
   inputLabel:  { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary, marginBottom: 6 },
   inputWrap:   { backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12 },

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const logo = require('../../assets/logo.png');
@@ -13,13 +13,24 @@ export default function StatsScreen() {
   const insets = useSafeAreaInsets();
   const [logs, setLogs] = useState<CommuteLog[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    getLogs()
+  const fetchLogs = (): Promise<void> => {
+    setLoadError(false);
+    return getLogs()
       .then(({ data }) => setLogs(data))
-      .catch(() => {})
+      .catch(() => setLoadError(true))
       .finally(() => setLoading(false));
-  }, []);
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchLogs();
+    setRefreshing(false);
+  };
+
+  useEffect(() => { setLoading(true); fetchLogs(); }, []);
 
   const logsWithFeedback = logs.filter(l => l.isLate !== null);
   const onTimeCount     = logsWithFeedback.filter(l => l.isLate === false).length;
@@ -63,8 +74,24 @@ export default function StatsScreen() {
     );
   }
 
+  if (loadError) {
+    return (
+      <View style={styles.center}>
+        <Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />
+        <Text style={styles.errorText}>통계를 불러오지 못했습니다.</Text>
+        <TouchableOpacity style={styles.retryBtn} onPress={fetchLogs}>
+          <Text style={styles.retryBtnText}>다시 시도</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
+
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+    >
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
@@ -209,7 +236,10 @@ function getWeekLabel(d: Date): string {
 
 const styles = StyleSheet.create({
   container:        { flex: 1, backgroundColor: colors.bg },
-  center:           { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
+  center:           { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, gap: 12 },
+  errorText:        { fontSize: 14, fontFamily: fonts.regular, color: colors.textMuted },
+  retryBtn:         { marginTop: 4, backgroundColor: colors.primaryLight, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
+  retryBtnText:     { fontSize: 14, fontFamily: fonts.semiBold, color: colors.primary },
   header:           { paddingHorizontal: 20, paddingBottom: 8 },
   logoImg:          { width: 180, height: 81 },
   insightCard:      { margin: 20, backgroundColor: colors.primary, borderRadius: 16, padding: 20 },

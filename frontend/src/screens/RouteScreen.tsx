@@ -11,7 +11,6 @@ import type { RouteRequest, RouteResponse } from '../api/routes';
 import { BUFFER_MIN, BUFFER_MAX, BUFFER_STEP } from '../constants/defaults';
 import { extractTimeHHmm } from '../utils/timeFormat';
 import { getErrorMessage } from '../utils/errors';
-import { DAYS_OF_WEEK } from '../constants/dates';
 import AddressInput from '../components/AddressInput';
 
 const logo = require('../../assets/logo.png');
@@ -48,7 +47,7 @@ export default function RouteScreen() {
   const [arrivalTime, setArrivalTime] = useState('09:00');
   const [buffer, setBuffer]         = useState(15);
   const [transport, setTransport]   = useState<'car' | 'transit' | 'walk'>('car');
-  const [activeDays, setActiveDays] = useState([1, 2, 3, 4, 5]);
+  const [activeDays, setActiveDays] = useState([1, 2, 3, 4, 5]); // 폼에서 숨김 — AlarmScreen에서 관리
 
   useEffect(() => { fetchRoutes(); }, []);
 
@@ -83,6 +82,14 @@ export default function RouteScreen() {
   const handleSave = async () => {
     if (!homeAddr.trim() || !workAddr.trim()) {
       Alert.alert('집과 직장 주소를 모두 입력해주세요.');
+      return;
+    }
+    if (!homeLat || !homeLng) {
+      Alert.alert('집 주소 확인 필요', '검색 결과 목록에서 주소를 선택해주세요.\n직접 입력하면 위치를 찾을 수 없습니다.');
+      return;
+    }
+    if (!workLat || !workLng) {
+      Alert.alert('직장 주소 확인 필요', '검색 결과 목록에서 주소를 선택해주세요.\n직접 입력하면 위치를 찾을 수 없습니다.');
       return;
     }
     const timeParts = arrivalTime.split(':');
@@ -124,9 +131,6 @@ export default function RouteScreen() {
       }},
     ]);
   };
-
-  const toggleDay = (i: number) =>
-    setActiveDays(prev => prev.includes(i) ? prev.filter(d => d !== i) : [...prev, i]);
 
   const sortedRoutes = [...routes].sort((a, b) => Number(b.isActive) - Number(a.isActive));
 
@@ -209,6 +213,7 @@ export default function RouteScreen() {
           <Text style={styles.inputLabel}>🏠 집 주소</Text>
           <AddressInput
             value={homeAddr}
+            isSelected={homeLat !== undefined}
             onChange={(t) => { setHomeAddr(t); setHomeLat(undefined); setHomeLng(undefined); }}
             onSelect={(addr, lat, lng) => { setHomeAddr(addr); setHomeLat(lat); setHomeLng(lng); }}
             placeholder="집 주소 입력"
@@ -218,6 +223,7 @@ export default function RouteScreen() {
           <Text style={[styles.inputLabel, { marginTop: 12 }]}>🏢 직장 주소</Text>
           <AddressInput
             value={workAddr}
+            isSelected={workLat !== undefined}
             onChange={(t) => { setWorkAddr(t); setWorkLat(undefined); setWorkLng(undefined); }}
             onSelect={(addr, lat, lng) => { setWorkAddr(addr); setWorkLat(lat); setWorkLng(lng); }}
             placeholder="직장 주소 입력"
@@ -294,18 +300,10 @@ export default function RouteScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* 반복 요일 */}
-          <Text style={[styles.inputLabel, { marginTop: 12 }]}>📅 반복 요일</Text>
-          <View style={styles.daysRow}>
-            {DAYS_OF_WEEK.map((day, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[styles.dayBtn, activeDays.includes(i) && styles.dayBtnActive]}
-                onPress={() => toggleDay(i)}
-              >
-                <Text style={[styles.dayText, activeDays.includes(i) && styles.dayTextActive]}>{day}</Text>
-              </TouchableOpacity>
-            ))}
+          {/* 반복 요일 안내 */}
+          <View style={styles.alarmTip}>
+            <Ionicons name="calendar-outline" size={14} color={colors.primary} />
+            <Text style={styles.alarmTipText}>반복 요일과 여유 시간 세부 설정은 <Text style={styles.alarmTipBold}>알람 탭</Text>에서 변경할 수 있어요.</Text>
           </View>
 
           {/* 버튼 */}
@@ -367,13 +365,11 @@ const styles = StyleSheet.create({
   bufferRow:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
   bufferBtn:            { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   bufferValue:          { fontSize: 22, fontWeight: '700', color: colors.textPrimary, minWidth: 60, textAlign: 'center' },
-  daysRow:              { flexDirection: 'row', justifyContent: 'space-between' },
-  dayBtn:               { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
-  dayBtnActive:         { backgroundColor: colors.primary },
-  dayText:              { fontSize: 12, fontWeight: '600', color: colors.textSecondary },
-  dayTextActive:        { color: '#fff' },
   transitNote:          { flexDirection: 'row', gap: 6, alignItems: 'flex-start', backgroundColor: '#FFF3E0', borderRadius: 8, padding: 10, marginTop: 8 },
   transitNoteText:      { flex: 1, fontSize: 11, color: '#E65100' },
+  alarmTip:             { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: colors.primaryLight, borderRadius: 8, padding: 10, marginTop: 12 },
+  alarmTipText:         { flex: 1, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
+  alarmTipBold:         { fontWeight: '700', color: colors.primary },
   formBtns:             { flexDirection: 'row', gap: 10, marginTop: 20 },
   cancelBtn:            { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.bg, alignItems: 'center' },
   cancelText:           { fontSize: 14, fontWeight: '600', color: colors.textSecondary },

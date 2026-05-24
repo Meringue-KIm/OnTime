@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Image, Platform,
+  TextInput, Alert, ActivityIndicator, Image, Platform, RefreshControl,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,7 +13,6 @@ import { getErrorMessage } from '../utils/errors';
 import type { AppointmentRequest } from '../api/appointments';
 import { DEFAULT_ALARM_MINUTES } from '../constants/defaults';
 import { formatKoreanDateTime } from '../utils/timeFormat';
-import { getErrorMessage } from '../utils/errors';
 
 const logo = require('../../assets/logo.png');
 
@@ -54,8 +53,15 @@ export default function AppointmentScreen() {
   const [webDate, setWebDate] = useState('');
   const [webTime, setWebTime] = useState('09:00');
 
+  const [refreshing, setRefreshing] = useState(false);
   const { appointments, loading, fetchAppointments, addAppointment, completeDone, removeAppointment } = useAppointmentStore();
   useEffect(() => { fetchAppointments(); }, []);
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await fetchAppointments();
+    setRefreshing(false);
+  };
 
   const handleComplete = (id: number) => {
     Alert.alert('약속 완료', '이 약속을 완료 처리하시겠습니까?', [
@@ -119,7 +125,11 @@ export default function AppointmentScreen() {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+    >
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
@@ -224,6 +234,7 @@ export default function AppointmentScreen() {
         <Text style={styles.inputLabel}>목적지 주소</Text>
         <AddressInput
           value={dest}
+          isSelected={destLat !== null}
           onChange={(t) => { setDest(t); setDestLat(null); setDestLng(null); }}
           onSelect={(address, lat, lng) => { setDest(address); setDestLat(lat); setDestLng(lng); }}
           placeholder="장소 또는 주소 입력"
@@ -261,7 +272,11 @@ export default function AppointmentScreen() {
 
         {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 8 }} />}
         {!loading && appointments.length === 0 && (
-          <Text style={styles.emptyText}>등록된 약속이 없습니다.</Text>
+          <View style={styles.emptyWrap}>
+            <Ionicons name="calendar-outline" size={28} color={colors.textMuted} />
+            <Text style={styles.emptyText}>등록된 약속이 없습니다.</Text>
+            <Text style={styles.emptySubText}>위 폼에서 약속을 추가해보세요.</Text>
+          </View>
         )}
 
         {appointments.map((item) => {
@@ -321,7 +336,9 @@ const styles = StyleSheet.create({
   submitBtn:          { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' },
   submitText:         { fontSize: 15, fontFamily: fonts.bold, color: '#fff' },
   sectionTitle:       { fontSize: 15, fontFamily: fonts.bold, color: colors.textPrimary, marginBottom: 12 },
-  emptyText:          { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', paddingVertical: 12 },
+  emptyWrap:          { alignItems: 'center', paddingVertical: 16, gap: 6 },
+  emptyText:          { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center' },
+  emptySubText:       { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center' },
   apptItem:           { flexDirection: 'row', alignItems: 'center', paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
   apptTitle:          { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },
   apptTime:           { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },

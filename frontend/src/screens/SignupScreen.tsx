@@ -8,6 +8,7 @@ import { signup } from '../api/auth';
 import { colors, fonts, cardShadow } from '../constants/colors';
 
 const logo = require('../../assets/logo.png');
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 export default function SignupScreen({ navigation }: any) {
   const [email, setEmail]       = useState('');
@@ -18,6 +19,10 @@ export default function SignupScreen({ navigation }: any) {
   const handleSignup = async () => {
     if (!email || !password || !confirm) {
       Alert.alert('모든 항목을 입력해주세요.');
+      return;
+    }
+    if (!EMAIL_RE.test(email)) {
+      Alert.alert('이메일 형식을 확인해주세요.');
       return;
     }
     if (password !== confirm) {

@@ -13,7 +13,7 @@ interface AppointmentState {
 
 export const useAppointmentStore = create<AppointmentState>((set) => ({
   appointments: [],
-  loading: false,
+  loading: true,
 
   fetchAppointments: async () => {
     set({ loading: true });

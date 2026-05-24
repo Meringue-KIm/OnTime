@@ -1,7 +1,7 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
-import { Platform } from 'react-native';
+import { Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import { updateFcmToken } from '../api/auth';
@@ -20,13 +20,13 @@ export async function setupNotificationChannel() {
     importance: Notifications.AndroidImportance.HIGH,
     vibrationPattern: vibration ? [0, 400, 200, 400] : undefined,
     enableVibrate: vibration,
-    lightingEnabled: true,
     lightColor: '#2D6A4F',
     sound: 'alarm',  // assets/alarm.wav (EAS 빌드 시 적용)
   });
 }
 
-export function useNotification() {
+export function useNotification(): { notifPermission: 'granted' | 'denied' | 'unknown' } {
+  const [notifPermission, setNotifPermission] = useState<'granted' | 'denied' | 'unknown'>('unknown');
   const soundRef    = useRef<Audio.Sound | null>(null);
   const rampRef     = useRef<ReturnType<typeof setInterval> | null>(null);
   const stopRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -46,11 +46,28 @@ export function useNotification() {
 
     (async () => {
       const { status: existing } = await Notifications.getPermissionsAsync();
-      const { status } = existing === 'granted'
-        ? { status: existing }
-        : await Notifications.requestPermissionsAsync();
-      if (status !== 'granted') return;
+      let finalStatus = existing;
 
+      if (existing !== 'granted') {
+        await new Promise<void>(resolve =>
+          Alert.alert(
+            '알림 권한 필요',
+            'OnTime이 매일 아침 출발 시간 알람을 보내려면 알림 권한이 필요합니다.',
+            [{ text: '확인', onPress: () => resolve() }],
+          )
+        );
+        const { status } = await Notifications.requestPermissionsAsync();
+        finalStatus = status;
+      }
+
+      const { status } = { status: finalStatus };
+
+      if (status !== 'granted') {
+        setNotifPermission('denied');
+        return;
+      }
+
+      setNotifPermission('granted');
       await setupNotificationChannel();
 
       const token = (await Notifications.getDevicePushTokenAsync()).data;
@@ -107,4 +124,6 @@ export function useNotification() {
       stopAlarm();
     };
   }, []);
+
+  return { notifPermission };
 }

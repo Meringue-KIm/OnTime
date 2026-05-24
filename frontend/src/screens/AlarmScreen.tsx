@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Image } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Image, Linking } from 'react-native';
+import * as Notifications from 'expo-notifications';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { setupNotificationChannel } from '../hooks/useNotification';
 import { sendTestAlarm } from '../api/auth';
+import { getErrorMessage } from '../utils/errors';
 import { colors, fonts, cardShadow } from '../constants/colors';
 
 const logo = require('../../assets/logo.png');
@@ -21,12 +23,37 @@ const STORAGE_KEYS = {
   wakeLight:     'alarm_wake_light',
 };
 
+const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
+
+function getNextAlarmLabel(departureTimeStr: string | null, activeDays: number[]): string | null {
+  if (!departureTimeStr || activeDays.length === 0) return null;
+  const [hh, mm] = departureTimeStr.split(':').map(Number);
+  const now = new Date();
+  for (let i = 0; i < 8; i++) {
+    const candidate = new Date(now);
+    candidate.setDate(candidate.getDate() + i);
+    candidate.setHours(hh, mm, 0, 0);
+    if (candidate <= now) continue;
+    const dow = candidate.getDay();
+    if (!activeDays.includes(dow)) continue;
+    const ampm = hh < 12 ? '오전' : '오후';
+    const h12 = hh % 12 === 0 ? 12 : hh % 12;
+    const timeStr = `${ampm} ${h12}:${String(mm).padStart(2, '0')}`;
+    if (i === 0) return `오늘 ${timeStr}`;
+    if (i === 1) return `내일 ${timeStr}`;
+    return `${candidate.getMonth() + 1}/${candidate.getDate()}(${DAY_LABELS[dow]}) ${timeStr}`;
+  }
+  return null;
+}
+
 export default function AlarmScreen() {
   const insets = useSafeAreaInsets();
   const [departureTime, setDepartureTime] = useState<string | null>(null);
   const [loading, setLoading]             = useState(true);
+  const [todayError, setTodayError]       = useState(false);
   const [saving, setSaving]               = useState(false);
 
+  const [notifStatus, setNotifStatus]     = useState<string | null>(null);
   const [activeDays, setActiveDays]       = useState([1, 2, 3, 4, 5]);
   const [vibration, setVibration]         = useState(true);
   const [gradualVolume, setGradualVolume] = useState(true);
@@ -38,12 +65,17 @@ export default function AlarmScreen() {
 
   // 마운트 시 저장된 설정 불러오기
   useEffect(() => {
+    Notifications.getPermissionsAsync().then(({ status }: { status: string }) => setNotifStatus(status));
+  }, []);
+
+  useEffect(() => {
     fetchRoutes();
     getToday()
       .then(({ data }) => {
         if (data.recommendedDeparture) setDepartureTime(extractTimeHHmm(data.recommendedDeparture));
+        setTodayError(false);
       })
-      .catch(() => {})
+      .catch(() => setTodayError(true))
       .finally(() => setLoading(false));
 
     AsyncStorage.multiGet([STORAGE_KEYS.vibration, STORAGE_KEYS.gradualVolume, STORAGE_KEYS.wakeLight])
@@ -80,6 +112,9 @@ export default function AlarmScreen() {
         alarmBeforeMinutes: buffer,
         activeDays:        activeDays.join(','),
       }, activeRoute.id);
+      Alert.alert('저장 완료', '알람 설정이 저장되었습니다.');
+    } catch (e: any) {
+      Alert.alert('저장 실패', getErrorMessage(e));
     } finally {
       setSaving(false);
     }
@@ -103,11 +138,21 @@ export default function AlarmScreen() {
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
+      {notifStatus === 'denied' && (
+        <TouchableOpacity style={styles.permissionBanner} onPress={() => Linking.openSettings()}>
+          <Ionicons name="alert-circle-outline" size={16} color="#D32F2F" />
+          <Text style={styles.permissionBannerText}>알림 권한이 꺼져 있습니다. 알람을 받으려면 설정에서 허용해주세요.</Text>
+          <Ionicons name="chevron-forward" size={14} color="#D32F2F" />
+        </TouchableOpacity>
+      )}
+
       {/* 오늘 출발 시간 */}
       <View style={styles.wakeCard}>
         <Text style={styles.wakeLabel}>오늘 추천 출발 시간</Text>
         {loading ? (
           <ActivityIndicator color="#fff" size="large" style={{ marginVertical: 12 }} />
+        ) : todayError ? (
+          <Text style={styles.wakeTimePlaceholder}>정보를 불러오지 못했습니다</Text>
         ) : departureTime ? (
           <Text style={styles.wakeTime}>{departureTime}</Text>
         ) : (
@@ -120,6 +165,15 @@ export default function AlarmScreen() {
             </View>
           )}
         </View>
+        {!loading && (() => {
+          const label = getNextAlarmLabel(departureTime, activeDays);
+          return label ? (
+            <View style={styles.nextAlarmRow}>
+              <Ionicons name="alarm-outline" size={13} color="rgba(255,255,255,0.8)" />
+              <Text style={styles.nextAlarmText}>다음 알람 · {label}</Text>
+            </View>
+          ) : null;
+        })()}
       </View>
 
       {/* 반복 요일 */}
@@ -223,6 +277,8 @@ export default function AlarmScreen() {
 const styles = StyleSheet.create({
   container:           { flex: 1, backgroundColor: colors.bg },
   header:              { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingBottom: 8 },
+  permissionBanner:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginBottom: 8, backgroundColor: '#FFEBEE', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  permissionBannerText:{ flex: 1, fontSize: 12, fontFamily: fonts.regular, color: '#D32F2F', lineHeight: 17 },
   logoImg:             { width: 180, height: 81 },
   wakeCard:            { margin: 20, backgroundColor: colors.primary, borderRadius: 16, padding: 24, alignItems: 'center' },
   wakeLabel:           { fontSize: 13, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.75)', marginBottom: 4 },
@@ -231,6 +287,8 @@ const styles = StyleSheet.create({
   badgeRow:            { flexDirection: 'row', gap: 8, marginTop: 12 },
   badge:               { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
   badgeText:           { fontSize: 12, fontFamily: fonts.regular, color: '#fff' },
+  nextAlarmRow:        { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 10 },
+  nextAlarmText:       { fontSize: 12, fontFamily: fonts.semiBold, color: 'rgba(255,255,255,0.9)' },
   card:                { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, ...cardShadow },
   sectionTitle:        { fontSize: 15, fontFamily: fonts.bold, color: colors.textPrimary, marginBottom: 14 },
   rowBetween:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },

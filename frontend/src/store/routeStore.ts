@@ -13,7 +13,7 @@ interface RouteState {
 
 export const useRouteStore = create<RouteState>((set) => ({
   routes: [],
-  loading: false,
+  loading: true,
 
   fetchRoutes: async () => {
     set({ loading: true });

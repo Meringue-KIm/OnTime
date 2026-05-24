@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Platform, Modal, TextInput } from 'react-native';
+import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Platform, Modal, TextInput, Alert, Linking, AppState, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -38,7 +38,10 @@ export default function HomeScreen() {
   const navigation = useNavigation<any>();
   const [today, setToday] = useState<TodayResponse | null>(null);
   const [todayLoading, setTodayLoading] = useState(true);
+  const [todayError, setTodayError] = useState(false);
   const [weather, setWeather] = useState<WeatherSummary | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [weatherError, setWeatherError] = useState(false);
 
   const { routes, fetchRoutes } = useRouteStore();
   const { appointments, fetchAppointments } = useAppointmentStore();
@@ -50,28 +53,80 @@ export default function HomeScreen() {
   const [newPw, setNewPw]   = useState('');
   const [pwSaving, setPwSaving] = useState(false);
 
-  useEffect(() => {
-    fetchRoutes();
-    fetchAppointments();
-    getToday()
+  const fetchToday = (): Promise<void> => {
+    setTodayLoading(true);
+    setTodayError(false);
+    return getToday()
       .then(({ data }) => {
         setToday(data);
         if (data.recommendedDeparture) {
           scheduleLocalAlarm(String(data.recommendedDeparture)).catch(() => {});
         }
       })
-      .catch(() => setToday(null))
+      .catch(() => {
+        setToday(null);
+        setTodayError(true);
+      })
       .finally(() => setTodayLoading(false));
+  };
+
+  const onRefresh = async () => {
+    setRefreshing(true);
+    await Promise.all([fetchRoutes(), fetchAppointments(), fetchToday()]);
+    setRefreshing(false);
+  };
+
+  useEffect(() => {
+    fetchRoutes();
+    fetchAppointments();
+    fetchToday();
   }, []);
+
+  // 앱 백그라운드 → 포그라운드 복귀 시 데이터 갱신
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', state => {
+      if (state === 'active') {
+        fetchRoutes();
+        fetchAppointments();
+        fetchToday();
+      }
+    });
+    return () => sub.remove();
+  }, []);
+
+  const handleNavigation = async () => {
+    const route = routes.find(r => r.isActive) ?? routes[0];
+    if (!route?.workLat || !route?.workLng) {
+      Alert.alert('위치 정보 없음', '루트의 직장 주소를 검색 목록에서 다시 선택해주세요.');
+      return;
+    }
+    const { workLat: lat, workLng: lng, workAddress } = route;
+    const name = encodeURIComponent(workAddress);
+
+    const kakaoUrl = `kakaomap://route?ep=${lat},${lng}&by=CAR`;
+    const naverUrl = `nmap://route/car?dlat=${lat}&dlng=${lng}&dname=${name}&appname=app.ontime`;
+    const googleUrl = `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&travelmode=driving`;
+
+    const tryOpen = async (url: string) => {
+      const can = await Linking.canOpenURL(url).catch(() => false);
+      if (can) { Linking.openURL(url); return true; }
+      return false;
+    };
+
+    if (await tryOpen(kakaoUrl)) return;
+    if (await tryOpen(naverUrl)) return;
+    Linking.openURL(googleUrl);
+  };
 
   // 날씨 우선순위: GPS 위치 > 활성 경로 집 주소 > 서울 기본값
   useEffect(() => {
     const active = routes.find(r => r.isActive) ?? routes[0];
     const lat = gpsCoords?.lat ?? active?.homeLat ?? DEFAULT_LOCATION.lat;
     const lng = gpsCoords?.lng ?? active?.homeLng ?? DEFAULT_LOCATION.lng;
+    setWeatherError(false);
     getWeatherSummary(lat, lng)
-      .then(({ data }) => setWeather(data))
-      .catch(() => {});
+      .then(({ data }) => { setWeather(data); setWeatherError(false); })
+      .catch(() => setWeatherError(true));
   }, [gpsCoords, routes]);
 
   useNotification();
@@ -112,7 +167,11 @@ export default function HomeScreen() {
     .slice(0, 3);
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
+    <ScrollView
+      style={styles.container}
+      showsVerticalScrollIndicator={false}
+      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
+    >
 
       {/* Header */}
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
@@ -128,6 +187,12 @@ export default function HomeScreen() {
       </View>
 
       {/* Weather */}
+      {weatherError && !weather && (
+        <View style={styles.weatherErrorWrap}>
+          <Ionicons name="cloud-offline-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.weatherErrorText}>날씨 정보를 불러오지 못했습니다.</Text>
+        </View>
+      )}
       {weather && (
         <View style={styles.weatherWrap}>
           {/* 상단: 아이콘 + 기온 + 위치 */}
@@ -179,6 +244,15 @@ export default function HomeScreen() {
         <Text style={styles.departureLabel}>다음 출발 시간</Text>
         {todayLoading ? (
           <ActivityIndicator color="#fff" size="large" style={{ marginVertical: 8 }} />
+        ) : todayError ? (
+          <View style={styles.onboardingWrap}>
+            <Ionicons name="cloud-offline-outline" size={32} color="rgba(255,255,255,0.7)" />
+            <Text style={styles.noRouteText}>출발 정보를 불러오지 못했습니다</Text>
+            <Text style={styles.noRouteSubText}>네트워크 연결을 확인해주세요.</Text>
+            <TouchableOpacity style={styles.onboardingBtn} onPress={fetchToday}>
+              <Text style={styles.onboardingBtnText}>다시 시도</Text>
+            </TouchableOpacity>
+          </View>
         ) : today?.recommendedDeparture ? (
           <>
             <Text style={styles.departureTime}>
@@ -245,7 +319,7 @@ export default function HomeScreen() {
                 <Text style={styles.routeText}>{activeRoute.workAddress}</Text>
               </View>
             </View>
-            <TouchableOpacity style={styles.navBtn}>
+            <TouchableOpacity style={styles.navBtn} onPress={handleNavigation}>
               <Ionicons name="navigate" size={16} color="#fff" />
               <Text style={styles.navBtnText}>내비게이션 시작</Text>
             </TouchableOpacity>
@@ -262,7 +336,12 @@ export default function HomeScreen() {
       <View style={[styles.card, { marginBottom: 28 }]}>
         <Text style={styles.cardLabel}>다가오는 약속</Text>
         {upcomingAppts.length === 0 ? (
-          <Text style={styles.emptyText}>예정된 약속이 없습니다.</Text>
+          <View style={styles.emptyApptWrap}>
+            <Text style={styles.emptyText}>예정된 약속이 없습니다.</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Appointment')}>
+              <Text style={styles.emptyApptLink}>약속 추가하기 →</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           upcomingAppts.map((item) => (
             <View key={item.id} style={styles.scheduleItem}>
@@ -365,6 +444,8 @@ const styles = StyleSheet.create({
   modalDeleteText:  { fontSize: 15, fontFamily: fonts.semiBold, color: colors.danger },
   greetingSection:  { paddingHorizontal: 20, paddingBottom: 12 },
   greeting:         { fontSize: 16, fontFamily: fonts.semiBold, color: colors.textSecondary },
+  weatherErrorWrap:   { flexDirection: 'row', alignItems: 'center', gap: 5, marginHorizontal: 20, marginBottom: 8 },
+  weatherErrorText:   { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted },
   weatherWrap:        { marginHorizontal: 20, marginBottom: 12, backgroundColor: colors.card, borderRadius: 16, paddingHorizontal: 14, paddingTop: 12, paddingBottom: 10, ...cardShadow },
   weatherTopRow:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
   weatherLeft:        { flexDirection: 'row', alignItems: 'center', gap: 8 },
@@ -403,7 +484,9 @@ const styles = StyleSheet.create({
   routeText:        { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },
   navBtn:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.primary, borderRadius: 50, paddingVertical: 12 },
   navBtnText:       { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },
-  emptyText:        { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', paddingVertical: 12 },
+  emptyText:        { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', paddingVertical: 4 },
+  emptyApptWrap:    { alignItems: 'center', paddingVertical: 8 },
+  emptyApptLink:    { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary, marginTop: 6 },
   scheduleItem:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
   scheduleIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   scheduleTitle:    { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },

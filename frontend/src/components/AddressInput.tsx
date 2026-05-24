@@ -13,15 +13,18 @@ interface Props {
   onSelect: (address: string, lat: number, lng: number) => void;
   placeholder?: string;
   iconName?: string;
+  isSelected?: boolean;
 }
 
-export default function AddressInput({ value, onChange, onSelect, placeholder = '주소 입력', iconName = 'location-outline' }: Props) {
+export default function AddressInput({ value, onChange, onSelect, placeholder = '주소 입력', iconName = 'location-outline', isSelected = false }: Props) {
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
+  const [searchFailed, setSearchFailed] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleChange = useCallback((text: string) => {
     onChange(text);
+    setSearchFailed(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!text.trim() || text.length < 2) { setSuggestions([]); return; }
     debounceRef.current = setTimeout(async () => {
@@ -29,8 +32,10 @@ export default function AddressInput({ value, onChange, onSelect, placeholder = 
       try {
         const { data } = await searchPlaces(text.trim());
         setSuggestions(data);
+        setSearchFailed(false);
       } catch {
         setSuggestions([]);
+        setSearchFailed(true);
       } finally {
         setSearching(false);
       }
@@ -41,6 +46,7 @@ export default function AddressInput({ value, onChange, onSelect, placeholder = 
     onChange(item.address);
     onSelect(item.address, item.lat, item.lng);
     setSuggestions([]);
+    setSearchFailed(false);
   };
 
   return (
@@ -55,13 +61,20 @@ export default function AddressInput({ value, onChange, onSelect, placeholder = 
           placeholderTextColor={colors.textMuted}
         />
         {searching && <ActivityIndicator size="small" color={colors.primary} />}
-        {!searching && value.length > 0 && (
+        {!searching && isSelected && <Ionicons name="checkmark-circle" size={16} color={colors.success} />}
+        {!searching && !isSelected && value.length > 0 && (
           <TouchableOpacity onPress={() => { onChange(''); setSuggestions([]); }}>
             <Ionicons name="close-circle" size={16} color={colors.textMuted} />
           </TouchableOpacity>
         )}
       </View>
-      {suggestions.length > 0 && (
+      {searchFailed && (
+        <View style={styles.errorRow}>
+          <Ionicons name="alert-circle-outline" size={13} color={colors.warning} />
+          <Text style={styles.errorText}>주소 검색에 실패했습니다. 네트워크를 확인해주세요.</Text>
+        </View>
+      )}
+      {!searchFailed && suggestions.length > 0 && (
         <View style={styles.dropdown}>
           <FlatList
             data={suggestions}
@@ -91,4 +104,6 @@ const styles = StyleSheet.create({
   itemIcon:   { marginRight: 8 },
   itemName:   { fontSize: 13, fontWeight: '600', color: colors.textPrimary },
   itemAddr:   { fontSize: 11, color: colors.textMuted, marginTop: 1 },
+  errorRow:   { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4, paddingHorizontal: 4 },
+  errorText:  { fontSize: 11, color: colors.warning },
 });

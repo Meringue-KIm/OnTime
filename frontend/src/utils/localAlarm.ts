@@ -29,7 +29,7 @@ export async function scheduleLocalAlarm(departureTimeStr: string): Promise<void
       body: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} 출발 — OnTime 알람`,
       sound: true,
     },
-    trigger: alarm,
+    trigger: { type: Notifications.SchedulableTriggerInputTypes.DATE, date: alarm },
   });
 
   await AsyncStorage.setItem(ALARM_ID_KEY, id);

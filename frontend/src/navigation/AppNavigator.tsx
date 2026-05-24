@@ -1,17 +1,30 @@
 import React, { useEffect } from 'react';
+import { View, Image, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/authStore';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import TabNavigator from './TabNavigator';
+import { colors } from '../constants/colors';
 
 const Stack = createNativeStackNavigator();
+const logo = require('../../assets/logo.png');
+
+function SplashScreen() {
+  return (
+    <View style={styles.splash}>
+      <Image source={logo} style={styles.splashLogo} resizeMode="contain" />
+    </View>
+  );
+}
 
 export default function AppNavigator() {
-  const { isLoggedIn, loadToken } = useAuthStore();
+  const { isLoggedIn, isLoading, loadToken } = useAuthStore();
 
   useEffect(() => { loadToken(); }, []);
+
+  if (isLoading) return <SplashScreen />;
 
   return (
     <NavigationContainer>
@@ -28,3 +41,8 @@ export default function AppNavigator() {
     </NavigationContainer>
   );
 }
+
+const styles = StyleSheet.create({
+  splash:      { flex: 1, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
+  splashLogo:  { width: 220, height: 100 },
+});
