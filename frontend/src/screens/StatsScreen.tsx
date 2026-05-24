@@ -1,7 +1,5 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image, TouchableOpacity, Alert, RefreshControl } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const logo = require('../../assets/logo.png');
@@ -41,53 +39,9 @@ export default function StatsScreen() {
     return () => clearTimeout(timer);
   }, [loadError]);
 
-  const FEEDBACK_SHOWN_KEY = 'stats_feedback_shown_date';
-
-  useFocusEffect(useCallback(() => {
-    const pending = logs
-      .filter(l => l.isLate === null)
-      .filter(l => (Date.now() - new Date(l.logDate).getTime()) / 86400000 <= 3);
-    if (pending.length === 0) return;
-
-    let cancelled = false;
-    let timer: ReturnType<typeof setTimeout> | null = null;
-    const today = new Date().toISOString().slice(0, 10);
-
-    AsyncStorage.getItem(FEEDBACK_SHOWN_KEY).then(lastShown => {
-      if (cancelled || lastShown === today) return;
-      const log = pending[0];
-      timer = setTimeout(() => {
-        if (cancelled) return;
-        Alert.alert(
-          '출근 결과를 알려주세요 📝',
-          `${formatDate(log.logDate)} 출근은 어떠셨나요?\n기록해두면 정시율 통계가 쌓여요!`,
-          [
-            {
-              text: '정시 도착 ✅',
-              onPress: async () => {
-                await submitFeedback(log.id, false);
-                setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: false } : l));
-              },
-            },
-            {
-              text: '지각 😅',
-              onPress: async () => {
-                await submitFeedback(log.id, true);
-                setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: true } : l));
-              },
-            },
-            { text: '나중에', style: 'cancel' },
-          ],
-        );
-        AsyncStorage.setItem(FEEDBACK_SHOWN_KEY, today);
-      }, 500);
-    });
-
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
-  }, [logs]));
+  // 최근 3일 내 피드백 미입력 로그
+  const pendingFeedbackLog = logs
+    .find(l => l.isLate === null && (Date.now() - new Date(l.logDate).getTime()) / 86400000 <= 3);
 
   const logsWithFeedback = logs.filter(l => l.isLate !== null);
   const onTimeCount     = logsWithFeedback.filter(l => l.isLate === false).length;
@@ -95,8 +49,9 @@ export default function StatsScreen() {
     ? Math.round((onTimeCount / logsWithFeedback.length) * 100)
     : 0;
 
+  const [showAllLogs, setShowAllLogs] = useState(false);
   const weeklyData = buildWeeklyData(logs);
-  const recentLogs = logs.slice(0, 5);
+  const recentLogs = showAllLogs ? logs : logs.slice(0, 5);
 
   const handleFeedback = (log: CommuteLog) => {
     if (log.isLate !== null) return;
@@ -107,15 +62,19 @@ export default function StatsScreen() {
         {
           text: '정시 도착 ✅',
           onPress: async () => {
-            await submitFeedback(log.id, false);
-            setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: false } : l));
+            try {
+              await submitFeedback(log.id, false);
+              setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: false } : l));
+            } catch { Alert.alert('오류', '저장에 실패했습니다. 다시 시도해주세요.'); }
           },
         },
         {
           text: '지각 😅',
           onPress: async () => {
-            await submitFeedback(log.id, true);
-            setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: true } : l));
+            try {
+              await submitFeedback(log.id, true);
+              setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: true } : l));
+            } catch { Alert.alert('오류', '저장에 실패했습니다. 다시 시도해주세요.'); }
           },
         },
         { text: '취소', style: 'cancel' },
@@ -173,6 +132,34 @@ export default function StatsScreen() {
         </View>
       </View>
 
+      {/* 피드백 미입력 배너 */}
+      {pendingFeedbackLog && (
+        <View style={styles.feedbackBanner}>
+          <Ionicons name="pencil-outline" size={16} color={colors.primary} />
+          <Text style={styles.feedbackBannerText}>
+            {formatDate(pendingFeedbackLog.logDate)} 출근 결과를 입력해주세요
+          </Text>
+          <View style={styles.feedbackBannerBtns}>
+            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={async () => {
+              try {
+                await submitFeedback(pendingFeedbackLog.id, false);
+                setLogs(prev => prev.map(l => l.id === pendingFeedbackLog.id ? { ...l, isLate: false } : l));
+              } catch { Alert.alert('오류', '저장에 실패했습니다.'); }
+            }}>
+              <Text style={styles.feedbackBannerBtnText}>정시 ✅</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={async () => {
+              try {
+                await submitFeedback(pendingFeedbackLog.id, true);
+                setLogs(prev => prev.map(l => l.id === pendingFeedbackLog.id ? { ...l, isLate: true } : l));
+              } catch { Alert.alert('오류', '저장에 실패했습니다.'); }
+            }}>
+              <Text style={styles.feedbackBannerBtnText}>지각 😅</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
       {/* Weekly Chart */}
       {weeklyData.length > 0 && (
         <View style={styles.card}>
@@ -206,12 +193,17 @@ export default function StatsScreen() {
           </View>
         ) : (
           <View style={styles.goalRow}>
-            <View style={styles.donutWrap}>
-              <View style={[styles.donutOuter, { borderColor: onTimeRate >= 80 ? colors.success : colors.primary }]}>
-                <View style={styles.donutInner}>
-                  <Text style={styles.donutValue}>{onTimeRate}%</Text>
-                  <Text style={styles.donutLabel}>정시율</Text>
-                </View>
+            {/* 프로그레스 바 */}
+            <View style={styles.progressWrap}>
+              <Text style={[styles.progressValue, { color: onTimeRate >= 80 ? colors.success : onTimeRate >= 50 ? '#FFA000' : colors.danger }]}>
+                {onTimeRate}%
+              </Text>
+              <Text style={styles.progressLabel}>정시율</Text>
+              <View style={styles.progressBarBg}>
+                <View style={[styles.progressBarFill, {
+                  width: `${onTimeRate}%`,
+                  backgroundColor: onTimeRate >= 80 ? colors.success : onTimeRate >= 50 ? '#FFA000' : colors.danger,
+                }]} />
               </View>
             </View>
             <View style={styles.goalStats}>
@@ -232,7 +224,16 @@ export default function StatsScreen() {
 
       {/* Recent Logs */}
       <View style={[styles.card, { marginBottom: 28 }]}>
-        <Text style={styles.sectionTitle}>최근 출근 기록</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>최근 출근 기록</Text>
+          {logs.length > 5 && (
+            <TouchableOpacity onPress={() => setShowAllLogs(v => !v)}>
+              <Text style={{ fontSize: 12, color: colors.primary, fontFamily: fonts.semiBold }}>
+                {showAllLogs ? '접기' : `전체 보기 (${logs.length}건)`}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </View>
         {recentLogs.length === 0 ? (
           <Text style={styles.emptyText}>기록이 없습니다.</Text>
         ) : (
@@ -315,6 +316,11 @@ const styles = StyleSheet.create({
   insightStat:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: 12 },
   insightStatValue: { fontSize: 24, fontWeight: '800', color: '#fff' },
   insightStatLabel: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
+  feedbackBanner:       { marginHorizontal: 20, marginBottom: 12, backgroundColor: colors.primaryLight, borderRadius: 12, padding: 12, gap: 8 },
+  feedbackBannerText:   { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textPrimary, flex: 1 },
+  feedbackBannerBtns:   { flexDirection: 'row', gap: 8 },
+  feedbackBannerBtn:    { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center' },
+  feedbackBannerBtnText:{ fontSize: 13, fontFamily: fonts.semiBold, color: '#fff' },
   card:             { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   sectionTitle:     { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 },
   chartContainer:   { flexDirection: 'row', alignItems: 'flex-end', height: 120, gap: 8, paddingTop: 8 },
@@ -324,11 +330,11 @@ const styles = StyleSheet.create({
   barFill:          { width: '100%', borderRadius: 6 },
   barLabel:         { fontSize: 11, color: colors.textSecondary },
   goalRow:          { flexDirection: 'row', alignItems: 'center', gap: 20 },
-  donutWrap:        { alignItems: 'center', justifyContent: 'center' },
-  donutOuter:       { width: 110, height: 110, borderRadius: 55, borderWidth: 12, borderColor: colors.primary, alignItems: 'center', justifyContent: 'center' },
-  donutInner:       { alignItems: 'center' },
-  donutValue:       { fontSize: 22, fontWeight: '800', color: colors.textPrimary },
-  donutLabel:       { fontSize: 11, color: colors.textSecondary },
+  progressWrap:     { alignItems: 'center', width: 110 },
+  progressValue:    { fontSize: 36, fontWeight: '800' },
+  progressLabel:    { fontSize: 11, color: colors.textSecondary, marginBottom: 8 },
+  progressBarBg:    { width: '100%', height: 8, backgroundColor: colors.border, borderRadius: 4, overflow: 'hidden' },
+  progressBarFill:  { height: '100%', borderRadius: 4 },
   goalStats:        { flex: 1, gap: 12 },
   goalStatItem:     { paddingTop: 12 },
   goalStatLabel:    { fontSize: 12, color: colors.textSecondary },

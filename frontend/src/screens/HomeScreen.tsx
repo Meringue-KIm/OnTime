@@ -239,8 +239,8 @@ export default function HomeScreen() {
           <ActivityIndicator color="#fff" size="large" style={{ marginVertical: 8 }} />
         ) : todayError ? (
           <View style={styles.onboardingWrap}>
-            <ActivityIndicator color="rgba(255,255,255,0.6)" style={{ marginBottom: 8 }} />
-            <Text style={styles.noRouteSubText}>데이터를 불러오는 중입니다...</Text>
+            <Ionicons name="cloud-offline-outline" size={28} color="rgba(255,255,255,0.7)" />
+            <Text style={styles.noRouteSubText}>잠시 후 자동으로 다시 시도합니다...</Text>
           </View>
         ) : today?.recommendedDeparture ? (
           <>
@@ -274,12 +274,28 @@ export default function HomeScreen() {
               </View>
             )}
             <View style={styles.trafficRow}>
-              {today.logDate && (
+              {today.logDate ? (
                 <View style={[styles.trafficBadge, { backgroundColor: 'rgba(255,255,255,0.35)', marginBottom: 4 }]}>
                   <Ionicons name="checkmark-circle" size={13} color="#fff" />
                   <Text style={styles.trafficBadgeText}>오늘 알람 발송 완료</Text>
                 </View>
-              )}
+              ) : (() => {
+                // 오늘이 활성 요일이고 출발 시간이 아직 미래면 "예약됨" 표시
+                const [hh, mm] = today.recommendedDeparture!.split(':').map(Number);
+                const dep = new Date(); dep.setHours(hh, mm, 0, 0);
+                const todayDow = new Date().getDay();
+                const isActiveToday = activeRoute?.activeDays
+                  ?.split(',').map(Number).includes(todayDow) ?? false;
+                if (dep > new Date() && isActiveToday) {
+                  return (
+                    <View style={[styles.trafficBadge, { backgroundColor: 'rgba(255,255,255,0.25)', marginBottom: 4 }]}>
+                      <Ionicons name="alarm-outline" size={13} color="#fff" />
+                      <Text style={styles.trafficBadgeText}>오늘 알람 예약됨</Text>
+                    </View>
+                  );
+                }
+                return null;
+              })()}
               <View style={styles.trafficBadge}>
                 <Ionicons name="flag-outline" size={13} color="#fff" />
                 <Text style={styles.trafficBadgeText}>

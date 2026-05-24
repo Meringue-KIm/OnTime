@@ -113,9 +113,30 @@ export function useNotification(): { notifPermission: 'granted' | 'denied' | 'un
       } catch {}
     });
 
-    // 알림 탭/해제 시 사운드 중단
-    const responseSub = Notifications.addNotificationResponseReceivedListener(() => {
+    // 알림 탭 시 사운드 중단 + 스누즈 옵션
+    const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
       stopAlarm();
+      const body = response.notification.request.content.body ?? '';
+      Alert.alert(
+        '알람을 끄시겠어요?',
+        body,
+        [
+          {
+            text: '5분 후 다시 알림',
+            onPress: () => {
+              Notifications.scheduleNotificationAsync({
+                content: {
+                  title: '출발할 시간이에요! (스누즈)',
+                  body,
+                  sound: true,
+                },
+                trigger: { seconds: 300, channelId: 'alarm' } as any,
+              });
+            },
+          },
+          { text: '알람 끄기', style: 'destructive' },
+        ],
+      );
     });
 
     return () => {

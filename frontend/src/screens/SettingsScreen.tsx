@@ -23,8 +23,9 @@ export default function SettingsScreen({ navigation }: any) {
       await changePassword(curPw, newPw);
       Alert.alert('변경 완료', '비밀번호가 변경되었습니다.');
       setCurPw(''); setNewPw('');
-    } catch {
-      Alert.alert('오류', '현재 비밀번호가 올바르지 않습니다.');
+    } catch (e: any) {
+      const msg = e?.response?.data?.message ?? '비밀번호 변경에 실패했습니다. 현재 비밀번호를 확인해주세요.';
+      Alert.alert('오류', msg);
     } finally {
       setPwSaving(false);
     }
@@ -85,7 +86,12 @@ export default function SettingsScreen({ navigation }: any) {
         </View>
 
         <View style={styles.card}>
-          <TouchableOpacity style={styles.rowItem} onPress={() => logout()}>
+          <TouchableOpacity style={styles.rowItem} onPress={() => {
+            Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
+              { text: '취소', style: 'cancel' },
+              { text: '로그아웃', style: 'destructive', onPress: logout },
+            ]);
+          }}>
             <View style={[styles.rowIcon, { backgroundColor: colors.primaryLight }]}>
               <Ionicons name="log-out-outline" size={18} color={colors.primary} />
             </View>

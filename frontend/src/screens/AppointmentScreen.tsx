@@ -56,6 +56,7 @@ export default function AppointmentScreen() {
   const [webTime, setWebTime] = useState('09:00');
 
   const [refreshing, setRefreshing] = useState(false);
+  const [showDone, setShowDone] = useState(false);
   const { appointments, loading, fetchAppointments, addAppointment, completeDone, removeAppointment } = useAppointmentStore();
   useEffect(() => { fetchAppointments(); }, []);
 
@@ -278,7 +279,7 @@ export default function AppointmentScreen() {
         </View>
         <View style={styles.alarmNote}>
           <Ionicons name="information-circle-outline" size={13} color={colors.textMuted} />
-          <Text style={styles.alarmNoteText}>약속 시간 {alarmMinutes}분 전에 알람이 울려요. 이동 시간은 별도로 고려해서 선택해주세요.</Text>
+          <Text style={styles.alarmNoteText}>약속 {alarmMinutes}분 전 + 집에서 목적지까지 이동 시간이 자동으로 합산되어 알람이 울립니다.</Text>
         </View>
 
         {/* 지도 미리보기 */}
@@ -289,7 +290,7 @@ export default function AppointmentScreen() {
         ) : (
           <View style={styles.mapPlaceholder}>
             <Ionicons name="map" size={28} color={colors.textMuted} />
-            <Text style={styles.mapPlaceholderText}>주소 입력 후 🔍 를 눌러 위치를 확인하세요</Text>
+            <Text style={styles.mapPlaceholderText}>검색 결과에서 주소를 선택하면 지도가 표시됩니다</Text>
           </View>
         )}
 
@@ -308,7 +309,12 @@ export default function AppointmentScreen() {
 
       {/* 등록된 약속 목록 */}
       <View style={[styles.card, { marginBottom: 28 }]}>
-        <Text style={styles.sectionTitle}>등록된 약속</Text>
+        <View style={styles.listHeader}>
+          <Text style={styles.sectionTitle}>등록된 약속</Text>
+          <TouchableOpacity onPress={() => setShowDone(v => !v)}>
+            <Text style={styles.toggleBtn}>{showDone ? '활성만 보기' : '완료 포함 보기'}</Text>
+          </TouchableOpacity>
+        </View>
 
         {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 8 }} />}
         {!loading && appointments.length === 0 && (
@@ -319,7 +325,9 @@ export default function AppointmentScreen() {
           </View>
         )}
 
-        {appointments.map((item) => {
+        {appointments
+          .filter(item => showDone || (!item.isDone && item.dDay >= 0))
+          .map((item) => {
           const timeStr = formatKoreanDateTime(item.appointmentTime);
           const dDayText = item.isDone ? '완료'
             : item.dDay === 0 ? 'D-Day'
@@ -376,7 +384,9 @@ const styles = StyleSheet.create({
   cancelText:         { fontSize: 15, fontFamily: fonts.semiBold, color: colors.textSecondary },
   submitBtn:          { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' },
   submitText:         { fontSize: 15, fontFamily: fonts.bold, color: '#fff' },
-  sectionTitle:       { fontSize: 15, fontFamily: fonts.bold, color: colors.textPrimary, marginBottom: 12 },
+  listHeader:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+  sectionTitle:       { fontSize: 15, fontFamily: fonts.bold, color: colors.textPrimary },
+  toggleBtn:          { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
   emptyWrap:          { alignItems: 'center', paddingVertical: 16, gap: 6 },
   emptyText:          { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center' },
   emptySubText:       { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center' },

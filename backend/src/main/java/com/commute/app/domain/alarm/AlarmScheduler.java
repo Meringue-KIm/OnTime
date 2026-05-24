@@ -84,7 +84,7 @@ public class AlarmScheduler {
         }
     }
 
-    // 매 분마다 실행 — 약속 출발 알람
+    // 매 분마다 실행 — 약속 출발 알람 (이동 시간 자동 반영)
     @Scheduled(cron = "0 * * * * *")
     @Transactional(readOnly = true)
     public void sendAppointmentAlarms() {
@@ -97,15 +97,32 @@ public class AlarmScheduler {
             String fcmToken = appt.getUser().getFcmToken();
             if (fcmToken == null || fcmToken.isBlank()) continue;
 
+            // 사용자 활성 루트의 집 좌표 → 약속 목적지 이동 시간 계산
+            int travelMinutes = 0;
+            if (appt.getDestLat() != null && appt.getDestLng() != null) {
+                List<CommuteRoute> userRoutes = routeRepository.findByUserIdAndIsActiveTrue(appt.getUser().getId());
+                if (!userRoutes.isEmpty()) {
+                    CommuteRoute activeRoute = userRoutes.get(0);
+                    if (activeRoute.getHomeLat() != null && activeRoute.getHomeLng() != null) {
+                        travelMinutes = kakaoMapService
+                                .getTravelMinutes(activeRoute.getHomeLat(), activeRoute.getHomeLng(),
+                                                  appt.getDestLat(), appt.getDestLng(),
+                                                  activeRoute.getTransportMode())
+                                .orElse(0);
+                    }
+                }
+            }
+
             LocalDateTime alarmAt = appt.getAppointmentTime()
-                    .minusMinutes(appt.getAlarmBeforeMinutes());
+                    .minusMinutes(appt.getAlarmBeforeMinutes() + travelMinutes);
 
             if (now.equals(alarmAt)) {
                 String title = "약속 시간이 다가와요!";
-                String body  = appt.getDestAddress() + " — "
-                             + appt.getAlarmBeforeMinutes() + "분 후 출발하세요";
+                String body  = buildAppointmentAlarmBody(appt.getDestAddress(),
+                                                         appt.getAlarmBeforeMinutes(), travelMinutes);
                 fcmService.sendPushNotification(fcmToken, title, body);
-                log.info("약속 알람 발송 — apptId={}, 약속시각={}", appt.getId(), appt.getAppointmentTime());
+                log.info("약속 알람 발송 — apptId={}, 약속시각={}, 이동={}분", appt.getId(),
+                         appt.getAppointmentTime(), travelMinutes);
             }
         }
     }
@@ -120,6 +137,18 @@ public class AlarmScheduler {
         if (!past.isEmpty()) {
             log.info("과거 약속 자동 종료 — {}건", past.size());
         }
+    }
+
+    private String buildAppointmentAlarmBody(String destAddress, int bufferMinutes, int travelMinutes) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(destAddress).append(" — ");
+        if (travelMinutes > 0) {
+            sb.append("이동 약 ").append(travelMinutes).append("분");
+            if (bufferMinutes > 0) sb.append(" + 여유 ").append(bufferMinutes).append("분");
+        } else {
+            sb.append(bufferMinutes).append("분 후 출발하세요");
+        }
+        return sb.toString();
     }
 
     private String buildAlarmBody(int drivingMinutes, WeatherInfo weather) {
