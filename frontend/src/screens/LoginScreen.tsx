@@ -104,14 +104,6 @@ export default function LoginScreen({ navigation }: any) {
           <Text style={styles.forgotLink}>비밀번호를 잊으셨나요?</Text>
         </TouchableOpacity>
 
-        {__DEV__ && (
-          <TouchableOpacity
-            style={styles.devButton}
-            onPress={() => setTokens('dev-access-token', 'dev-refresh-token')}
-          >
-            <Text style={styles.devButtonText}>🛠 개발자 모드로 진입</Text>
-          </TouchableOpacity>
-        )}
 
       </ScrollView>
     </SafeAreaView>
@@ -136,6 +128,5 @@ const styles = StyleSheet.create({
   link:        { textAlign: 'center', fontSize: 14, fontFamily: fonts.regular, color: colors.textMuted },
   linkBold:    { fontFamily: fonts.semiBold, color: colors.primary },
   forgotLink:  { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textDecorationLine: 'underline' },
-  devButton:   { marginTop: 32, borderWidth: 1, borderColor: colors.border, borderRadius: 10, borderStyle: 'dashed', padding: 12, alignItems: 'center' },
-  devButtonText: { color: colors.textMuted, fontSize: 13, fontFamily: fonts.regular },
+
 });
