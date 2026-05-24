@@ -7,6 +7,7 @@ interface TodayState {
   loading: boolean;
   error: boolean;
   fetchToday: () => Promise<void>;
+  reset: () => void;
 }
 
 export const useTodayStore = create<TodayState>((set) => ({
@@ -23,9 +24,12 @@ export const useTodayStore = create<TodayState>((set) => ({
         scheduleLocalAlarm(String(data.recommendedDeparture)).catch(() => {});
       }
     } catch {
-      set({ today: null, error: true });
+      // 기존 today 값 유지 — 순간적 오류에도 출발 시간 카드 초기화 방지
+      set({ error: true });
     } finally {
       set({ loading: false });
     }
   },
+
+  reset: () => set({ today: null, loading: false, error: false }),
 }));

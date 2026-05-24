@@ -3,6 +3,9 @@ import { View, Image, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useAuthStore } from '../store/authStore';
+import { useRouteStore } from '../store/routeStore';
+import { useAppointmentStore } from '../store/appointmentStore';
+import { useTodayStore } from '../store/todayStore';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -24,8 +27,20 @@ function SplashScreen() {
 
 export default function AppNavigator() {
   const { isLoggedIn, isLoading, loadToken } = useAuthStore();
+  const resetRoutes       = useRouteStore(s => s.reset);
+  const resetAppointments = useAppointmentStore(s => s.reset);
+  const resetToday        = useTodayStore(s => s.reset);
 
   useEffect(() => { pingServer(); loadToken(); }, []);
+
+  // 로그아웃 시 모든 스토어 초기화 — 다른 계정 로그인 시 이전 데이터 노출 방지
+  useEffect(() => {
+    if (!isLoggedIn && !isLoading) {
+      resetRoutes();
+      resetAppointments();
+      resetToday();
+    }
+  }, [isLoggedIn, isLoading]);
 
   if (isLoading) return <SplashScreen />;
 

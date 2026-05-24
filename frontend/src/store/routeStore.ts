@@ -9,6 +9,7 @@ interface RouteState {
   saveRoute: (data: RouteRequest, id?: number) => Promise<void>;
   activateRoute: (id: number) => Promise<void>;
   removeRoute: (id: number) => Promise<void>;
+  reset: () => void;
 }
 
 export const useRouteStore = create<RouteState>((set) => ({
@@ -49,4 +50,6 @@ export const useRouteStore = create<RouteState>((set) => ({
     await routeApi.deleteRoute(id);
     set(state => ({ routes: state.routes.filter(r => r.id !== id) }));
   },
+
+  reset: () => set({ routes: [], loading: false }),
 }));

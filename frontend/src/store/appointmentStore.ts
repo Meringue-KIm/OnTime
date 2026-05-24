@@ -7,8 +7,10 @@ interface AppointmentState {
   loading: boolean;
   fetchAppointments: () => Promise<void>;
   addAppointment: (data: AppointmentRequest) => Promise<void>;
+  updateAppointment: (id: number, data: AppointmentRequest) => Promise<void>;
   removeAppointment: (id: number) => Promise<void>;
   completeDone: (id: number) => Promise<void>;
+  reset: () => void;
 }
 
 export const useAppointmentStore = create<AppointmentState>((set) => ({
@@ -30,6 +32,13 @@ export const useAppointmentStore = create<AppointmentState>((set) => ({
     set(state => ({ appointments: [...state.appointments, created] }));
   },
 
+  updateAppointment: async (id, data) => {
+    const { data: updated } = await apptApi.updateAppointment(id, data);
+    set(state => ({
+      appointments: state.appointments.map(a => a.id === id ? updated : a),
+    }));
+  },
+
   removeAppointment: async (id) => {
     await apptApi.deleteAppointment(id);
     set(state => ({ appointments: state.appointments.filter(a => a.id !== id) }));
@@ -43,4 +52,6 @@ export const useAppointmentStore = create<AppointmentState>((set) => ({
       ),
     }));
   },
+
+  reset: () => set({ appointments: [], loading: false }),
 }));

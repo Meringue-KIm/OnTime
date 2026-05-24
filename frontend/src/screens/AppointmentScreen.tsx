@@ -56,13 +56,26 @@ export default function AppointmentScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [showDone, setShowDone] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const { appointments, loading, fetchAppointments, addAppointment, completeDone, removeAppointment } = useAppointmentStore();
+  const [editingId, setEditingId] = useState<number | null>(null);
+  const { appointments, loading, fetchAppointments, addAppointment, updateAppointment, completeDone, removeAppointment } = useAppointmentStore();
   useEffect(() => { fetchAppointments(); }, []);
 
   const onRefresh = async () => {
     setRefreshing(true);
     await fetchAppointments();
     setRefreshing(false);
+  };
+
+  const openEdit = (item: import('../api/appointments').AppointmentResponse) => {
+    setEditingId(item.id);
+    setTitle(item.title ?? '');
+    setDest(item.destAddress);
+    setDestLat(item.destLat ?? null);
+    setDestLng(item.destLng ?? null);
+    setAlarmMinutes(item.alarmBeforeMinutes);
+    const d = new Date(item.appointmentTime);
+    setApptDate(d);
+    setShowForm(true);
   };
 
   const handleComplete = (id: number) => {
@@ -89,18 +102,24 @@ export default function AppointmentScreen() {
 
   const doSubmit = async (apptData: AppointmentRequest): Promise<boolean> => {
     setSubmitting(true);
+    const isEditing = editingId !== null;
     try {
-      await addAppointment(apptData);
+      if (isEditing) {
+        await updateAppointment(editingId!, apptData);
+      } else {
+        await addAppointment(apptData);
+      }
       setTitle('');
       setDest(''); setDestLat(null); setDestLng(null);
       const fresh = new Date(); fresh.setDate(fresh.getDate() + 1); fresh.setHours(9, 0, 0, 0);
       setApptDate(fresh);
       setWebDate(''); setWebTime('09:00');
       setAlarmMinutes(30);
-      Alert.alert('등록 완료', '약속이 추가되었습니다.');
+      setEditingId(null);
+      Alert.alert(isEditing ? '수정 완료' : '등록 완료', isEditing ? '약속이 수정되었습니다.' : '약속이 추가되었습니다.');
       return true;
     } catch (e: any) {
-      Alert.alert('등록 실패', getErrorMessage(e));
+      Alert.alert(isEditing ? '수정 실패' : '등록 실패', getErrorMessage(e));
       return false;
     } finally {
       setSubmitting(false);
@@ -176,7 +195,7 @@ export default function AppointmentScreen() {
             <TouchableOpacity onPress={() => setShowDone(v => !v)}>
               <Text style={styles.toggleBtn}>{showDone ? '활성만' : '전체'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.addApptBtn} onPress={() => setShowForm(v => !v)}>
+            <TouchableOpacity style={styles.addApptBtn} onPress={() => { setShowForm(v => !v); setEditingId(null); }}>
               <Ionicons name={showForm ? 'remove' : 'add'} size={16} color="#fff" />
               <Text style={styles.addApptBtnText}>{showForm ? '닫기' : '새 약속'}</Text>
             </TouchableOpacity>
@@ -215,6 +234,11 @@ export default function AppointmentScreen() {
                 <Text style={[styles.statusText, { color: statusColor }]}>{dDayText}</Text>
               </View>
               {!item.isDone && (
+                <TouchableOpacity style={styles.apptActionBtn} onPress={() => openEdit(item)}>
+                  <Ionicons name="pencil-outline" size={19} color={colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+              {!item.isDone && (
                 <TouchableOpacity style={styles.apptActionBtn} onPress={() => handleComplete(item.id)}>
                   <Ionicons name="checkmark-circle-outline" size={22} color={colors.success} />
                 </TouchableOpacity>
@@ -227,8 +251,9 @@ export default function AppointmentScreen() {
         })}
       </View>
 
-      {/* 등록 폼 (접기/펼치기) */}
+      {/* 등록/수정 폼 (접기/펼치기) */}
       {showForm && <View style={styles.card}>
+        <Text style={styles.formTitle}>{editingId !== null ? '약속 수정' : '새 약속 등록'}</Text>
 
         {/* 날짜/시간 선택 */}
         {Platform.OS === 'web' ? (
@@ -380,7 +405,7 @@ export default function AppointmentScreen() {
           <TouchableOpacity style={styles.submitBtn} onPress={async () => { const ok = await handleSubmit(); if (ok) setShowForm(false); }} disabled={submitting}>
             {submitting
               ? <ActivityIndicator color={colors.textPrimary} />
-              : <Text style={styles.submitText}>등록하기</Text>
+              : <Text style={styles.submitText}>{editingId !== null ? '수정하기' : '등록하기'}</Text>
             }
           </TouchableOpacity>
         </View>
@@ -432,4 +457,5 @@ const styles = StyleSheet.create({
   alarmNoteText:      { flex: 1, fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted, lineHeight: 16 },
   addApptBtn:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
   addApptBtnText:     { fontSize: 13, fontFamily: fonts.semiBold, color: '#fff' },
+  formTitle:          { fontSize: 15, fontFamily: fonts.bold, color: colors.textPrimary, marginBottom: 4 },
 });

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
   Alert, ActivityIndicator, Image, ScrollView, KeyboardAvoidingView, Platform,
@@ -18,6 +18,8 @@ export default function ForgotPasswordScreen({ navigation }: any) {
   const [newPw, setNewPw]       = useState('');
   const [confirmPw, setConfirmPw] = useState('');
   const [loading, setLoading]   = useState(false);
+  const newPwRef     = useRef<any>(null);
+  const confirmPwRef = useRef<any>(null);
 
   const handleSendCode = async () => {
     if (!EMAIL_RE.test(email)) {
@@ -111,6 +113,9 @@ export default function ForgotPasswordScreen({ navigation }: any) {
                     placeholderTextColor={colors.textMuted}
                     keyboardType="number-pad"
                     maxLength={6}
+                    returnKeyType="next"
+                    onSubmitEditing={() => newPwRef.current?.focus()}
+                    blurOnSubmit={false}
                     value={code}
                     onChangeText={setCode}
                   />
@@ -119,10 +124,14 @@ export default function ForgotPasswordScreen({ navigation }: any) {
                 <Text style={[styles.inputLabel, { marginTop: 14 }]}>새 비밀번호</Text>
                 <View style={styles.inputWrap}>
                   <TextInput
+                    ref={newPwRef}
                     style={styles.input}
                     placeholder="8자 이상 입력"
                     placeholderTextColor={colors.textMuted}
                     secureTextEntry
+                    returnKeyType="next"
+                    onSubmitEditing={() => confirmPwRef.current?.focus()}
+                    blurOnSubmit={false}
                     value={newPw}
                     onChangeText={setNewPw}
                   />
@@ -131,10 +140,13 @@ export default function ForgotPasswordScreen({ navigation }: any) {
                 <Text style={[styles.inputLabel, { marginTop: 14 }]}>새 비밀번호 확인</Text>
                 <View style={styles.inputWrap}>
                   <TextInput
+                    ref={confirmPwRef}
                     style={styles.input}
                     placeholder="비밀번호 재입력"
                     placeholderTextColor={colors.textMuted}
                     secureTextEntry
+                    returnKeyType="done"
+                    onSubmitEditing={handleResetPassword}
                     value={confirmPw}
                     onChangeText={setConfirmPw}
                   />

@@ -20,11 +20,13 @@ export default function AddressInput({ value, onChange, onSelect, placeholder = 
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [searching, setSearching] = useState(false);
   const [searchFailed, setSearchFailed] = useState(false);
+  const [noResults, setNoResults] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleChange = useCallback((text: string) => {
     onChange(text);
     setSearchFailed(false);
+    setNoResults(false);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (!text.trim() || text.length < 2) { setSuggestions([]); return; }
     debounceRef.current = setTimeout(async () => {
@@ -32,6 +34,7 @@ export default function AddressInput({ value, onChange, onSelect, placeholder = 
       try {
         const { data } = await searchPlaces(text.trim());
         setSuggestions(data);
+        setNoResults(data.length === 0);
         setSearchFailed(false);
       } catch {
         setSuggestions([]);
@@ -46,6 +49,7 @@ export default function AddressInput({ value, onChange, onSelect, placeholder = 
     onChange(item.address);
     onSelect(item.address, item.lat, item.lng);
     setSuggestions([]);
+    setNoResults(false);
     setSearchFailed(false);
   };
 
@@ -63,7 +67,7 @@ export default function AddressInput({ value, onChange, onSelect, placeholder = 
         {searching && <ActivityIndicator size="small" color={colors.primary} />}
         {!searching && isSelected && <Ionicons name="checkmark-circle" size={16} color={colors.success} />}
         {!searching && !isSelected && value.length > 0 && (
-          <TouchableOpacity onPress={() => { onChange(''); setSuggestions([]); }}>
+          <TouchableOpacity onPress={() => { onChange(''); setSuggestions([]); setNoResults(false); }}>
             <Ionicons name="close-circle" size={16} color={colors.textMuted} />
           </TouchableOpacity>
         )}
@@ -72,6 +76,12 @@ export default function AddressInput({ value, onChange, onSelect, placeholder = 
         <View style={styles.errorRow}>
           <Ionicons name="alert-circle-outline" size={13} color={colors.warning} />
           <Text style={styles.errorText}>주소 검색에 실패했습니다. 네트워크를 확인해주세요.</Text>
+        </View>
+      )}
+      {!searchFailed && noResults && (
+        <View style={styles.errorRow}>
+          <Ionicons name="search-outline" size={13} color={colors.textMuted} />
+          <Text style={[styles.errorText, { color: colors.textMuted }]}>검색 결과가 없습니다.</Text>
         </View>
       )}
       {!searchFailed && suggestions.length > 0 && (
