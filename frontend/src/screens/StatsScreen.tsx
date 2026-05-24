@@ -146,7 +146,11 @@ export default function StatsScreen() {
         </Text>
         <View style={styles.insightStat}>
           <Text style={styles.insightStatValue}>{onTimeRate}%</Text>
-          <Ionicons name="trending-up" size={20} color={colors.success} />
+          <Ionicons
+            name={onTimeRate >= 50 ? 'trending-up' : 'trending-down'}
+            size={20}
+            color={onTimeRate >= 80 ? colors.success : onTimeRate >= 50 ? '#FFA000' : colors.danger}
+          />
           <Text style={styles.insightStatLabel}>정시 도착률</Text>
         </View>
       </View>
@@ -265,9 +269,9 @@ function buildWeeklyData(logs: CommuteLog[]) {
 }
 
 function getWeekLabel(d: Date): string {
-  const startOfYear = new Date(d.getFullYear(), 0, 1);
-  const week = Math.ceil(((d.getTime() - startOfYear.getTime()) / 86400000 + startOfYear.getDay() + 1) / 7);
-  return `W${week}`;
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return `${mon.getMonth() + 1}/${mon.getDate()}`;
 }
 
 const styles = StyleSheet.create({

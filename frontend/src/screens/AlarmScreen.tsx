@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, Switch, ActivityIndicator, Image, Linking } from 'react-native';
 import * as Notifications from 'expo-notifications';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -51,7 +51,6 @@ export default function AlarmScreen() {
   const [departureTime, setDepartureTime] = useState<string | null>(null);
   const [loading, setLoading]             = useState(true);
   const [todayError, setTodayError]       = useState(false);
-  const [saving, setSaving]               = useState(false);
 
   const [notifStatus, setNotifStatus]     = useState<string | null>(null);
   const [activeDays, setActiveDays]       = useState([1, 2, 3, 4, 5]);
@@ -62,6 +61,9 @@ export default function AlarmScreen() {
   const { routes, fetchRoutes, saveRoute } = useRouteStore();
   const activeRoute = routes.find(r => r.isActive) ?? routes[0];
   const [buffer, setBuffer] = useState(20);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isInitialMount = useRef(true);
 
   // 마운트 시 저장된 설정 불러오기
   useEffect(() => {
@@ -88,37 +90,46 @@ export default function AlarmScreen() {
       .catch(() => {});
   }, []);
 
-  // 루트 로드 후 설정 반영
+  // 루트 로드 후 설정 반영 (초기 1회만)
   useEffect(() => {
     if (!activeRoute) return;
     setBuffer(activeRoute.alarmBeforeMinutes);
     if (activeRoute.activeDays) {
       setActiveDays(activeRoute.activeDays.split(',').map(Number));
     }
-  }, [activeRoute]);
+    isInitialMount.current = false;
+  }, [activeRoute?.id]);
 
-  const handleSaveBuffer = async () => {
+  // 요일/버퍼 변경 시 자동 저장
+  useEffect(() => {
+    if (isInitialMount.current) return;
+    autoSave(buffer, activeDays);
+  }, [buffer, activeDays]);
+
+  const autoSave = useCallback((newBuffer: number, newDays: number[]) => {
     if (!activeRoute) return;
-    setSaving(true);
-    try {
-      await saveRoute({
-        homeAddress:       activeRoute.homeAddress,
-        homeLat:           activeRoute.homeLat,
-        homeLng:           activeRoute.homeLng,
-        workAddress:       activeRoute.workAddress,
-        workLat:           activeRoute.workLat,
-        workLng:           activeRoute.workLng,
-        arrivalTime:       activeRoute.arrivalTime,
-        alarmBeforeMinutes: buffer,
-        activeDays:        activeDays.join(','),
-      }, activeRoute.id);
-      Alert.alert('저장 완료', '알람 설정이 저장되었습니다.');
-    } catch (e: any) {
-      Alert.alert('저장 실패', getErrorMessage(e));
-    } finally {
-      setSaving(false);
-    }
-  };
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    setSaveStatus('saving');
+    debounceRef.current = setTimeout(async () => {
+      try {
+        await saveRoute({
+          homeAddress:        activeRoute.homeAddress,
+          homeLat:            activeRoute.homeLat,
+          homeLng:            activeRoute.homeLng,
+          workAddress:        activeRoute.workAddress,
+          workLat:            activeRoute.workLat,
+          workLng:            activeRoute.workLng,
+          arrivalTime:        activeRoute.arrivalTime,
+          alarmBeforeMinutes: newBuffer,
+          activeDays:         newDays.join(','),
+        }, activeRoute.id);
+        setSaveStatus('saved');
+        setTimeout(() => setSaveStatus('idle'), 2000);
+      } catch {
+        setSaveStatus('idle');
+      }
+    }, 1000);
+  }, [activeRoute, saveRoute]);
 
   const toggleDay = (i: number) =>
     setActiveDays(prev => prev.includes(i) ? prev.filter(d => d !== i) : [...prev, i]);
@@ -180,13 +191,8 @@ export default function AlarmScreen() {
       <View style={styles.card}>
         <View style={styles.rowBetween}>
           <Text style={styles.sectionTitle}>📅 반복 일정 설정</Text>
-          <TouchableOpacity
-            style={[styles.saveBtn, saving && { opacity: 0.6 }]}
-            onPress={handleSaveBuffer}
-            disabled={saving || !activeRoute}
-          >
-            <Text style={styles.saveBtnText}>{saving ? '저장 중...' : '저장'}</Text>
-          </TouchableOpacity>
+          {saveStatus === 'saving' && <Text style={styles.autoSaveText}>저장 중...</Text>}
+          {saveStatus === 'saved'  && <Text style={[styles.autoSaveText, { color: colors.success }]}>✓ 저장됨</Text>}
         </View>
         <View style={styles.daysRow}>
           {DAYS_OF_WEEK.map((day, i) => (
@@ -292,8 +298,7 @@ const styles = StyleSheet.create({
   card:                { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, ...cardShadow },
   sectionTitle:        { fontSize: 15, fontFamily: fonts.bold, color: colors.textPrimary, marginBottom: 14 },
   rowBetween:          { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
-  saveBtn:             { backgroundColor: colors.primary, paddingHorizontal: 14, paddingVertical: 6, borderRadius: 8 },
-  saveBtnText:         { color: '#fff', fontFamily: fonts.semiBold, fontSize: 13 },
+  autoSaveText:        { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted },
   daysRow:             { flexDirection: 'row', justifyContent: 'space-between' },
   dayBtn:              { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   dayBtnActive:        { backgroundColor: colors.primary },

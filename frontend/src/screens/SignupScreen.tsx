@@ -4,7 +4,8 @@ import {
   Alert, ActivityIndicator, Image, View, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { signup } from '../api/auth';
+import { signup, login } from '../api/auth';
+import { useAuthStore } from '../store/authStore';
 import { colors, fonts, cardShadow } from '../constants/colors';
 
 const logo = require('../../assets/logo.png');
@@ -15,6 +16,7 @@ export default function SignupScreen({ navigation }: any) {
   const [password, setPassword] = useState('');
   const [confirm, setConfirm]   = useState('');
   const [loading, setLoading]   = useState(false);
+  const setTokens = useAuthStore((s) => s.setTokens);
 
   const handleSignup = async () => {
     if (!email || !password || !confirm) {
@@ -36,12 +38,10 @@ export default function SignupScreen({ navigation }: any) {
     setLoading(true);
     try {
       await signup(email, password);
-      Alert.alert('가입 완료!', '로그인 해주세요.', [
-        { text: '확인', onPress: () => navigation.navigate('Login') },
-      ]);
+      const { data } = await login(email, password);
+      await setTokens(data.accessToken, data.refreshToken);
     } catch (e: any) {
       Alert.alert('가입 실패', e.response?.data?.message ?? '다시 시도해주세요.');
-    } finally {
       setLoading(false);
     }
   };

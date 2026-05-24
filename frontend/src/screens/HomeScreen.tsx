@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Platform, Modal, TextInput, Alert, Linking, AppState, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -48,6 +48,7 @@ export default function HomeScreen() {
   const { coords: gpsCoords, status: locationStatus } = useLocation();
   const { logout } = useAuthStore();
 
+  const lastRefreshRef = useRef<number>(0);
   const [showSettings, setShowSettings] = useState(false);
   const [curPw, setCurPw]   = useState('');
   const [newPw, setNewPw]   = useState('');
@@ -82,10 +83,13 @@ export default function HomeScreen() {
     fetchToday();
   }, []);
 
-  // 앱 백그라운드 → 포그라운드 복귀 시 데이터 갱신
+  // 앱 백그라운드 → 포그라운드 복귀 시 데이터 갱신 (5분 쿨다운)
   useEffect(() => {
     const sub = AppState.addEventListener('change', state => {
       if (state === 'active') {
+        const now = Date.now();
+        if (now - lastRefreshRef.current < 5 * 60 * 1000) return;
+        lastRefreshRef.current = now;
         fetchRoutes();
         fetchAppointments();
         fetchToday();
@@ -161,6 +165,13 @@ export default function HomeScreen() {
   };
 
   const activeRoute = routes.find(r => r.isActive) ?? routes[0];
+
+  const departureLabel = (() => {
+    if (!today?.recommendedDeparture) return '다음 출발 시간';
+    const [hh, mm] = today.recommendedDeparture.split(':').map(Number);
+    const dep = new Date(); dep.setHours(hh, mm, 0, 0);
+    return dep > new Date() ? '오늘 출발 시간' : '내일 출발 예정';
+  })();
 
   const greeting = (() => {
     if (today?.recommendedDeparture) {
@@ -258,7 +269,7 @@ export default function HomeScreen() {
 
       {/* Departure Card */}
       <View style={styles.departureCard}>
-        <Text style={styles.departureLabel}>다음 출발 시간</Text>
+        <Text style={styles.departureLabel}>{departureLabel}</Text>
         {todayLoading ? (
           <ActivityIndicator color="#fff" size="large" style={{ marginVertical: 8 }} />
         ) : todayError ? (
@@ -337,48 +348,21 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* 오늘 이동 요약 */}
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.cardLabel}>오늘 이동 요약</Text>
-          <TouchableOpacity style={styles.routeAddBtn} onPress={() => navigation.navigate('Route')}>
-            <Ionicons name="settings-outline" size={13} color={colors.primary} />
-            <Text style={styles.routeAddBtnText}>루트 설정</Text>
-          </TouchableOpacity>
-        </View>
-        {activeRoute ? (
-          <>
-            <View style={styles.tripSummaryRow}>
-              <View style={styles.tripSummaryItem}>
-                <Ionicons name="flag-outline" size={16} color={colors.primary} />
-                <Text style={styles.tripSummaryLabel}>도착 목표</Text>
-                <Text style={styles.tripSummaryValue}>{extractTimeHHmm(activeRoute.arrivalTime)}</Text>
-              </View>
-              {today?.drivingMinutes !== undefined && (
-                <View style={styles.tripSummaryItem}>
-                  <Ionicons name="car-outline" size={16} color={colors.primary} />
-                  <Text style={styles.tripSummaryLabel}>이동 시간</Text>
-                  <Text style={styles.tripSummaryValue}>{today.drivingMinutes}분</Text>
-                </View>
-              )}
-              <View style={styles.tripSummaryItem}>
-                <Ionicons name="alarm-outline" size={16} color={colors.primary} />
-                <Text style={styles.tripSummaryLabel}>알람 여유</Text>
-                <Text style={styles.tripSummaryValue}>{activeRoute.alarmBeforeMinutes}분</Text>
-              </View>
-            </View>
-            <TouchableOpacity style={styles.navBtn} onPress={handleNavigation}>
-              <Ionicons name="navigate" size={16} color="#fff" />
-              <Text style={styles.navBtnText}>내비게이션 시작</Text>
-            </TouchableOpacity>
-          </>
-        ) : (
+      {/* 내비게이션 */}
+      {activeRoute && (
+        <TouchableOpacity style={[styles.navBtn, { marginHorizontal: 20, marginBottom: 12 }]} onPress={handleNavigation}>
+          <Ionicons name="navigate" size={16} color="#fff" />
+          <Text style={styles.navBtnText}>내비게이션 시작</Text>
+        </TouchableOpacity>
+      )}
+      {!activeRoute && (
+        <View style={[styles.card, { marginBottom: 12 }]}>
           <TouchableOpacity style={styles.noRouteBtn} onPress={() => navigation.navigate('Route')}>
             <Ionicons name="add-circle-outline" size={20} color={colors.primary} />
             <Text style={styles.noRouteBtnText}>루트를 설정해주세요</Text>
           </TouchableOpacity>
-        )}
-      </View>
+        </View>
+      )}
 
       {/* Schedule */}
       <View style={[styles.card, { marginBottom: 28 }]}>
@@ -528,10 +512,6 @@ const styles = StyleSheet.create({
   routeAddBtnText:    { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
   noRouteBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16 },
   noRouteBtnText:     { fontSize: 14, fontFamily: fonts.semiBold, color: colors.primary },
-  tripSummaryRow:     { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 12, marginBottom: 12, backgroundColor: colors.bg, borderRadius: 12 },
-  tripSummaryItem:    { alignItems: 'center', gap: 4 },
-  tripSummaryLabel:   { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted },
-  tripSummaryValue:   { fontSize: 16, fontFamily: fonts.bold, color: colors.textPrimary },
   navBtn:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.primary, borderRadius: 50, paddingVertical: 12 },
   navBtnText:         { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },
   emptyText:        { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', paddingVertical: 4 },
