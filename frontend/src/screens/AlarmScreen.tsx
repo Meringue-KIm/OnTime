@@ -80,6 +80,8 @@ export default function AlarmScreen() {
       .catch(() => setTodayError(true))
       .finally(() => setLoading(false));
 
+
+
     AsyncStorage.multiGet([STORAGE_KEYS.vibration, STORAGE_KEYS.gradualVolume, STORAGE_KEYS.wakeLight])
       .then(pairs => {
         const map = Object.fromEntries(pairs.map(([k, v]) => [k, v]));
@@ -89,6 +91,22 @@ export default function AlarmScreen() {
       })
       .catch(() => {});
   }, []);
+
+  // 로드 실패 시 5초 후 자동 재시도
+  useEffect(() => {
+    if (!todayError) return;
+    const timer = setTimeout(() => {
+      setLoading(true);
+      getToday()
+        .then(({ data }) => {
+          if (data.recommendedDeparture) setDepartureTime(extractTimeHHmm(data.recommendedDeparture));
+          setTodayError(false);
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    }, 5000);
+    return () => clearTimeout(timer);
+  }, [todayError]);
 
   // 루트 로드 후 설정 반영 (초기 1회만)
   useEffect(() => {
@@ -163,7 +181,7 @@ export default function AlarmScreen() {
         {loading ? (
           <ActivityIndicator color="#fff" size="large" style={{ marginVertical: 12 }} />
         ) : todayError ? (
-          <Text style={styles.wakeTimePlaceholder}>정보를 불러오지 못했습니다</Text>
+          <Text style={styles.wakeTimePlaceholder}>--:--</Text>
         ) : departureTime ? (
           <Text style={styles.wakeTime}>{departureTime}</Text>
         ) : (

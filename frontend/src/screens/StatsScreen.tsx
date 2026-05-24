@@ -34,6 +34,13 @@ export default function StatsScreen() {
 
   useEffect(() => { setLoading(true); fetchLogs(); }, []);
 
+  // 로드 실패 시 5초 후 자동 재시도
+  useEffect(() => {
+    if (!loadError) return;
+    const timer = setTimeout(fetchLogs, 5000);
+    return () => clearTimeout(timer);
+  }, [loadError]);
+
   const FEEDBACK_SHOWN_KEY = 'stats_feedback_shown_date';
 
   useFocusEffect(useCallback(() => {
@@ -127,11 +134,8 @@ export default function StatsScreen() {
   if (loadError) {
     return (
       <View style={styles.center}>
-        <Ionicons name="cloud-offline-outline" size={40} color={colors.textMuted} />
-        <Text style={styles.errorText}>통계를 불러오지 못했습니다.</Text>
-        <TouchableOpacity style={styles.retryBtn} onPress={fetchLogs}>
-          <Text style={styles.retryBtnText}>다시 시도</Text>
-        </TouchableOpacity>
+        <ActivityIndicator color={colors.primary} size="large" />
+        <Text style={styles.errorText}>잠시 후 자동으로 다시 불러옵니다...</Text>
       </View>
     );
   }

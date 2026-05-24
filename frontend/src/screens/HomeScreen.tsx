@@ -76,6 +76,13 @@ export default function HomeScreen() {
     fetchToday();
   }, []);
 
+  // 로드 실패 시 5초 후 자동 재시도 (서버 콜드스타트 대응)
+  useEffect(() => {
+    if (!todayError) return;
+    const timer = setTimeout(fetchToday, 5000);
+    return () => clearTimeout(timer);
+  }, [todayError]);
+
   // 앱 백그라운드 → 포그라운드 복귀 시 데이터 갱신 (5분 쿨다운)
   useEffect(() => {
     const sub = AppState.addEventListener('change', state => {
@@ -179,12 +186,6 @@ export default function HomeScreen() {
       </View>
 
       {/* Weather */}
-      {weatherError && !weather && (
-        <View style={styles.weatherErrorWrap}>
-          <Ionicons name="cloud-offline-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.weatherErrorText}>날씨 정보를 불러오지 못했습니다.</Text>
-        </View>
-      )}
       {weather && (
         <View style={styles.weatherWrap}>
           {/* 상단: 아이콘 + 기온 + 위치 */}
@@ -238,12 +239,8 @@ export default function HomeScreen() {
           <ActivityIndicator color="#fff" size="large" style={{ marginVertical: 8 }} />
         ) : todayError ? (
           <View style={styles.onboardingWrap}>
-            <Ionicons name="cloud-offline-outline" size={32} color="rgba(255,255,255,0.7)" />
-            <Text style={styles.noRouteText}>출발 정보를 불러오지 못했습니다</Text>
-            <Text style={styles.noRouteSubText}>네트워크 연결을 확인해주세요.</Text>
-            <TouchableOpacity style={styles.onboardingBtn} onPress={fetchToday}>
-              <Text style={styles.onboardingBtnText}>다시 시도</Text>
-            </TouchableOpacity>
+            <ActivityIndicator color="rgba(255,255,255,0.6)" style={{ marginBottom: 8 }} />
+            <Text style={styles.noRouteSubText}>데이터를 불러오는 중입니다...</Text>
           </View>
         ) : today?.recommendedDeparture ? (
           <>
