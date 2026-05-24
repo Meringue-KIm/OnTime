@@ -7,9 +7,7 @@ import { Audio } from 'expo-av';
 import { updateFcmToken } from '../api/auth';
 
 const STORAGE_KEYS = {
-  vibration:     'alarm_vibration',
-  gradualVolume: 'alarm_gradual_volume',
-  wakeLight:     'alarm_wake_light',
+  vibration: 'alarm_vibration',
 };
 
 export async function setupNotificationChannel() {
@@ -74,41 +72,17 @@ export function useNotification(): { notifPermission: 'granted' | 'denied' | 'un
       updateFcmToken(token).catch(() => {});
     })();
 
-    // 포그라운드 알림 수신
+    // 포그라운드 알림 수신 — 앱이 열려있을 때 사운드 재생
     const sub = Notifications.addNotificationReceivedListener(async () => {
-      // 기상 라이트
-      const wakeLight = (await AsyncStorage.getItem(STORAGE_KEYS.wakeLight)) === 'true';
-      if (wakeLight) {
-        try {
-          const Brightness = await import('expo-brightness');
-          const current = await Brightness.getBrightnessAsync();
-          await Brightness.setBrightnessAsync(1.0);
-          setTimeout(() => Brightness.setBrightnessAsync(current), 60_000);
-        } catch {}
-      }
-
-      // 점진적 음량 — 포그라운드에서만 동작
       if (Platform.OS === 'web') return;
-      const gradualVolume = (await AsyncStorage.getItem(STORAGE_KEYS.gradualVolume)) !== 'false';
-      if (!gradualVolume) return;
-
       await stopAlarm();
       try {
         await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
         const { sound } = await Audio.Sound.createAsync(
           require('../../assets/alarm.wav'),
-          { shouldPlay: true, isLooping: true, volume: 0.05 },
+          { shouldPlay: true, isLooping: true, volume: 1.0 },
         );
         soundRef.current = sound;
-
-        let vol = 0.05;
-        rampRef.current = setInterval(async () => {
-          vol = Math.min(1.0, vol + 0.05);
-          await sound.setVolumeAsync(vol).catch(() => {});
-          if (vol >= 1.0) { clearInterval(rampRef.current!); rampRef.current = null; }
-        }, 2000); // 2초마다 +5%, ~38초에 최대
-
-        // 2분 후 자동 종료
         stopRef.current = setTimeout(stopAlarm, 120_000);
       } catch {}
     });

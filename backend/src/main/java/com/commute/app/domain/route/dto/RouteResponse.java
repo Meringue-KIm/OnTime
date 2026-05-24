@@ -15,7 +15,8 @@ public record RouteResponse(
         Integer alarmBeforeMinutes,
         Boolean isActive,
         String activeDays,
-        String transportMode
+        String transportMode,
+        Integer customTravelMinutes
 ) {
     public static RouteResponse from(CommuteRoute route) {
         return new RouteResponse(
@@ -30,7 +31,8 @@ public record RouteResponse(
                 route.getAlarmBeforeMinutes(),
                 route.getIsActive(),
                 route.getActiveDays(),
-                route.getTransportMode()
+                route.getTransportMode(),
+                route.getCustomTravelMinutes()
         );
     }
 }

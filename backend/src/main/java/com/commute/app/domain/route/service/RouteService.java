@@ -60,6 +60,7 @@ public class RouteService {
                 .alarmBeforeMinutes(request.alarmBeforeMinutes())
                 .activeDays(request.activeDays() != null ? request.activeDays() : "1,2,3,4,5")
                 .transportMode(request.transportMode() != null ? request.transportMode() : "car")
+                .customTravelMinutes(request.customTravelMinutes())
                 .build();
         return RouteResponse.from(routeRepository.save(route));
     }
@@ -87,7 +88,8 @@ public class RouteService {
         route.update(request.homeAddress(), homeLat, homeLng,
                 request.workAddress(), workLat, workLng,
                 request.arrivalTime(), request.alarmBeforeMinutes(),
-                request.activeDays(), request.transportMode());
+                request.activeDays(), request.transportMode(),
+                request.customTravelMinutes());
         return RouteResponse.from(route);
     }
 

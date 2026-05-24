@@ -14,5 +14,6 @@ public record RouteRequest(
         @NotNull LocalTime arrivalTime,
         @NotNull Integer alarmBeforeMinutes,
         String activeDays,
-        String transportMode
+        String transportMode,
+        Integer customTravelMinutes
 ) {}

@@ -37,11 +37,9 @@ if (Platform.OS !== 'web') {
 export default function AppointmentScreen() {
   const insets = useSafeAreaInsets();
 
-  const tomorrow = new Date();
-  tomorrow.setDate(tomorrow.getDate() + 1);
-  tomorrow.setHours(9, 0, 0, 0);
+  const makeTomorrow = () => { const d = new Date(); d.setDate(d.getDate() + 1); d.setHours(9, 0, 0, 0); return d; };
 
-  const [apptDate, setApptDate]       = useState<Date>(tomorrow);
+  const [apptDate, setApptDate]       = useState<Date>(makeTomorrow);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [title, setTitle]             = useState('');
@@ -89,15 +87,15 @@ export default function AppointmentScreen() {
     return toISOLocal(apptDate);
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (): Promise<boolean> => {
     if (!dest.trim()) {
       Alert.alert('목적지 주소를 입력해주세요.');
-      return;
+      return false;
     }
     const appointmentTime = getAppointmentTimeISO();
     if (!appointmentTime) {
       Alert.alert('날짜와 시간을 입력해주세요.');
-      return;
+      return false;
     }
 
     const apptData: AppointmentRequest = {
@@ -114,12 +112,15 @@ export default function AppointmentScreen() {
       await addAppointment(apptData);
       setTitle('');
       setDest(''); setDestLat(null); setDestLng(null);
-      setApptDate(tomorrow);
+      const fresh = new Date(); fresh.setDate(fresh.getDate() + 1); fresh.setHours(9, 0, 0, 0);
+      setApptDate(fresh);
       setWebDate(''); setWebTime('09:00');
       setAlarmMinutes(30);
       Alert.alert('등록 완료', '약속이 추가되었습니다.');
+      return true;
     } catch (e: any) {
       Alert.alert('등록 실패', getErrorMessage(e));
+      return false;
     } finally {
       setSubmitting(false);
     }
@@ -128,7 +129,7 @@ export default function AppointmentScreen() {
   const handleReset = () => {
     setTitle('');
     setDest(''); setDestLat(null); setDestLng(null);
-    setApptDate(tomorrow);
+    setApptDate(makeTomorrow());
     setWebDate(''); setWebTime('09:00');
     setAlarmMinutes(30);
   };
@@ -353,7 +354,7 @@ export default function AppointmentScreen() {
           <TouchableOpacity style={styles.cancelBtn} onPress={handleReset}>
             <Text style={styles.cancelText}>초기화</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.submitBtn} onPress={async () => { await handleSubmit(); setShowForm(false); }} disabled={submitting}>
+          <TouchableOpacity style={styles.submitBtn} onPress={async () => { const ok = await handleSubmit(); if (ok) setShowForm(false); }} disabled={submitting}>
             {submitting
               ? <ActivityIndicator color={colors.textPrimary} />
               : <Text style={styles.submitText}>등록하기</Text>

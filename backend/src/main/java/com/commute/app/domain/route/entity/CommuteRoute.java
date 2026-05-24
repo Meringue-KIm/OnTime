@@ -60,6 +60,10 @@ public class CommuteRoute {
     @Builder.Default
     private String activeDays = "1,2,3,4,5";
 
+    // 대중교통 직접 입력 이동 시간 (분). null이면 Kakao API 자동 계산
+    @Column(name = "custom_travel_minutes")
+    private Integer customTravelMinutes;
+
     public boolean isActiveDay(int frontendDayIndex) {
         for (String d : activeDays.split(",")) {
             if (d.trim().equals(String.valueOf(frontendDayIndex))) return true;
@@ -70,7 +74,7 @@ public class CommuteRoute {
     public void update(String homeAddress, Double homeLat, Double homeLng,
                        String workAddress, Double workLat, Double workLng,
                        LocalTime arrivalTime, Integer alarmBeforeMinutes,
-                       String activeDays, String transportMode) {
+                       String activeDays, String transportMode, Integer customTravelMinutes) {
         this.homeAddress = homeAddress;
         this.homeLat = homeLat;
         this.homeLng = homeLng;
@@ -81,6 +85,7 @@ public class CommuteRoute {
         this.alarmBeforeMinutes = alarmBeforeMinutes;
         if (activeDays != null && !activeDays.isBlank()) this.activeDays = activeDays;
         if (transportMode != null && !transportMode.isBlank()) this.transportMode = transportMode;
+        this.customTravelMinutes = customTravelMinutes;
     }
 
     public void activate() {

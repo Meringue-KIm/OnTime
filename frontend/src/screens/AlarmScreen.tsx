@@ -18,9 +18,7 @@ import { BUFFER_MIN, BUFFER_MAX, BUFFER_STEP } from '../constants/defaults';
 import { extractTimeHHmm } from '../utils/timeFormat';
 
 const STORAGE_KEYS = {
-  vibration:     'alarm_vibration',
-  gradualVolume: 'alarm_gradual_volume',
-  wakeLight:     'alarm_wake_light',
+  vibration: 'alarm_vibration',
 };
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -54,9 +52,7 @@ export default function AlarmScreen() {
 
   const [notifStatus, setNotifStatus]     = useState<string | null>(null);
   const [activeDays, setActiveDays]       = useState([1, 2, 3, 4, 5]);
-  const [vibration, setVibration]         = useState(true);
-  const [gradualVolume, setGradualVolume] = useState(true);
-  const [wakeLight, setWakeLight]         = useState(false);
+  const [vibration, setVibration] = useState(true);
 
   const { routes, fetchRoutes, saveRoute } = useRouteStore();
   const activeRoute = routes.find(r => r.isActive) ?? routes[0];
@@ -82,13 +78,8 @@ export default function AlarmScreen() {
 
 
 
-    AsyncStorage.multiGet([STORAGE_KEYS.vibration, STORAGE_KEYS.gradualVolume, STORAGE_KEYS.wakeLight])
-      .then(pairs => {
-        const map = Object.fromEntries(pairs.map(([k, v]) => [k, v]));
-        if (map[STORAGE_KEYS.vibration]     !== null) setVibration(map[STORAGE_KEYS.vibration] === 'true');
-        if (map[STORAGE_KEYS.gradualVolume] !== null) setGradualVolume(map[STORAGE_KEYS.gradualVolume] === 'true');
-        if (map[STORAGE_KEYS.wakeLight]     !== null) setWakeLight(map[STORAGE_KEYS.wakeLight] === 'true');
-      })
+    AsyncStorage.getItem(STORAGE_KEYS.vibration)
+      .then(v => { if (v !== null) setVibration(v === 'true'); })
       .catch(() => {});
   }, []);
 
@@ -294,27 +285,21 @@ export default function AlarmScreen() {
       {/* 사운드 설정 */}
       <View style={[styles.card, { marginBottom: 28 }]}>
         <Text style={styles.sectionTitle}>🔔 사운드 설정</Text>
-        {[
-          { label: '진동 알림',   sub: 'Android 알림 채널 진동 활성화',     icon: 'phone-portrait-outline', key: STORAGE_KEYS.vibration,     value: vibration,     set: setVibration },
-          { label: '점진적 음량', sub: '포그라운드 알림 수신 시 음량을 서서히 높입니다', icon: 'volume-medium-outline', key: STORAGE_KEYS.gradualVolume, value: gradualVolume, set: setGradualVolume },
-          { label: '기상 라이트', sub: '알림 수신 시 화면 최대 밝기 (1분)',   icon: 'sunny-outline',          key: STORAGE_KEYS.wakeLight,     value: wakeLight,     set: setWakeLight },
-        ].map((item, i) => (
-          <View key={i} style={styles.settingRow}>
-            <View style={styles.settingIconWrap}>
-              <Ionicons name={item.icon as any} size={18} color={colors.primary} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.settingLabel}>{item.label}</Text>
-              <Text style={styles.settingSub}>{item.sub}</Text>
-            </View>
-            <Switch
-              value={item.value}
-              onValueChange={(v) => { item.set(v); handleSoundToggle(item.key, v); }}
-              trackColor={{ false: colors.border, true: colors.primary }}
-              thumbColor="#fff"
-            />
+        <View style={styles.settingRow}>
+          <View style={styles.settingIconWrap}>
+            <Ionicons name="phone-portrait-outline" size={18} color={colors.primary} />
           </View>
-        ))}
+          <View style={{ flex: 1 }}>
+            <Text style={styles.settingLabel}>진동 알림</Text>
+            <Text style={styles.settingSub}>Android 알림 채널 진동 활성화</Text>
+          </View>
+          <Switch
+            value={vibration}
+            onValueChange={(v) => { setVibration(v); handleSoundToggle(STORAGE_KEYS.vibration, v); }}
+            trackColor={{ false: colors.border, true: colors.primary }}
+            thumbColor="#fff"
+          />
+        </View>
       </View>
 
     </ScrollView>

@@ -75,6 +75,7 @@ export default function RouteScreen() {
     setBuffer(route.alarmBeforeMinutes);
     setTransport((route.transportMode as any) ?? 'car');
     setActiveDays(route.activeDays ? route.activeDays.split(',').map(Number) : [1,2,3,4,5]);
+    setCustomTravelMin(route.customTravelMinutes != null ? String(route.customTravelMinutes) : '');
     setShowForm(true);
   };
 
@@ -109,6 +110,7 @@ export default function RouteScreen() {
       Alert.alert('시간 형식을 확인하세요 (HH:mm)');
       return;
     }
+    const parsedCustomMin = customTravelMin.trim() ? parseInt(customTravelMin.trim(), 10) : undefined;
     const routeData: RouteRequest = {
       homeAddress: homeAddr.trim(), homeLat, homeLng,
       workAddress: workAddr.trim(), workLat, workLng,
@@ -116,6 +118,7 @@ export default function RouteScreen() {
       alarmBeforeMinutes: buffer,
       transportMode: transport,
       activeDays: activeDays.join(','),
+      customTravelMinutes: (transport === 'transit' && parsedCustomMin && !isNaN(parsedCustomMin)) ? parsedCustomMin : undefined,
     };
     setSaving(true);
     try {
@@ -182,11 +185,13 @@ export default function RouteScreen() {
         <>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionLabel}>내 루트</Text>
-            {routes.length < 3 && (
+            {routes.length < 3 ? (
               <TouchableOpacity style={styles.addBtn} onPress={openNewForm}>
                 <Ionicons name="add" size={16} color="#fff" />
                 <Text style={styles.addBtnText}>추가</Text>
               </TouchableOpacity>
+            ) : (
+              <Text style={styles.routeLimitText}>최대 3개까지 등록 가능</Text>
             )}
           </View>
 
@@ -398,6 +403,7 @@ const styles = StyleSheet.create({
   sectionLabel:         { fontSize: 15, fontWeight: '700', color: colors.textPrimary },
   addBtn:               { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 },
   addBtnText:           { fontSize: 13, fontWeight: '600', color: '#fff' },
+  routeLimitText:       { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted },
   routeCard:            { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, ...cardShadow },
   routeCardActive:      { borderWidth: 2, borderColor: colors.primary },
   routeCardTop:         { gap: 12 },
