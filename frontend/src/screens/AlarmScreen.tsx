@@ -235,8 +235,8 @@ export default function AlarmScreen() {
           style={styles.testBtn}
           onPress={() =>
             sendTestAlarm()
-              .then(() => Alert.alert('전송 완료', '테스트 알람이 발송되었습니다.'))
-              .catch(() => Alert.alert('오류', 'FCM 토큰을 먼저 등록해주세요.'))
+              .then(() => Alert.alert('전송 완료', '잠시 후 알림이 도착합니다.\n알림이 오지 않으면 설정 → 알림에서 OnTime 알림이 허용되어 있는지 확인해주세요.'))
+              .catch(() => Alert.alert('알람 테스트 실패', '앱을 완전히 종료했다가 다시 열고 시도해주세요.\n문제가 계속되면 로그아웃 후 재로그인해주세요.'))
           }
         >
           <Ionicons name="notifications-outline" size={18} color="#fff" />

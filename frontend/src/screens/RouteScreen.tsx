@@ -9,7 +9,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
 import { useRouteStore } from '../store/routeStore';
 import type { RouteRequest, RouteResponse } from '../api/routes';
-import { BUFFER_MIN, BUFFER_MAX, BUFFER_STEP } from '../constants/defaults';
 import { extractTimeHHmm } from '../utils/timeFormat';
 import { getErrorMessage } from '../utils/errors';
 import AddressInput from '../components/AddressInput';
@@ -49,7 +48,7 @@ export default function RouteScreen() {
   const [arrivalTime, setArrivalTime] = useState('09:00');
   const [buffer, setBuffer]         = useState(15);
   const [transport, setTransport]   = useState<'car' | 'transit' | 'walk'>('car');
-  const [activeDays, setActiveDays] = useState([1, 2, 3, 4, 5]); // 폼에서 숨김 — AlarmScreen에서 관리
+  const [activeDays, setActiveDays] = useState([1, 2, 3, 4, 5]);
 
   useEffect(() => { fetchRoutes(); }, []);
 
@@ -313,23 +312,10 @@ export default function RouteScreen() {
             </View>
           )}
 
-          {/* 여유 시간 */}
-          <Text style={[styles.inputLabel, { marginTop: 12 }]}>⏱ 알람 여유 시간</Text>
-          <View style={styles.bufferRow}>
-            <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.max(BUFFER_MIN, b - BUFFER_STEP))}>
-              <Ionicons name="remove" size={18} color={colors.primary} />
-            </TouchableOpacity>
-            <Text style={styles.bufferValue}>{buffer}분</Text>
-            <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.min(BUFFER_MAX, b + BUFFER_STEP))}>
-              <Ionicons name="add" size={18} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-          <Text style={styles.bufferHint}>계산된 출발 시간보다 {buffer}분 일찍 알람이 울려요</Text>
-
-          {/* 반복 요일 안내 */}
+          {/* 알람 설정 안내 */}
           <View style={styles.alarmTip}>
-            <Ionicons name="calendar-outline" size={14} color={colors.primary} />
-            <Text style={styles.alarmTipText}>반복 요일과 여유 시간 세부 설정은 <Text style={styles.alarmTipBold}>알람 탭</Text>에서 변경할 수 있어요.</Text>
+            <Ionicons name="alarm-outline" size={14} color={colors.primary} />
+            <Text style={styles.alarmTipText}>반복 요일과 알람 여유 시간은 <Text style={styles.alarmTipBold}>알람 탭</Text>에서 설정할 수 있어요.</Text>
           </View>
 
           {/* 버튼 */}
@@ -392,10 +378,6 @@ const styles = StyleSheet.create({
   timeRow:              { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 16 },
   timeBtn:              { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   timeValue:            { fontSize: 28, fontWeight: '800', color: colors.textPrimary, minWidth: 52, textAlign: 'center' },
-  bufferRow:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
-  bufferBtn:            { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
-  bufferValue:          { fontSize: 22, fontWeight: '700', color: colors.textPrimary, minWidth: 60, textAlign: 'center' },
-  bufferHint:           { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 6 },
   transitNote:          { flexDirection: 'row', gap: 6, alignItems: 'flex-start', backgroundColor: '#FFF3E0', borderRadius: 8, padding: 10, marginTop: 8 },
   transitNoteText:      { flex: 1, fontSize: 11, color: '#E65100' },
   alarmTip:             { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: colors.primaryLight, borderRadius: 8, padding: 10, marginTop: 12 },

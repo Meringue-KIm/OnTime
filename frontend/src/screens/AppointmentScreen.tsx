@@ -245,7 +245,7 @@ export default function AppointmentScreen() {
         />
 
         {/* 알람 시간 설정 */}
-        <Text style={styles.inputLabel}>출발 몇 분 전에 알람</Text>
+        <Text style={styles.inputLabel}>약속 몇 분 전에 알람</Text>
         <View style={styles.alarmOptionsRow}>
           {ALARM_OPTIONS.map(opt => (
             <TouchableOpacity
@@ -258,6 +258,10 @@ export default function AppointmentScreen() {
               </Text>
             </TouchableOpacity>
           ))}
+        </View>
+        <View style={styles.alarmNote}>
+          <Ionicons name="information-circle-outline" size={13} color={colors.textMuted} />
+          <Text style={styles.alarmNoteText}>약속 시간 {alarmMinutes}분 전에 알람이 울려요. 이동 시간은 별도로 고려해서 선택해주세요.</Text>
         </View>
 
         {/* 지도 미리보기 */}
@@ -369,4 +373,6 @@ const styles = StyleSheet.create({
   alarmOptionActive:  { backgroundColor: colors.primary },
   alarmOptionText:    { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textSecondary },
   alarmOptionTextActive: { color: '#fff' },
+  alarmNote:          { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: 6 },
+  alarmNoteText:      { flex: 1, fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted, lineHeight: 16 },
 });

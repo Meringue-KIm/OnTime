@@ -161,6 +161,23 @@ export default function HomeScreen() {
   };
 
   const activeRoute = routes.find(r => r.isActive) ?? routes[0];
+
+  const greeting = (() => {
+    if (today?.recommendedDeparture) {
+      const [hh, mm] = today.recommendedDeparture.split(':').map(Number);
+      const dep = new Date(); dep.setHours(hh, mm, 0, 0);
+      const diffMin = (dep.getTime() - Date.now()) / 60000;
+      if (diffMin > 0 && diffMin <= 30) return '곧 출발 시간이에요! 준비되셨나요? 🚀';
+      if (diffMin > 0 && diffMin <= 60) return `${Math.round(diffMin)}분 후 출발입니다. 여유 있게 준비하세요.`;
+    }
+    const h = new Date().getHours();
+    if (h < 6)  return '일찍 일어나셨네요. 오늘도 OnTime! 🌙';
+    if (h < 10) return '좋은 아침이에요! 오늘도 정시 출발 🌅';
+    if (h < 14) return '좋은 오전이에요. 오늘 하루도 OnTime으로! ☀️';
+    if (h < 18) return '오후도 힘차게! 내일 알람도 준비됐어요. 💪';
+    return '수고하셨어요! 내일 출발 시간을 계산 중이에요. 🌙';
+  })();
+
   const upcomingAppts = appointments
     .filter(a => !a.isDone && a.dDay >= 0)
     .sort((a, b) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime())
@@ -183,7 +200,7 @@ export default function HomeScreen() {
 
       {/* Greeting */}
       <View style={styles.greetingSection}>
-        <Text style={styles.greeting}>오늘도 OnTime으로 여유있게 출발하세요. 👋</Text>
+        <Text style={styles.greeting}>{greeting}</Text>
       </View>
 
       {/* Weather */}
@@ -320,29 +337,34 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* Route Preview */}
+      {/* 오늘 이동 요약 */}
       <View style={styles.card}>
         <View style={styles.rowBetween}>
-          <Text style={styles.cardLabel}>경로 미리보기</Text>
+          <Text style={styles.cardLabel}>오늘 이동 요약</Text>
           <TouchableOpacity style={styles.routeAddBtn} onPress={() => navigation.navigate('Route')}>
-            <Ionicons name="add" size={14} color={colors.primary} />
-            <Text style={styles.routeAddBtnText}>{activeRoute ? '수정' : '추가'}</Text>
+            <Ionicons name="settings-outline" size={13} color={colors.primary} />
+            <Text style={styles.routeAddBtnText}>루트 설정</Text>
           </TouchableOpacity>
         </View>
         {activeRoute ? (
           <>
-            <View style={styles.routeRow}>
-              <View style={styles.routePoints}>
-                <View style={[styles.dot, { backgroundColor: colors.primary }]} />
-                <View style={styles.routeDash} />
-                <View style={[styles.dot, { backgroundColor: colors.secondary }]} />
+            <View style={styles.tripSummaryRow}>
+              <View style={styles.tripSummaryItem}>
+                <Ionicons name="flag-outline" size={16} color={colors.primary} />
+                <Text style={styles.tripSummaryLabel}>도착 목표</Text>
+                <Text style={styles.tripSummaryValue}>{extractTimeHHmm(activeRoute.arrivalTime)}</Text>
               </View>
-              <View style={styles.routeTexts}>
-                <Text style={styles.routeText}>{activeRoute.homeAddress}</Text>
-                <Text style={[styles.routeText, { color: colors.textMuted, fontSize: 12, fontFamily: fonts.regular }]}>
-                  알람 여유 {activeRoute.alarmBeforeMinutes}분
-                </Text>
-                <Text style={styles.routeText}>{activeRoute.workAddress}</Text>
+              {today?.drivingMinutes !== undefined && (
+                <View style={styles.tripSummaryItem}>
+                  <Ionicons name="car-outline" size={16} color={colors.primary} />
+                  <Text style={styles.tripSummaryLabel}>이동 시간</Text>
+                  <Text style={styles.tripSummaryValue}>{today.drivingMinutes}분</Text>
+                </View>
+              )}
+              <View style={styles.tripSummaryItem}>
+                <Ionicons name="alarm-outline" size={16} color={colors.primary} />
+                <Text style={styles.tripSummaryLabel}>알람 여유</Text>
+                <Text style={styles.tripSummaryValue}>{activeRoute.alarmBeforeMinutes}분</Text>
               </View>
             </View>
             <TouchableOpacity style={styles.navBtn} onPress={handleNavigation}>
@@ -502,18 +524,16 @@ const styles = StyleSheet.create({
   card:             { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, ...cardShadow },
   cardLabel:        { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textSecondary, marginBottom: 10 },
   rowBetween:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
-  routeAddBtn:      { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primaryLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
-  routeAddBtnText:  { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
-  noRouteBtn:       { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16 },
-  noRouteBtnText:   { fontSize: 14, fontFamily: fonts.semiBold, color: colors.primary },
-  routeRow:         { flexDirection: 'row', alignItems: 'center', gap: 12, marginBottom: 14 },
-  routePoints:      { alignItems: 'center', gap: 4 },
-  dot:              { width: 10, height: 10, borderRadius: 5 },
-  routeDash:        { width: 2, height: 24, backgroundColor: colors.border },
-  routeTexts:       { gap: 10, flex: 1 },
-  routeText:        { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },
-  navBtn:           { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.primary, borderRadius: 50, paddingVertical: 12 },
-  navBtnText:       { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },
+  routeAddBtn:        { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primaryLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
+  routeAddBtnText:    { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
+  noRouteBtn:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, paddingVertical: 16 },
+  noRouteBtnText:     { fontSize: 14, fontFamily: fonts.semiBold, color: colors.primary },
+  tripSummaryRow:     { flexDirection: 'row', justifyContent: 'space-around', paddingVertical: 12, marginBottom: 12, backgroundColor: colors.bg, borderRadius: 12 },
+  tripSummaryItem:    { alignItems: 'center', gap: 4 },
+  tripSummaryLabel:   { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted },
+  tripSummaryValue:   { fontSize: 16, fontFamily: fonts.bold, color: colors.textPrimary },
+  navBtn:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, backgroundColor: colors.primary, borderRadius: 50, paddingVertical: 12 },
+  navBtnText:         { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },
   emptyText:        { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', paddingVertical: 4 },
   emptyApptWrap:    { alignItems: 'center', paddingVertical: 8 },
   emptyApptLink:    { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary, marginTop: 6 },
