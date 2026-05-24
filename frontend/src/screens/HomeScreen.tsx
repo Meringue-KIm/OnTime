@@ -362,8 +362,8 @@ export default function HomeScreen() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.scheduleTitle}>{item.title || item.destAddress}</Text>
-                <Text style={styles.scheduleLocation}>
-                  {item.dDay === 0 ? 'D-Day' : `D-${item.dDay}`}
+                <Text style={styles.scheduleLocation} numberOfLines={1}>
+                  {item.title ? `${item.destAddress} · ` : ''}{item.dDay === 0 ? 'D-Day' : `D-${item.dDay}`}
                 </Text>
               </View>
               <Text style={styles.scheduleTime}>{formatApptTime(item.appointmentTime)}</Text>

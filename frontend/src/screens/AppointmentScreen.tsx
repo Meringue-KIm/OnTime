@@ -73,7 +73,7 @@ export default function AppointmentScreen() {
   };
 
   const handleDelete = (id: number) => {
-    Alert.alert('약속 삭제', '이 약속을 삭제하시겠습니까?', [
+    Alert.alert('약속 삭제', '삭제하면 기록이 완전히 사라집니다.\n(완료 처리와 달리 복구 불가)', [
       { text: '취소', style: 'cancel' },
       { text: '삭제', style: 'destructive', onPress: () => removeAppointment(id).catch((e: any) => Alert.alert('오류', getErrorMessage(e))) },
     ]);
@@ -85,6 +85,26 @@ export default function AppointmentScreen() {
       return `${webDate}T${webTime}:00`;
     }
     return toISOLocal(apptDate);
+  };
+
+  const doSubmit = async (apptData: AppointmentRequest): Promise<boolean> => {
+    setSubmitting(true);
+    try {
+      await addAppointment(apptData);
+      setTitle('');
+      setDest(''); setDestLat(null); setDestLng(null);
+      const fresh = new Date(); fresh.setDate(fresh.getDate() + 1); fresh.setHours(9, 0, 0, 0);
+      setApptDate(fresh);
+      setWebDate(''); setWebTime('09:00');
+      setAlarmMinutes(30);
+      Alert.alert('등록 완료', '약속이 추가되었습니다.');
+      return true;
+    } catch (e: any) {
+      Alert.alert('등록 실패', getErrorMessage(e));
+      return false;
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleSubmit = async (): Promise<boolean> => {
@@ -111,23 +131,22 @@ export default function AppointmentScreen() {
       alarmBeforeMinutes: alarmMinutes,
     };
 
-    setSubmitting(true);
-    try {
-      await addAppointment(apptData);
-      setTitle('');
-      setDest(''); setDestLat(null); setDestLng(null);
-      const fresh = new Date(); fresh.setDate(fresh.getDate() + 1); fresh.setHours(9, 0, 0, 0);
-      setApptDate(fresh);
-      setWebDate(''); setWebTime('09:00');
-      setAlarmMinutes(30);
-      Alert.alert('등록 완료', '약속이 추가되었습니다.');
-      return true;
-    } catch (e: any) {
-      Alert.alert('등록 실패', getErrorMessage(e));
-      return false;
-    } finally {
-      setSubmitting(false);
+    // 여유 시간 기준 알람 시각이 이미 지난 경우 경고
+    const alarmMs = new Date(appointmentTime).getTime() - alarmMinutes * 60 * 1000;
+    if (alarmMs <= Date.now()) {
+      return new Promise(resolve => {
+        Alert.alert(
+          '알람이 오지 않을 수 있어요',
+          `여유 시간(${alarmMinutes}분) 기준 알람 시각이 이미 지났습니다.\n그래도 등록하시겠습니까?`,
+          [
+            { text: '취소', style: 'cancel', onPress: () => resolve(false) },
+            { text: '등록', onPress: () => doSubmit(apptData).then(resolve) },
+          ],
+        );
+      });
     }
+
+    return doSubmit(apptData);
   };
 
   const handleReset = () => {

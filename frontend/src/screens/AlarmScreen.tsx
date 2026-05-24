@@ -201,51 +201,64 @@ export default function AlarmScreen() {
         )}
       </View>
 
-      {/* 반복 요일 */}
-      <View style={styles.card}>
-        <View style={styles.rowBetween}>
-          <Text style={styles.sectionTitle}>📅 반복 일정 설정</Text>
-          {saveStatus === 'saving' && <Text style={styles.autoSaveText}>저장 중...</Text>}
-          {saveStatus === 'saved'  && <Text style={[styles.autoSaveText, { color: colors.success }]}>✓ 저장됨</Text>}
+      {/* 반복 요일 / 여유 시간 — 루트 없으면 안내만 표시 */}
+      {!activeRoute && !loading ? (
+        <View style={[styles.card, { alignItems: 'center', paddingVertical: 24 }]}>
+          <Ionicons name="navigate-outline" size={32} color={colors.textMuted} />
+          <Text style={styles.noRouteMsg}>반복 요일과 여유 시간을 설정하려면{'\n'}루트를 먼저 등록해주세요.</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Route')}>
+            <Text style={styles.noRouteMsgLink}>루트 등록하러 가기 →</Text>
+          </TouchableOpacity>
         </View>
-        <View style={styles.daysRow}>
-          {DAYS_OF_WEEK.map((day, i) => (
-            <TouchableOpacity
-              key={i}
-              style={[styles.dayBtn, activeDays.includes(i) && styles.dayBtnActive]}
-              onPress={() => toggleDay(i)}
-            >
-              <Text style={[styles.dayText, activeDays.includes(i) && styles.dayTextActive]}>
-                {day}
-              </Text>
-            </TouchableOpacity>
-          ))}
-        </View>
-      </View>
+      ) : (
+        <>
+          {/* 반복 요일 */}
+          <View style={styles.card}>
+            <View style={styles.rowBetween}>
+              <Text style={styles.sectionTitle}>📅 반복 일정 설정</Text>
+              {saveStatus === 'saving' && <Text style={styles.autoSaveText}>저장 중...</Text>}
+              {saveStatus === 'saved'  && <Text style={[styles.autoSaveText, { color: colors.success }]}>✓ 저장됨</Text>}
+            </View>
+            <View style={styles.daysRow}>
+              {DAYS_OF_WEEK.map((day, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={[styles.dayBtn, activeDays.includes(i) && styles.dayBtnActive]}
+                  onPress={() => toggleDay(i)}
+                >
+                  <Text style={[styles.dayText, activeDays.includes(i) && styles.dayTextActive]}>
+                    {day}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </View>
 
-      {/* 여유 시간 */}
-      <View style={styles.card}>
-        <Text style={styles.sectionTitle}>✨ 여유 시간 (Buffer)</Text>
-        <View style={styles.bufferDisplay}>
-          <Text style={styles.bufferValue}>{buffer}</Text>
-          <Text style={styles.bufferUnit}>분</Text>
-        </View>
-        <View style={styles.infoBanner}>
-          <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
-          <Text style={styles.infoText}>
-            설정한 여유 시간만큼 일찍 출발 알람이 울립니다. 날씨 상황에 따라 자동으로 추가됩니다.
-          </Text>
-        </View>
-        <View style={styles.bufferControls}>
-          <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.max(BUFFER_MIN, b - BUFFER_STEP))}>
-            <Ionicons name="remove" size={20} color={colors.primary} />
-          </TouchableOpacity>
-          <Text style={styles.bufferControlValue}>{buffer}분</Text>
-          <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.min(BUFFER_MAX, b + BUFFER_STEP))}>
-            <Ionicons name="add" size={20} color={colors.primary} />
-          </TouchableOpacity>
-        </View>
-      </View>
+          {/* 여유 시간 */}
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>✨ 여유 시간 (Buffer)</Text>
+            <View style={styles.bufferDisplay}>
+              <Text style={styles.bufferValue}>{buffer}</Text>
+              <Text style={styles.bufferUnit}>분</Text>
+            </View>
+            <View style={styles.infoBanner}>
+              <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
+              <Text style={styles.infoText}>
+                설정한 여유 시간만큼 일찍 출발 알람이 울립니다. 날씨 상황에 따라 자동으로 추가됩니다.
+              </Text>
+            </View>
+            <View style={styles.bufferControls}>
+              <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.max(BUFFER_MIN, b - BUFFER_STEP))}>
+                <Ionicons name="remove" size={20} color={colors.primary} />
+              </TouchableOpacity>
+              <Text style={styles.bufferControlValue}>{buffer}분</Text>
+              <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.min(BUFFER_MAX, b + BUFFER_STEP))}>
+                <Ionicons name="add" size={20} color={colors.primary} />
+              </TouchableOpacity>
+            </View>
+          </View>
+        </>
+      )}
 
       {/* 테스트 알람 */}
       <View style={styles.card}>
@@ -328,6 +341,8 @@ const styles = StyleSheet.create({
   settingIconWrap:     { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   settingLabel:        { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },
   settingSub:          { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
+  noRouteMsg:          { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', marginTop: 10, lineHeight: 20 },
+  noRouteMsgLink:      { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary, marginTop: 12 },
   testDesc:            { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, marginBottom: 12 },
   testBtn:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 13 },
   testBtnText:         { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },

@@ -149,11 +149,26 @@ export default function RouteScreen() {
   };
 
   const handleDelete = (id: number) => {
+    const target = routes.find(r => r.id === id);
     Alert.alert('루트 삭제', '이 루트를 삭제하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       { text: '삭제', style: 'destructive', onPress: async () => {
-        try { await removeRoute(id); }
-        catch (e: any) { Alert.alert('삭제 실패', getErrorMessage(e)); }
+        try {
+          await removeRoute(id);
+          if (target?.isActive) {
+            const remaining = routes.filter(r => r.id !== id);
+            if (remaining.length > 0) {
+              Alert.alert(
+                '알람이 꺼졌어요',
+                '활성 루트가 삭제되어 알람이 중단됩니다.\n다른 루트를 활성화하시겠습니까?',
+                [
+                  { text: '나중에', style: 'cancel' },
+                  { text: '활성화', onPress: () => handleActivate(remaining[0].id) },
+                ],
+              );
+            }
+          }
+        } catch (e: any) { Alert.alert('삭제 실패', getErrorMessage(e)); }
       }},
     ]);
   };
