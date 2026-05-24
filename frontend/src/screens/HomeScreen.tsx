@@ -258,6 +258,32 @@ export default function HomeScreen() {
             <Text style={styles.departureTime}>
               {extractTimeHHmm(today.recommendedDeparture)}
             </Text>
+            {today.drivingMinutes !== undefined && (
+              <View style={styles.breakdownRow}>
+                <View style={styles.breakdownChip}>
+                  <Ionicons name="car-outline" size={11} color="rgba(255,255,255,0.9)" />
+                  <Text style={styles.breakdownChipText}>이동 {today.drivingMinutes}분</Text>
+                </View>
+                {(today.weather?.bufferMinutes ?? 0) > 0 && (
+                  <>
+                    <Text style={styles.breakdownPlus}>+</Text>
+                    <View style={styles.breakdownChip}>
+                      <Ionicons name={getWeatherNavIcon(today.weather!.icon)} size={11} color="rgba(255,255,255,0.9)" />
+                      <Text style={styles.breakdownChipText}>날씨 +{today.weather!.bufferMinutes}분</Text>
+                    </View>
+                  </>
+                )}
+                {(activeRoute?.alarmBeforeMinutes ?? 0) > 0 && (
+                  <>
+                    <Text style={styles.breakdownPlus}>+</Text>
+                    <View style={styles.breakdownChip}>
+                      <Ionicons name="alarm-outline" size={11} color="rgba(255,255,255,0.9)" />
+                      <Text style={styles.breakdownChipText}>여유 {activeRoute!.alarmBeforeMinutes}분</Text>
+                    </View>
+                  </>
+                )}
+              </View>
+            )}
             <View style={styles.trafficRow}>
               {today.logDate && (
                 <View style={[styles.trafficBadge, { backgroundColor: 'rgba(255,255,255,0.35)', marginBottom: 4 }]}>
@@ -314,7 +340,7 @@ export default function HomeScreen() {
               <View style={styles.routeTexts}>
                 <Text style={styles.routeText}>{activeRoute.homeAddress}</Text>
                 <Text style={[styles.routeText, { color: colors.textMuted, fontSize: 12, fontFamily: fonts.regular }]}>
-                  {activeRoute.alarmBeforeMinutes}분 여유
+                  알람 여유 {activeRoute.alarmBeforeMinutes}분
                 </Text>
                 <Text style={styles.routeText}>{activeRoute.workAddress}</Text>
               </View>
@@ -466,6 +492,10 @@ const styles = StyleSheet.create({
   noRouteSubText:   { fontSize: 13, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.75)', textAlign: 'center' },
   onboardingBtn:    { marginTop: 4, backgroundColor: 'rgba(255,255,255,0.25)', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
   onboardingBtnText:{ fontSize: 14, fontFamily: fonts.semiBold, color: '#fff' },
+  breakdownRow:     { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 4, marginTop: 8, marginBottom: 2 },
+  breakdownChip:    { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
+  breakdownChipText:{ fontSize: 11, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.9)' },
+  breakdownPlus:    { fontSize: 11, color: 'rgba(255,255,255,0.6)', fontFamily: fonts.regular },
   trafficRow:       { marginTop: 8 },
   trafficBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   trafficBadgeText: { color: '#fff', fontSize: 12, fontFamily: fonts.regular },

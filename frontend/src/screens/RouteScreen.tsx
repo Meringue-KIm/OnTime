@@ -4,6 +4,7 @@ import {
   Alert, ActivityIndicator, Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
 import { useRouteStore } from '../store/routeStore';
@@ -32,6 +33,7 @@ const EMPTY_FORM = {
 
 export default function RouteScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const { routes, loading, fetchRoutes, saveRoute, activateRoute, removeRoute } = useRouteStore();
 
   const [showForm, setShowForm]     = useState(false);
@@ -109,7 +111,18 @@ export default function RouteScreen() {
     try {
       await saveRoute(routeData, editingId ?? undefined);
       setShowForm(false);
-      Alert.alert('저장 완료', editingId ? '루트가 수정되었습니다.' : '새 루트가 추가되었습니다.');
+      if (editingId) {
+        Alert.alert('수정 완료', '루트가 수정되었습니다.');
+      } else {
+        Alert.alert(
+          '등록 완료 🎉',
+          '루트가 저장되었습니다!\n홈 화면에서 오늘의 출발 시간을 확인해보세요.',
+          [
+            { text: '홈으로 이동', onPress: () => navigation.navigate('Home') },
+            { text: '계속', style: 'cancel' },
+          ],
+        );
+      }
     } catch (e: any) {
       Alert.alert('저장 실패', getErrorMessage(e));
     } finally {
@@ -289,7 +302,7 @@ export default function RouteScreen() {
           )}
 
           {/* 여유 시간 */}
-          <Text style={[styles.inputLabel, { marginTop: 12 }]}>⏱ 여유 시간</Text>
+          <Text style={[styles.inputLabel, { marginTop: 12 }]}>⏱ 알람 여유 시간</Text>
           <View style={styles.bufferRow}>
             <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.max(BUFFER_MIN, b - BUFFER_STEP))}>
               <Ionicons name="remove" size={18} color={colors.primary} />
@@ -299,6 +312,7 @@ export default function RouteScreen() {
               <Ionicons name="add" size={18} color={colors.primary} />
             </TouchableOpacity>
           </View>
+          <Text style={styles.bufferHint}>계산된 출발 시간보다 {buffer}분 일찍 알람이 울려요</Text>
 
           {/* 반복 요일 안내 */}
           <View style={styles.alarmTip}>
@@ -365,6 +379,7 @@ const styles = StyleSheet.create({
   bufferRow:            { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
   bufferBtn:            { width: 36, height: 36, borderRadius: 18, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   bufferValue:          { fontSize: 22, fontWeight: '700', color: colors.textPrimary, minWidth: 60, textAlign: 'center' },
+  bufferHint:           { fontSize: 11, color: colors.textMuted, textAlign: 'center', marginTop: 6 },
   transitNote:          { flexDirection: 'row', gap: 6, alignItems: 'flex-start', backgroundColor: '#FFF3E0', borderRadius: 8, padding: 10, marginTop: 8 },
   transitNoteText:      { flex: 1, fontSize: 11, color: '#E65100' },
   alarmTip:             { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: colors.primaryLight, borderRadius: 8, padding: 10, marginTop: 12 },

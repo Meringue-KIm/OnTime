@@ -11,7 +11,7 @@ import KakaoMapView from '../components/KakaoMapView';
 import AddressInput from '../components/AddressInput';
 import { getErrorMessage } from '../utils/errors';
 import type { AppointmentRequest } from '../api/appointments';
-import { DEFAULT_ALARM_MINUTES } from '../constants/defaults';
+const ALARM_OPTIONS = [15, 30, 60, 90];
 import { formatKoreanDateTime } from '../utils/timeFormat';
 
 const logo = require('../../assets/logo.png');
@@ -47,6 +47,7 @@ export default function AppointmentScreen() {
   const [dest, setDest]               = useState('');
   const [destLat, setDestLat]         = useState<number | null>(null);
   const [destLng, setDestLng]         = useState<number | null>(null);
+  const [alarmMinutes, setAlarmMinutes] = useState(30);
   const [submitting, setSubmitting]   = useState(false);
 
   // 웹용 날짜/시간 텍스트 상태
@@ -101,7 +102,7 @@ export default function AppointmentScreen() {
       destLat: destLat ?? undefined,
       destLng: destLng ?? undefined,
       appointmentTime,
-      alarmBeforeMinutes: DEFAULT_ALARM_MINUTES,
+      alarmBeforeMinutes: alarmMinutes,
     };
 
     setSubmitting(true);
@@ -110,6 +111,7 @@ export default function AppointmentScreen() {
       setDest(''); setDestLat(null); setDestLng(null);
       setApptDate(tomorrow);
       setWebDate(''); setWebTime('09:00');
+      setAlarmMinutes(30);
       Alert.alert('등록 완료', '약속이 추가되었습니다.');
     } catch (e: any) {
       Alert.alert('등록 실패', getErrorMessage(e));
@@ -122,6 +124,7 @@ export default function AppointmentScreen() {
     setDest(''); setDestLat(null); setDestLng(null);
     setApptDate(tomorrow);
     setWebDate(''); setWebTime('09:00');
+    setAlarmMinutes(30);
   };
 
   return (
@@ -241,6 +244,22 @@ export default function AppointmentScreen() {
           iconName="location-outline"
         />
 
+        {/* 알람 시간 설정 */}
+        <Text style={styles.inputLabel}>출발 몇 분 전에 알람</Text>
+        <View style={styles.alarmOptionsRow}>
+          {ALARM_OPTIONS.map(opt => (
+            <TouchableOpacity
+              key={opt}
+              style={[styles.alarmOption, alarmMinutes === opt && styles.alarmOptionActive]}
+              onPress={() => setAlarmMinutes(opt)}
+            >
+              <Text style={[styles.alarmOptionText, alarmMinutes === opt && styles.alarmOptionTextActive]}>
+                {opt}분 전
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
         {/* 지도 미리보기 */}
         {destLat && destLng ? (
           <View style={{ marginTop: 12 }}>
@@ -345,4 +364,9 @@ const styles = StyleSheet.create({
   statusBadge:        { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusText:         { fontSize: 12, fontFamily: fonts.semiBold },
   apptActionBtn:      { padding: 6, marginLeft: 2 },
+  alarmOptionsRow:    { flexDirection: 'row', gap: 8 },
+  alarmOption:        { flex: 1, paddingVertical: 9, borderRadius: 10, backgroundColor: colors.bg, alignItems: 'center' },
+  alarmOptionActive:  { backgroundColor: colors.primary },
+  alarmOptionText:    { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textSecondary },
+  alarmOptionTextActive: { color: '#fff' },
 });

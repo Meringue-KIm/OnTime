@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image, TouchableOpacity, Alert, RefreshControl } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const logo = require('../../assets/logo.png');
@@ -31,6 +32,41 @@ export default function StatsScreen() {
   };
 
   useEffect(() => { setLoading(true); fetchLogs(); }, []);
+
+  useFocusEffect(useCallback(() => {
+    const pending = logs
+      .filter(l => l.isLate === null)
+      .filter(l => {
+        const daysDiff = (Date.now() - new Date(l.logDate).getTime()) / 86400000;
+        return daysDiff <= 3;
+      });
+    if (pending.length === 0) return;
+    const log = pending[0];
+    const timer = setTimeout(() => {
+      Alert.alert(
+        '출근 결과를 알려주세요 📝',
+        `${formatDate(log.logDate)} 출근은 어떠셨나요?\n기록해두면 정시율 통계가 쌓여요!`,
+        [
+          {
+            text: '정시 도착 ✅',
+            onPress: async () => {
+              await submitFeedback(log.id, false);
+              setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: false } : l));
+            },
+          },
+          {
+            text: '지각 😅',
+            onPress: async () => {
+              await submitFeedback(log.id, true);
+              setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: true } : l));
+            },
+          },
+          { text: '나중에', style: 'cancel' },
+        ],
+      );
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [logs]));
 
   const logsWithFeedback = logs.filter(l => l.isLate !== null);
   const onTimeCount     = logsWithFeedback.filter(l => l.isLate === false).length;
