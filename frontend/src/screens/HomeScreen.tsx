@@ -106,26 +106,27 @@ export default function HomeScreen() {
     Linking.openURL(googleUrl);
   };
 
+  const activeRoute = routes.find(r => r.isActive) ?? routes[0];
+
   // 날씨 우선순위: GPS 위치 > 활성 경로 집 주소 > 서울 기본값
+  // deps에 원시값만 사용 — routes 배열 참조가 바뀔 때마다 재실행되는 것을 방지
   useEffect(() => {
-    const active = routes.find(r => r.isActive) ?? routes[0];
-    const lat = gpsCoords?.lat ?? active?.homeLat ?? DEFAULT_LOCATION.lat;
-    const lng = gpsCoords?.lng ?? active?.homeLng ?? DEFAULT_LOCATION.lng;
+    const lat = gpsCoords?.lat ?? activeRoute?.homeLat ?? DEFAULT_LOCATION.lat;
+    const lng = gpsCoords?.lng ?? activeRoute?.homeLng ?? DEFAULT_LOCATION.lng;
     setWeatherError(false);
     getWeatherSummary(lat, lng)
       .then(({ data }) => { setWeather(data); setWeatherError(false); })
       .catch(() => setWeatherError(true));
-  }, [gpsCoords, routes]);
+  }, [gpsCoords?.lat, gpsCoords?.lng, activeRoute?.homeLat, activeRoute?.homeLng]);
 
   useNotification();
-
-  const activeRoute = routes.find(r => r.isActive) ?? routes[0];
 
   const departureLabel = (() => {
     if (!today?.recommendedDeparture) return '다음 출발 시간';
     const [hh, mm] = today.recommendedDeparture.split(':').map(Number);
     const dep = new Date(); dep.setHours(hh, mm, 0, 0);
-    return dep > new Date() ? '오늘 출발 시간' : '내일 출발 예정';
+    if (dep > new Date()) return '오늘 출발 시간';
+    return today.logDate ? '오늘 출발 완료' : '오늘 출발 기준 시간';
   })();
 
   const greeting = (() => {

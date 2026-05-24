@@ -4,6 +4,7 @@ import * as Notifications from 'expo-notifications';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native';
 import { setupNotificationChannel } from '../hooks/useNotification';
 import { sendTestAlarm } from '../api/auth';
 import { getErrorMessage } from '../utils/errors';
@@ -46,6 +47,7 @@ function getNextAlarmLabel(departureTimeStr: string | null, activeDays: number[]
 
 export default function AlarmScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const { today, loading, error: todayError, fetchToday } = useTodayStore();
   const departureTime = today?.recommendedDeparture ? extractTimeHHmm(today.recommendedDeparture) : null;
 
@@ -105,13 +107,14 @@ export default function AlarmScreen() {
           alarmBeforeMinutes: newBuffer,
           activeDays:         newDays.join(','),
         }, activeRoute.id);
+        fetchToday(); // 버퍼/요일 변경 반영된 출발 시간 즉시 갱신
         setSaveStatus('saved');
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch {
         setSaveStatus('idle');
       }
     }, 1000);
-  }, [activeRoute, saveRoute]);
+  }, [activeRoute, saveRoute, fetchToday]);
 
   const toggleDay = (i: number) =>
     setActiveDays(prev => prev.includes(i) ? prev.filter(d => d !== i) : [...prev, i]);
@@ -129,6 +132,9 @@ export default function AlarmScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={styles.settingsBtn}>
+          <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
       {/* 어떤 루트를 수정 중인지 안내 */}
@@ -284,7 +290,8 @@ export default function AlarmScreen() {
 
 const styles = StyleSheet.create({
   container:           { flex: 1, backgroundColor: colors.bg },
-  header:              { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 20, paddingBottom: 8 },
+  header:              { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 8 },
+  settingsBtn:         { padding: 6 },
   routeInfoBanner:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 20, marginBottom: 8, backgroundColor: colors.primaryLight, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
   routeInfoText:       { flex: 1, fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
   permissionBanner:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginBottom: 8, backgroundColor: '#FFEBEE', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
