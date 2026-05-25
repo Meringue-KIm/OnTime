@@ -33,7 +33,7 @@ if (Platform.OS !== 'web') {
 export default function HomeScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
-  const { today, loading: todayLoading, error: todayError, fetchToday } = useTodayStore();
+  const { today, loading: todayLoading, error: todayError, cachedAt, fetchToday } = useTodayStore();
   const [weather, setWeather] = useState<WeatherSummary | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [weatherError, setWeatherError] = useState(false);
@@ -143,6 +143,14 @@ export default function HomeScreen() {
   }, [gpsCoords?.lat, gpsCoords?.lng, activeRoute?.homeLat, activeRoute?.homeLng]);
 
   const { alarmFired, dismissAlarmBanner } = useNotification();
+
+  const cacheAgeLabel = (() => {
+    if (!cachedAt) return '';
+    const diffMin = Math.round((Date.now() - new Date(cachedAt).getTime()) / 60000);
+    if (diffMin < 1) return '방금 전';
+    if (diffMin < 60) return `${diffMin}분 전`;
+    return `${Math.floor(diffMin / 60)}시간 전`;
+  })();
 
   const departureLabel = (() => {
     if (!today?.recommendedDeparture) return '다음 출발 시간';
@@ -281,7 +289,7 @@ export default function HomeScreen() {
         <Text style={styles.departureLabel}>{departureLabel}</Text>
         {todayLoading ? (
           <ActivityIndicator color="#fff" size="large" style={{ marginVertical: 8 }} />
-        ) : todayError ? (
+        ) : todayError && !today?.recommendedDeparture ? (
           <View style={styles.onboardingWrap}>
             <Ionicons name="cloud-offline-outline" size={28} color="rgba(255,255,255,0.7)" />
             <Text style={styles.noRouteSubText}>잠시 후 자동으로 다시 시도합니다...</Text>
@@ -291,6 +299,12 @@ export default function HomeScreen() {
             <Text style={styles.departureTime}>
               {extractTimeHHmm(today.recommendedDeparture)}
             </Text>
+            {todayError && cachedAt && (
+              <View style={styles.offlineBadge}>
+                <Ionicons name="cloud-offline-outline" size={11} color="rgba(255,255,255,0.7)" />
+                <Text style={styles.offlineBadgeText}>오프라인 · {cacheAgeLabel}</Text>
+              </View>
+            )}
             {today.drivingMinutes !== undefined && (
               <View style={styles.breakdownRow}>
                 <View style={styles.breakdownChip}>
@@ -464,6 +478,8 @@ const styles = StyleSheet.create({
   breakdownChip:    { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   breakdownChipText:{ fontSize: 11, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.9)' },
   breakdownPlus:    { fontSize: 11, color: 'rgba(255,255,255,0.6)', fontFamily: fonts.regular },
+  offlineBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.2)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, marginTop: 6 },
+  offlineBadgeText: { fontSize: 11, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.7)' },
   trafficRow:       { marginTop: 8 },
   trafficBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   trafficBadgeText: { color: '#fff', fontSize: 12, fontFamily: fonts.regular },
