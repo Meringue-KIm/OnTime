@@ -77,15 +77,39 @@ export default function HomeScreen() {
     return () => sub.remove();
   }, []);
 
-  const handleNavigation = async () => {
+  const handleNavigation = async (destLat?: number, destLng?: number, destAddress?: string) => {
     const route = routes.find(r => r.isActive) ?? routes[0];
-    if (!route?.workLat || !route?.workLng) {
-      Alert.alert('위치 정보 없음', '루트의 직장 주소를 검색 목록에서 다시 선택해주세요.');
-      return;
-    }
-    const { workLat: lat, workLng: lng, workAddress, transportMode } = route;
-    const name = encodeURIComponent(workAddress);
+    const transportMode = route?.transportMode ?? 'car';
 
+    // 목적지 결정: 인자로 받은 좌표 > 오늘 약속 장소 > 회사
+    let lat: number | undefined = destLat;
+    let lng: number | undefined = destLng;
+    let address: string = destAddress ?? '';
+
+    if (!lat || !lng) {
+      // 오늘 D-Day=0이고 아직 지나지 않은 약속 중 가장 이른 것
+      const now = new Date();
+      const todayAppt = appointments
+        .filter(a => !a.isDone && a.dDay === 0 && a.destLat && a.destLng)
+        .filter(a => new Date(a.appointmentTime) > now)
+        .sort((a, b) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime())[0];
+
+      if (todayAppt?.destLat && todayAppt?.destLng) {
+        lat = todayAppt.destLat;
+        lng = todayAppt.destLng;
+        address = todayAppt.destAddress;
+      } else {
+        if (!route?.workLat || !route?.workLng) {
+          Alert.alert('위치 정보 없음', '루트의 직장 주소를 검색 목록에서 다시 선택해주세요.');
+          return;
+        }
+        lat = route.workLat;
+        lng = route.workLng;
+        address = route.workAddress;
+      }
+    }
+
+    const name = encodeURIComponent(address);
     const kakaoMode  = transportMode === 'transit' ? 'PUBLICTRANSIT' : transportMode === 'walk' ? 'FOOT' : 'CAR';
     const naverPath  = transportMode === 'transit' ? 'public' : transportMode === 'walk' ? 'walk' : 'car';
     const googleMode = transportMode === 'transit' ? 'transit' : transportMode === 'walk' ? 'walking' : 'driving';
@@ -118,7 +142,7 @@ export default function HomeScreen() {
       .catch(() => setWeatherError(true));
   }, [gpsCoords?.lat, gpsCoords?.lng, activeRoute?.homeLat, activeRoute?.homeLng]);
 
-  useNotification();
+  const { alarmFired, dismissAlarmBanner } = useNotification();
 
   const departureLabel = (() => {
     if (!today?.recommendedDeparture) return '다음 출발 시간';
@@ -163,6 +187,23 @@ export default function HomeScreen() {
           <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
+
+      {/* 출발 배너 — 알람 탭 후 표시 */}
+      {alarmFired && (
+        <View style={styles.departureBanner}>
+          <View style={styles.departureBannerTop}>
+            <Text style={styles.departureBannerTitle}>지금 출발할 시간이에요! 🚀</Text>
+            <TouchableOpacity onPress={dismissAlarmBanner} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name="close" size={20} color="rgba(255,255,255,0.8)" />
+            </TouchableOpacity>
+          </View>
+          <Text style={styles.departureBannerSub}>안전 운행하세요. 오늘도 OnTime!</Text>
+          <TouchableOpacity style={styles.departureBannerBtn} onPress={() => handleNavigation()}>
+            <Ionicons name="navigate" size={16} color="#fff" />
+            <Text style={styles.departureBannerBtnText}>내비게이션 시작</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Greeting */}
       <View style={styles.greetingSection}>
@@ -385,7 +426,13 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: colors.bg },
+  container:          { flex: 1, backgroundColor: colors.bg },
+  departureBanner:    { marginHorizontal: 20, marginBottom: 12, backgroundColor: '#1B5E20', borderRadius: 16, padding: 18, gap: 8 },
+  departureBannerTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  departureBannerTitle:{ fontSize: 18, fontFamily: fonts.bold, color: '#fff' },
+  departureBannerSub: { fontSize: 13, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.75)' },
+  departureBannerBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 12, paddingVertical: 11, marginTop: 4 },
+  departureBannerBtnText: { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },
   header:           { paddingHorizontal: 20, paddingBottom: 4, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   logoImg:          { width: 180, height: 81 },
   settingsBtn:      { padding: 6 },

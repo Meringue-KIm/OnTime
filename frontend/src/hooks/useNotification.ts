@@ -5,6 +5,7 @@ import { Platform, Alert } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import { updateFcmToken } from '../api/auth';
+import { cancelLocalAlarm } from '../utils/localAlarm';
 
 const STORAGE_KEYS = {
   vibration: 'alarm_vibration',
@@ -19,15 +20,22 @@ export async function setupNotificationChannel() {
     vibrationPattern: vibration ? [0, 400, 200, 400] : undefined,
     enableVibrate: vibration,
     lightColor: '#2D6A4F',
-    sound: 'alarm',  // assets/alarm.wav (EAS 빌드 시 적용)
+    sound: 'alarm',
   });
 }
 
-export function useNotification(): { notifPermission: 'granted' | 'denied' | 'unknown' } {
+interface UseNotificationResult {
+  notifPermission: 'granted' | 'denied' | 'unknown';
+  alarmFired: boolean;
+  dismissAlarmBanner: () => void;
+}
+
+export function useNotification(): UseNotificationResult {
   const [notifPermission, setNotifPermission] = useState<'granted' | 'denied' | 'unknown'>('unknown');
-  const soundRef    = useRef<Audio.Sound | null>(null);
-  const rampRef     = useRef<ReturnType<typeof setInterval> | null>(null);
-  const stopRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [alarmFired, setAlarmFired] = useState(false);
+  const soundRef = useRef<Audio.Sound | null>(null);
+  const rampRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stopRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const stopAlarm = async () => {
     if (rampRef.current)  { clearInterval(rampRef.current); rampRef.current = null; }
@@ -38,6 +46,8 @@ export function useNotification(): { notifPermission: 'granted' | 'denied' | 'un
       soundRef.current = null;
     }
   };
+
+  const dismissAlarmBanner = () => setAlarmFired(false);
 
   useEffect(() => {
     if (!Device.isDevice) return;
@@ -58,9 +68,7 @@ export function useNotification(): { notifPermission: 'granted' | 'denied' | 'un
         finalStatus = status;
       }
 
-      const { status } = { status: finalStatus };
-
-      if (status !== 'granted') {
+      if (finalStatus !== 'granted') {
         setNotifPermission('denied');
         return;
       }
@@ -72,9 +80,16 @@ export function useNotification(): { notifPermission: 'granted' | 'denied' | 'un
       updateFcmToken(token).catch(() => {});
     })();
 
-    // 포그라운드 알림 수신 — 앱이 열려있을 때 사운드 재생
-    const sub = Notifications.addNotificationReceivedListener(async () => {
+    // 포그라운드 알림 수신 — 출발 알람이면 로컬 알람 취소 후 사운드 재생
+    const sub = Notifications.addNotificationReceivedListener(async (notification) => {
       if (Platform.OS === 'web') return;
+
+      const title = notification.request.content.title ?? '';
+      if (title.includes('출발할 시간')) {
+        // FCM이 도착했으면 로컬 알람은 필요 없음 — 이중 알람 방지
+        cancelLocalAlarm().catch(() => {});
+      }
+
       await stopAlarm();
       try {
         await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
@@ -87,10 +102,13 @@ export function useNotification(): { notifPermission: 'granted' | 'denied' | 'un
       } catch {}
     });
 
-    // 알림 탭 시 사운드 중단 + 스누즈 옵션
+    // 알림 탭 — 사운드 중단 + 스누즈 or 끄기 선택
     const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
       stopAlarm();
-      const body = response.notification.request.content.body ?? '';
+      const title = response.notification.request.content.title ?? '';
+      const body  = response.notification.request.content.body ?? '';
+      const isDepartureAlarm = title.includes('출발할 시간');
+
       Alert.alert(
         '알람을 끄시겠어요?',
         body,
@@ -99,16 +117,19 @@ export function useNotification(): { notifPermission: 'granted' | 'denied' | 'un
             text: '5분 후 다시 알림',
             onPress: () => {
               Notifications.scheduleNotificationAsync({
-                content: {
-                  title: '출발할 시간이에요! (스누즈)',
-                  body,
-                  sound: true,
-                },
+                content: { title: '출발할 시간이에요! (스누즈)', body, sound: true },
                 trigger: { seconds: 300, channelId: 'alarm' } as any,
               });
             },
           },
-          { text: '알람 끄기', style: 'destructive' },
+          {
+            text: '알람 끄기',
+            style: 'destructive',
+            onPress: () => {
+              // 출발 알람이면 홈화면에 배너 표시
+              if (isDepartureAlarm) setAlarmFired(true);
+            },
+          },
         ],
       );
     });
@@ -120,5 +141,5 @@ export function useNotification(): { notifPermission: 'granted' | 'denied' | 'un
     };
   }, []);
 
-  return { notifPermission };
+  return { notifPermission, alarmFired, dismissAlarmBanner };
 }
