@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator, Image, Platform, Alert, Linking, AppState, RefreshControl } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
@@ -16,6 +17,20 @@ import { getWeatherNavIcon, getWeatherIonicon } from '../utils/weather';
 import { DEFAULT_LOCATION } from '../constants/locations';
 
 const logo = require('../../assets/logo.png');
+
+type City = { name: string; lat: number; lng: number };
+const CITIES: City[] = [
+  { name: '서울',   lat: 37.5665, lng: 126.9780 },
+  { name: '인천',   lat: 37.4563, lng: 126.7052 },
+  { name: '수원',   lat: 37.2636, lng: 127.0286 },
+  { name: '성남',   lat: 37.4449, lng: 127.1388 },
+  { name: '부산',   lat: 35.1796, lng: 129.0756 },
+  { name: '대구',   lat: 35.8714, lng: 128.6014 },
+  { name: '대전',   lat: 36.3504, lng: 127.3845 },
+  { name: '광주',   lat: 35.1595, lng: 126.8526 },
+  { name: '울산',   lat: 35.5384, lng: 129.3114 },
+  { name: '제주',   lat: 33.4996, lng: 126.5312 },
+];
 
 if (Platform.OS !== 'web') {
   Notifications.setNotificationHandler({
@@ -39,6 +54,7 @@ export default function HomeScreen() {
   const [weatherError, setWeatherError] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const [showWeatherInfo, setShowWeatherInfo] = useState(false);
+  const [selectedCity, setSelectedCity] = useState<City | null>(null);
 
   const { routes, fetchRoutes } = useRouteStore();
   const { appointments, fetchAppointments } = useAppointmentStore();
@@ -133,16 +149,32 @@ export default function HomeScreen() {
 
   const activeRoute = routes.find(r => r.isActive) ?? routes[0];
 
-  // 날씨 우선순위: GPS 위치 > 활성 경로 집 주소 > 서울 기본값
-  // deps에 원시값만 사용 — routes 배열 참조가 바뀔 때마다 재실행되는 것을 방지
+  // 저장된 도시 선택 복원
   useEffect(() => {
-    const lat = gpsCoords?.lat ?? activeRoute?.homeLat ?? DEFAULT_LOCATION.lat;
-    const lng = gpsCoords?.lng ?? activeRoute?.homeLng ?? DEFAULT_LOCATION.lng;
+    AsyncStorage.getItem('weather_city').then(v => {
+      if (v) { try { setSelectedCity(JSON.parse(v)); } catch {} }
+    });
+  }, []);
+
+  // 날씨 우선순위: 선택 도시 > GPS 위치 > 활성 경로 집 주소 > 서울 기본값
+  useEffect(() => {
+    const lat = selectedCity?.lat ?? gpsCoords?.lat ?? activeRoute?.homeLat ?? DEFAULT_LOCATION.lat;
+    const lng = selectedCity?.lng ?? gpsCoords?.lng ?? activeRoute?.homeLng ?? DEFAULT_LOCATION.lng;
     setWeatherError(false);
     getWeatherSummary(lat, lng)
       .then(({ data }) => { setWeather(data); setWeatherError(false); })
       .catch(() => setWeatherError(true));
-  }, [gpsCoords?.lat, gpsCoords?.lng, activeRoute?.homeLat, activeRoute?.homeLng]);
+  }, [selectedCity, gpsCoords?.lat, gpsCoords?.lng, activeRoute?.homeLat, activeRoute?.homeLng]);
+
+  const handleSelectCity = (city: City | null) => {
+    setSelectedCity(city);
+    setShowWeatherInfo(false);
+    if (city) {
+      AsyncStorage.setItem('weather_city', JSON.stringify(city)).catch(() => {});
+    } else {
+      AsyncStorage.removeItem('weather_city').catch(() => {});
+    }
+  };
 
   const { alarmFired, dismissAlarmBanner } = useNotification();
 
@@ -268,7 +300,9 @@ export default function HomeScreen() {
             >
               <Ionicons name="location-outline" size={12} color={colors.primary} />
               <Text style={styles.weatherLocation}>
-                {gpsCoords
+                {selectedCity
+                  ? selectedCity.name
+                  : gpsCoords
                   ? '현재 위치'
                   : activeRoute?.homeAddress?.split(' ').slice(0, 2).join(' ') ?? '서울'}
               </Text>
@@ -277,12 +311,28 @@ export default function HomeScreen() {
           </View>
           {showWeatherInfo && (
             <View style={styles.weatherInfoPanel}>
-              <Text style={styles.weatherInfoText}>
-                {gpsCoords ? 'GPS 현재 위치' : (activeRoute?.homeAddress?.split(' ').slice(0, 2).join(' ') ?? '서울 기본값')} 기준 날씨입니다.{'\n'}위치를 변경하려면 루트 탭에서 집 주소를 수정하세요.
-              </Text>
-              <TouchableOpacity onPress={() => { setShowWeatherInfo(false); navigation.navigate('Route'); }}>
-                <Text style={styles.weatherInfoLink}>루트 수정 →</Text>
-              </TouchableOpacity>
+              <Text style={styles.weatherInfoLabel}>날씨 지역 선택</Text>
+              <View style={styles.cityGrid}>
+                <TouchableOpacity
+                  style={[styles.cityBtn, !selectedCity && styles.cityBtnActive]}
+                  onPress={() => handleSelectCity(null)}
+                >
+                  <Text style={[styles.cityBtnText, !selectedCity && styles.cityBtnTextActive]}>
+                    {gpsCoords ? 'GPS' : '기본'}
+                  </Text>
+                </TouchableOpacity>
+                {CITIES.map(city => (
+                  <TouchableOpacity
+                    key={city.name}
+                    style={[styles.cityBtn, selectedCity?.name === city.name && styles.cityBtnActive]}
+                    onPress={() => handleSelectCity(city)}
+                  >
+                    <Text style={[styles.cityBtnText, selectedCity?.name === city.name && styles.cityBtnTextActive]}>
+                      {city.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
             </View>
           )}
 
@@ -534,7 +584,11 @@ const styles = StyleSheet.create({
   scheduleTime:     { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary },
   footer:           { alignItems: 'center', paddingVertical: 20, gap: 4, marginTop: 8 },
   footerText:       { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted },
-  weatherInfoPanel: { backgroundColor: colors.primaryLight, borderRadius: 10, padding: 12, marginTop: 8, gap: 6 },
-  weatherInfoText:  { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 18 },
-  weatherInfoLink:  { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
+  weatherInfoPanel: { backgroundColor: colors.primaryLight, borderRadius: 10, padding: 12, marginTop: 8 },
+  weatherInfoLabel: { fontSize: 11, fontFamily: fonts.semiBold, color: colors.primary, marginBottom: 8 },
+  cityGrid:         { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  cityBtn:          { paddingHorizontal: 12, paddingVertical: 6, borderRadius: 16, backgroundColor: colors.card },
+  cityBtnActive:    { backgroundColor: colors.primary },
+  cityBtnText:      { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary },
+  cityBtnTextActive:{ color: '#fff' },
 });

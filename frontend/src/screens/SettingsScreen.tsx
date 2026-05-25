@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator,
+  TextInput, Alert, ActivityIndicator, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -87,10 +87,14 @@ export default function SettingsScreen({ navigation }: any) {
 
         <View style={styles.card}>
           <TouchableOpacity style={styles.rowItem} onPress={() => {
-            Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
-              { text: '취소', style: 'cancel' },
-              { text: '로그아웃', style: 'destructive', onPress: logout },
-            ]);
+            if (Platform.OS === 'web') {
+              if ((window as any).confirm('정말 로그아웃하시겠습니까?')) logout();
+            } else {
+              Alert.alert('로그아웃', '정말 로그아웃하시겠습니까?', [
+                { text: '취소', style: 'cancel' },
+                { text: '로그아웃', style: 'destructive', onPress: logout },
+              ]);
+            }
           }}>
             <View style={[styles.rowIcon, { backgroundColor: colors.primaryLight }]}>
               <Ionicons name="log-out-outline" size={18} color={colors.primary} />
