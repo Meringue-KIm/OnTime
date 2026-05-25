@@ -16,24 +16,20 @@ export default function LoginScreen({ navigation }: any) {
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading]   = useState(false);
+  const [error, setError]       = useState('');
   const setTokens = useAuthStore((s) => s.setTokens);
   const passwordRef = useRef<any>(null);
 
   const handleLogin = async () => {
-    if (!email || !password) {
-      Alert.alert('이메일과 비밀번호를 입력해주세요.');
-      return;
-    }
-    if (!EMAIL_RE.test(email)) {
-      Alert.alert('이메일 형식을 확인해주세요.');
-      return;
-    }
+    if (!email || !password) { setError('이메일과 비밀번호를 입력해주세요.'); return; }
+    if (!EMAIL_RE.test(email)) { setError('이메일 형식을 확인해주세요.'); return; }
     setLoading(true);
+    setError('');
     try {
       const { data } = await login(email, password);
       await setTokens(data.accessToken, data.refreshToken);
     } catch (e: any) {
-      Alert.alert('로그인 실패', e.response?.data?.message ?? '다시 시도해주세요.');
+      setError(e.response?.data?.message ?? '이메일 또는 비밀번호가 맞지 않습니다.');
     } finally {
       setLoading(false);
     }
@@ -77,7 +73,7 @@ export default function LoginScreen({ navigation }: any) {
               onSubmitEditing={() => passwordRef.current?.focus()}
               blurOnSubmit={false}
               value={email}
-              onChangeText={setEmail}
+              onChangeText={v => { setEmail(v); setError(''); }}
             />
           </View>
 
@@ -92,10 +88,16 @@ export default function LoginScreen({ navigation }: any) {
               returnKeyType="done"
               onSubmitEditing={handleLogin}
               value={password}
-              onChangeText={setPassword}
+              onChangeText={v => { setPassword(v); setError(''); }}
             />
           </View>
 
+          {error ? (
+            <View style={styles.errorBox}>
+              <Ionicons name="alert-circle-outline" size={14} color="#D32F2F" />
+              <Text style={styles.errorMsg}>{error}</Text>
+            </View>
+          ) : null}
           <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
             {loading
               ? <ActivityIndicator color="#fff" />
@@ -135,5 +137,7 @@ const styles = StyleSheet.create({
   link:        { textAlign: 'center', fontSize: 14, fontFamily: fonts.regular, color: colors.textMuted },
   linkBold:    { fontFamily: fonts.semiBold, color: colors.primary },
   forgotLink:  { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textDecorationLine: 'underline' },
+  errorBox:    { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: '#FFEBEE', borderRadius: 8, padding: 10, marginTop: 14 },
+  errorMsg:    { flex: 1, fontSize: 13, fontFamily: fonts.regular, color: '#D32F2F', lineHeight: 18 },
 
 });

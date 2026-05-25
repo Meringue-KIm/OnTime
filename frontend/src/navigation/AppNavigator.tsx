@@ -1,9 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Image, StyleSheet, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
 import { useRouteStore } from '../store/routeStore';
 import { useAppointmentStore } from '../store/appointmentStore';
@@ -12,6 +13,7 @@ import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import SettingsScreen from '../screens/SettingsScreen';
+import OnboardingScreen from '../screens/OnboardingScreen';
 import TabNavigator from './TabNavigator';
 import { colors } from '../constants/colors';
 import { pingServer } from '../api/ping';
@@ -34,8 +36,13 @@ export default function AppNavigator() {
   const resetRoutes       = useRouteStore(s => s.reset);
   const resetAppointments = useAppointmentStore(s => s.reset);
   const resetToday        = useTodayStore(s => s.reset);
+  const [introSeen, setIntroSeen] = useState<boolean | null>(null);
 
-  useEffect(() => { pingServer(); loadToken(); }, []);
+  useEffect(() => {
+    pingServer();
+    loadToken();
+    AsyncStorage.getItem('app_intro_seen').then(v => setIntroSeen(!!v));
+  }, []);
 
   // 로그인 상태가 되면 FCM 토큰 즉시 재등록 — 앱 재설치/토큰 만료 대응
   useEffect(() => {
@@ -55,13 +62,14 @@ export default function AppNavigator() {
     }
   }, [isLoggedIn, isLoading]);
 
-  if (isLoading) return <SplashScreen />;
+  if (isLoading || introSeen === null) return <SplashScreen />;
 
   return (
     <NavigationContainer>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isLoggedIn ? (
           <>
+            {!introSeen && <Stack.Screen name="Onboarding" component={OnboardingScreen} />}
             <Stack.Screen name="Main"     component={TabNavigator} />
             <Stack.Screen name="Settings" component={SettingsScreen} />
           </>

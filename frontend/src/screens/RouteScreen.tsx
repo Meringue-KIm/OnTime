@@ -110,18 +110,6 @@ export default function RouteScreen() {
       Alert.alert('시간 형식을 확인하세요 (HH:mm)');
       return;
     }
-    // 대중교통: 직접 입력 필수 (× 1.4 추정값은 부정확하여 잘못된 알람 유발)
-    if (transport === 'transit') {
-      const parsed = parseInt(customTravelMin.trim(), 10);
-      if (!customTravelMin.trim() || isNaN(parsed) || parsed <= 0) {
-        Alert.alert(
-          '대중교통 시간을 입력해주세요',
-          '자동 계산값(자동차 × 1.4)은 실제와 크게 다를 수 있어요.\n카카오맵에서 경로를 검색한 후 실제 소요 시간(분)을 입력하면 정확한 알람을 받을 수 있어요.',
-          [{ text: '확인' }],
-        );
-        return;
-      }
-    }
     const parsedCustomMin = customTravelMin.trim() ? parseInt(customTravelMin.trim(), 10) : undefined;
     const routeData: RouteRequest = {
       homeAddress: homeAddr.trim(), homeLat, homeLng,
@@ -367,11 +355,11 @@ export default function RouteScreen() {
 
           {transport === 'transit' && (
             <View style={styles.transitNote}>
-              <Ionicons name="warning-outline" size={16} color="#E65100" />
+              <Ionicons name="information-circle-outline" size={16} color="#1565C0" />
               <View style={{ flex: 1, gap: 8 }}>
                 <Text style={styles.transitNoteText}>
-                  대중교통 시간은 자동차 기준 × 1.4 추정값이라 실제와 크게 다를 수 있어요.{'\n'}
-                  정확한 시간을 아신다면 직접 입력하세요.
+                  카카오맵에서 대중교통 경로를 검색하면 정확한 소요 시간을 알 수 있어요.{'\n'}
+                  직접 입력하면 더 정확하고, 비워두면 자동으로 계산해드려요.
                 </Text>
                 <View style={styles.customTravelRow}>
                   <TextInput
@@ -383,7 +371,7 @@ export default function RouteScreen() {
                     onChangeText={setCustomTravelMin}
                     maxLength={3}
                   />
-                  <Text style={styles.customTravelUnit}>분 직접 입력 (비워두면 자동 계산)</Text>
+                  <Text style={styles.customTravelUnit}>분 (비워두면 자동 계산)</Text>
                 </View>
               </View>
             </View>
@@ -481,11 +469,11 @@ const styles = StyleSheet.create({
   timeValue:            { fontSize: 28, fontWeight: '800', color: colors.textPrimary, minWidth: 52, textAlign: 'center' },
   timePickerBtn:        { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 14 },
   timePickerText:       { flex: 1, fontSize: 20, fontFamily: fonts.bold, color: colors.textPrimary },
-  transitNote:          { flexDirection: 'row', gap: 6, alignItems: 'flex-start', backgroundColor: '#FFF3E0', borderRadius: 8, padding: 10, marginTop: 8 },
-  transitNoteText:      { fontSize: 11, color: '#E65100', lineHeight: 16 },
+  transitNote:          { flexDirection: 'row', gap: 6, alignItems: 'flex-start', backgroundColor: '#E3F2FD', borderRadius: 8, padding: 10, marginTop: 8 },
+  transitNoteText:      { fontSize: 11, color: '#1565C0', lineHeight: 16 },
   customTravelRow:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  customTravelInput:    { width: 60, backgroundColor: '#fff', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, fontSize: 14, fontFamily: fonts.bold, color: colors.textPrimary, borderWidth: 1, borderColor: '#E65100' },
-  customTravelUnit:     { fontSize: 11, color: '#E65100', flex: 1 },
+  customTravelInput:    { width: 60, backgroundColor: '#fff', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, fontSize: 14, fontFamily: fonts.bold, color: colors.textPrimary, borderWidth: 1, borderColor: '#1565C0' },
+  customTravelUnit:     { fontSize: 11, color: '#1565C0', flex: 1 },
   daysRow:              { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
   dayBtn:               { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
   dayBtnActive:         { backgroundColor: colors.primary },

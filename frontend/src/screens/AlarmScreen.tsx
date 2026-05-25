@@ -156,6 +156,11 @@ export default function AlarmScreen() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.descBanner}>
+        <Ionicons name="alarm-outline" size={16} color={colors.primary} />
+        <Text style={styles.descBannerText}>매일 반복되는 출근 알람을 관리하세요. 여유 시간과 반복 요일을 설정하면 자동으로 알람이 울려요.</Text>
+      </View>
+
       {/* 어떤 루트를 수정 중인지 안내 */}
       {activeRoute && (
         <View style={styles.routeInfoBanner}>
@@ -336,6 +341,8 @@ const styles = StyleSheet.create({
   container:           { flex: 1, backgroundColor: colors.bg },
   header:              { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 8 },
   settingsBtn:         { padding: 6 },
+  descBanner:          { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 20, marginBottom: 8, backgroundColor: colors.primaryLight, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  descBannerText:      { flex: 1, fontSize: 13, fontFamily: fonts.regular, color: colors.primary, lineHeight: 18 },
   routeInfoBanner:     { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 20, marginBottom: 8, backgroundColor: colors.primaryLight, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8 },
   routeInfoText:       { flex: 1, fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary },
   permissionBanner:    { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginBottom: 8, backgroundColor: '#FFEBEE', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },

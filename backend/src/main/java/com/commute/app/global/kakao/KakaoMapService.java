@@ -134,29 +134,57 @@ public class KakaoMapService {
 
     public List<PlaceSuggestion> searchPlaces(String query) {
         if (restApiKey.isBlank() || query == null || query.isBlank()) return List.of();
+
+        // 1차: 키워드 검색 (POI — 장소명, 브랜드, 상호)
         try {
             KeywordResponse response = restClient.get()
                     .uri("https://dapi.kakao.com/v2/local/search/keyword.json?query={q}&size=5", query)
                     .header("Authorization", "KakaoAK " + restApiKey)
                     .retrieve()
                     .body(KeywordResponse.class);
-            if (response == null || response.documents() == null) return List.of();
-            return response.documents().stream()
-                    .map(d -> new PlaceSuggestion(
-                            d.place_name(),
-                            d.road_address_name().isBlank() ? d.address_name() : d.road_address_name(),
-                            Double.parseDouble(d.y()),
-                            Double.parseDouble(d.x())))
-                    .toList();
+            if (response != null && response.documents() != null && !response.documents().isEmpty()) {
+                return response.documents().stream()
+                        .map(d -> new PlaceSuggestion(
+                                d.place_name(),
+                                d.road_address_name().isBlank() ? d.address_name() : d.road_address_name(),
+                                Double.parseDouble(d.y()),
+                                Double.parseDouble(d.x())))
+                        .toList();
+            }
         } catch (Exception e) {
             log.warn("Kakao keyword search failed for '{}': {}", query, e.getMessage());
+        }
+
+        // 2차: 주소 검색 fallback (행정구역·도로명 — "인천 서구" 등)
+        try {
+            GeocodeResponse response = restClient.get()
+                    .uri("https://dapi.kakao.com/v2/local/search/address.json?query={q}&size=5", query)
+                    .header("Authorization", "KakaoAK " + restApiKey)
+                    .retrieve()
+                    .body(GeocodeResponse.class);
+            if (response == null || response.documents() == null || response.documents().isEmpty()) return List.of();
+            return response.documents().stream()
+                    .map(d -> {
+                        String addr = (d.road_address() != null
+                                && d.road_address().address_name() != null
+                                && !d.road_address().address_name().isBlank())
+                                ? d.road_address().address_name()
+                                : (d.address_name() != null ? d.address_name() : "");
+                        String name = d.address_name() != null ? d.address_name() : addr;
+                        return new PlaceSuggestion(name, addr,
+                                Double.parseDouble(d.y()), Double.parseDouble(d.x()));
+                    })
+                    .toList();
+        } catch (Exception e) {
+            log.warn("Kakao address search fallback failed for '{}': {}", query, e.getMessage());
             return List.of();
         }
     }
 
-    // ─── Kakao Geocode response ────────────────────────────────────────────────
+    // ─── Kakao Geocode / Address search response ───────────────────────────────
     record GeocodeResponse(List<GeocodeDocument> documents) {}
-    record GeocodeDocument(String x, String y) {} // x=경도(lng), y=위도(lat)
+    record GeocodeDocument(String x, String y, String address_name, RoadAddress road_address) {}
+    record RoadAddress(String address_name) {}
 
     // ─── Kakao Keyword search response ────────────────────────────────────────
     record KeywordResponse(List<KeywordDocument> documents) {}

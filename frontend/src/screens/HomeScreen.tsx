@@ -38,6 +38,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [weatherError, setWeatherError] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const [showWeatherInfo, setShowWeatherInfo] = useState(false);
 
   const { routes, fetchRoutes } = useRouteStore();
   const { appointments, fetchAppointments } = useAppointmentStore();
@@ -181,11 +182,12 @@ export default function HomeScreen() {
       if (diffMin > 0 && diffMin <= 60) return `${Math.round(diffMin)}분 후 출발입니다. 여유 있게 준비하세요.`;
     }
     const h = new Date().getHours();
-    if (h < 6)  return '일찍 일어나셨네요. 오늘도 OnTime! 🌙';
+    if (h < 6)  return '오늘도 OnTime과 함께하세요! ✨';
     if (h < 10) return '좋은 아침이에요! 오늘도 정시 출발 🌅';
     if (h < 14) return '좋은 오전이에요. 오늘 하루도 OnTime으로! ☀️';
     if (h < 18) return '오후도 힘차게! 내일 알람도 준비됐어요. 💪';
-    return '수고하셨어요! 내일 출발 시간을 계산 중이에요. 🌙';
+    if (h < 22) return '수고하셨어요! 내일 출발 시간을 계산 중이에요. 🌆';
+    return '오늘도 수고 많으셨어요! OnTime이 내일도 함께할게요. 🌙';
   })();
 
   const upcomingAppts = appointments
@@ -262,17 +264,7 @@ export default function HomeScreen() {
             </View>
             <TouchableOpacity
               style={styles.weatherLocationBtn}
-              onPress={() => {
-                const source = gpsCoords ? 'GPS 현재 위치' : (activeRoute?.homeAddress?.split(' ').slice(0, 2).join(' ') ?? '서울 기본값');
-                Alert.alert(
-                  '날씨 기준 위치',
-                  `현재 ${source} 기준으로 날씨를 표시합니다.\n\n위치를 변경하려면 루트 탭에서 집 주소를 수정하세요.`,
-                  [
-                    { text: '루트 수정', onPress: () => navigation.navigate('Route') },
-                    { text: '확인', style: 'cancel' },
-                  ],
-                );
-              }}
+              onPress={() => setShowWeatherInfo(v => !v)}
             >
               <Ionicons name="location-outline" size={12} color={colors.primary} />
               <Text style={styles.weatherLocation}>
@@ -280,9 +272,19 @@ export default function HomeScreen() {
                   ? '현재 위치'
                   : activeRoute?.homeAddress?.split(' ').slice(0, 2).join(' ') ?? '서울'}
               </Text>
-              <Ionicons name="chevron-forward" size={11} color={colors.textMuted} />
+              <Ionicons name={showWeatherInfo ? 'chevron-up' : 'chevron-forward'} size={11} color={colors.textMuted} />
             </TouchableOpacity>
           </View>
+          {showWeatherInfo && (
+            <View style={styles.weatherInfoPanel}>
+              <Text style={styles.weatherInfoText}>
+                {gpsCoords ? 'GPS 현재 위치' : (activeRoute?.homeAddress?.split(' ').slice(0, 2).join(' ') ?? '서울 기본값')} 기준 날씨입니다.{'\n'}위치를 변경하려면 루트 탭에서 집 주소를 수정하세요.
+              </Text>
+              <TouchableOpacity onPress={() => { setShowWeatherInfo(false); navigation.navigate('Route'); }}>
+                <Text style={styles.weatherInfoLink}>루트 수정 →</Text>
+              </TouchableOpacity>
+            </View>
+          )}
 
           {/* 하단: 시간대별 스크롤 */}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyRow}>
@@ -532,4 +534,7 @@ const styles = StyleSheet.create({
   scheduleTime:     { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary },
   footer:           { alignItems: 'center', paddingVertical: 20, gap: 4, marginTop: 8 },
   footerText:       { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted },
+  weatherInfoPanel: { backgroundColor: colors.primaryLight, borderRadius: 10, padding: 12, marginTop: 8, gap: 6 },
+  weatherInfoText:  { fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 18 },
+  weatherInfoLink:  { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
 });

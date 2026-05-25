@@ -189,6 +189,11 @@ export default function AppointmentScreen() {
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
       </View>
 
+      <View style={styles.descBanner}>
+        <Ionicons name="calendar-outline" size={16} color={colors.primary} />
+        <Text style={styles.descBannerText}>약속 장소와 시간을 등록하면 출발 시간을 자동 계산해 미리 알람이 울려요.</Text>
+      </View>
+
       {/* 목록 먼저 */}
       <View style={[styles.card, { marginTop: 4 }]}>
         <View style={styles.listHeader}>
@@ -421,6 +426,8 @@ const styles = StyleSheet.create({
   container:          { flex: 1, backgroundColor: colors.bg },
   header:             { paddingHorizontal: 20, paddingBottom: 8 },
   logoImg:            { width: 180, height: 81 },
+  descBanner:         { flexDirection: 'row', alignItems: 'flex-start', gap: 8, marginHorizontal: 20, marginBottom: 8, backgroundColor: colors.primaryLight, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  descBannerText:     { flex: 1, fontSize: 13, fontFamily: fonts.regular, color: colors.primary, lineHeight: 18 },
   titleRow:           { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 20, paddingVertical: 12 },
   pageTitle:          { fontSize: 20, fontFamily: fonts.bold, color: colors.textPrimary },
   card:               { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, ...cardShadow },
