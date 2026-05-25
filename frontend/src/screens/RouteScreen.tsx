@@ -110,6 +110,18 @@ export default function RouteScreen() {
       Alert.alert('시간 형식을 확인하세요 (HH:mm)');
       return;
     }
+    // 대중교통: 직접 입력 필수 (× 1.4 추정값은 부정확하여 잘못된 알람 유발)
+    if (transport === 'transit') {
+      const parsed = parseInt(customTravelMin.trim(), 10);
+      if (!customTravelMin.trim() || isNaN(parsed) || parsed <= 0) {
+        Alert.alert(
+          '대중교통 시간을 입력해주세요',
+          '자동 계산값(자동차 × 1.4)은 실제와 크게 다를 수 있어요.\n카카오맵에서 경로를 검색한 후 실제 소요 시간(분)을 입력하면 정확한 알람을 받을 수 있어요.',
+          [{ text: '확인' }],
+        );
+        return;
+      }
+    }
     const parsedCustomMin = customTravelMin.trim() ? parseInt(customTravelMin.trim(), 10) : undefined;
     const routeData: RouteRequest = {
       homeAddress: homeAddr.trim(), homeLat, homeLng,
@@ -383,10 +395,20 @@ export default function RouteScreen() {
             </View>
           )}
 
-          {/* 알람 설정 안내 */}
-          <View style={styles.alarmTip}>
-            <Ionicons name="alarm-outline" size={14} color={colors.primary} />
-            <Text style={styles.alarmTipText}>반복 요일과 알람 여유 시간은 <Text style={styles.alarmTipBold}>알람 탭</Text>에서 설정할 수 있어요.</Text>
+          {/* 반복 요일 */}
+          <Text style={[styles.inputLabel, { marginTop: 12 }]}>📅 알람 반복 요일</Text>
+          <View style={styles.daysRow}>
+            {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
+              <TouchableOpacity
+                key={i}
+                style={[styles.dayBtn, activeDays.includes(i) && styles.dayBtnActive]}
+                onPress={() => setActiveDays(prev =>
+                  prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]
+                )}
+              >
+                <Text style={[styles.dayText, activeDays.includes(i) && styles.dayTextActive]}>{d}</Text>
+              </TouchableOpacity>
+            ))}
           </View>
 
           {/* 버튼 */}
@@ -464,9 +486,11 @@ const styles = StyleSheet.create({
   customTravelRow:      { flexDirection: 'row', alignItems: 'center', gap: 8 },
   customTravelInput:    { width: 60, backgroundColor: '#fff', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 6, fontSize: 14, fontFamily: fonts.bold, color: colors.textPrimary, borderWidth: 1, borderColor: '#E65100' },
   customTravelUnit:     { fontSize: 11, color: '#E65100', flex: 1 },
-  alarmTip:             { flexDirection: 'row', alignItems: 'flex-start', gap: 6, backgroundColor: colors.primaryLight, borderRadius: 8, padding: 10, marginTop: 12 },
-  alarmTipText:         { flex: 1, fontSize: 12, color: colors.textSecondary, lineHeight: 18 },
-  alarmTipBold:         { fontWeight: '700', color: colors.primary },
+  daysRow:              { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 4 },
+  dayBtn:               { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg },
+  dayBtnActive:         { backgroundColor: colors.primary },
+  dayText:              { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textSecondary },
+  dayTextActive:        { color: '#fff' },
   formBtns:             { flexDirection: 'row', gap: 10, marginTop: 20 },
   cancelBtn:            { flex: 1, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.bg, alignItems: 'center' },
   cancelText:           { fontSize: 14, fontWeight: '600', color: colors.textSecondary },

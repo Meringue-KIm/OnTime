@@ -5,6 +5,7 @@ export interface HourlyWeatherInfo {
   condition: string;
   icon: string;
   temperature: number;
+  precipitationProb: number;
 }
 
 export interface WeatherSummary {
@@ -13,6 +14,7 @@ export interface WeatherSummary {
   icon: string;
   highTemp: number;
   lowTemp: number;
+  currentPop: number;
   hourly: HourlyWeatherInfo[];
 }
 

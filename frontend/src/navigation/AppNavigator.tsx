@@ -1,7 +1,9 @@
 import React, { useEffect } from 'react';
-import { View, Image, StyleSheet } from 'react-native';
+import { View, Image, StyleSheet, Platform } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { useAuthStore } from '../store/authStore';
 import { useRouteStore } from '../store/routeStore';
 import { useAppointmentStore } from '../store/appointmentStore';
@@ -14,6 +16,7 @@ import TabNavigator from './TabNavigator';
 import { colors } from '../constants/colors';
 import { pingServer } from '../api/ping';
 import { cancelAllAlarms } from '../utils/localAlarm';
+import { updateFcmToken } from '../api/auth';
 
 const Stack = createNativeStackNavigator();
 const logo = require('../../assets/logo.png');
@@ -33,6 +36,14 @@ export default function AppNavigator() {
   const resetToday        = useTodayStore(s => s.reset);
 
   useEffect(() => { pingServer(); loadToken(); }, []);
+
+  // 로그인 상태가 되면 FCM 토큰 즉시 재등록 — 앱 재설치/토큰 만료 대응
+  useEffect(() => {
+    if (!isLoggedIn || !Device.isDevice || Platform.OS === 'web') return;
+    Notifications.getDevicePushTokenAsync()
+      .then(({ data }) => updateFcmToken(data))
+      .catch(() => {});
+  }, [isLoggedIn]);
 
   // 로그아웃 시 모든 스토어 + 로컬 알람 초기화
   useEffect(() => {

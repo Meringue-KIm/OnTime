@@ -53,7 +53,7 @@ public class WeatherService {
         int    bufferMinutes
     ) {}
 
-    public record HourlyWeatherInfo(String time, String condition, String icon, double temperature) {}
+    public record HourlyWeatherInfo(String time, String condition, String icon, double temperature, int precipitationProb) {}
 
     public record WeatherSummary(
         double currentTemp,
@@ -61,6 +61,7 @@ public class WeatherService {
         String icon,
         double highTemp,
         double lowTemp,
+        int currentPop,
         List<HourlyWeatherInfo> hourly
     ) {}
 
@@ -93,8 +94,15 @@ public class WeatherService {
         high = Math.max(high, current.temperature());
         low  = Math.min(low,  current.temperature());
 
+        String nowHourStr = LocalDateTime.now().format(DateTimeFormatter.ofPattern("HH")) + ":00";
+        int currentPop = hourly.stream()
+                .filter(h -> h.time().equals(nowHourStr))
+                .mapToInt(HourlyWeatherInfo::precipitationProb)
+                .findFirst()
+                .orElse(hourly.isEmpty() ? 0 : hourly.get(0).precipitationProb());
+
         WeatherSummary summary = new WeatherSummary(
-                current.temperature(), current.condition(), current.icon(), high, low, hourly);
+                current.temperature(), current.condition(), current.icon(), high, low, currentPop, hourly);
 
         try {
             redisTemplate.opsForValue().set(
@@ -252,9 +260,10 @@ public class WeatherService {
                         int pty  = cats.containsKey("PTY") ? (int) Double.parseDouble(cats.get("PTY")) : 0;
                         double tmp = cats.containsKey("TMP") ? Double.parseDouble(cats.get("TMP")) : 0.0;
                         int sky  = cats.containsKey("SKY") ? (int) Double.parseDouble(cats.get("SKY")) : 1;
+                        int pop  = cats.containsKey("POP") ? (int) Double.parseDouble(cats.get("POP")) : 0;
                         WeatherInfo info = pty != 0 ? buildWeatherInfo(pty, tmp) : buildSkyInfo(sky, tmp);
                         String displayTime = key.substring(8, 10) + ":" + key.substring(10, 12);
-                        return new HourlyWeatherInfo(displayTime, info.condition(), info.icon(), info.temperature());
+                        return new HourlyWeatherInfo(displayTime, info.condition(), info.icon(), info.temperature(), pop);
                     })
                     .collect(java.util.stream.Collectors.toList());
 

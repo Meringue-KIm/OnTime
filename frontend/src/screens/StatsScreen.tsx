@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useNavigation } from '@react-navigation/native';
 
 const logo = require('../../assets/logo.png');
 import { Ionicons } from '@expo/vector-icons';
@@ -11,6 +12,7 @@ import { extractTimeHHmm } from '../utils/timeFormat';
 
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
+  const navigation = useNavigation<any>();
   const [logs, setLogs] = useState<CommuteLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
@@ -132,6 +134,22 @@ export default function StatsScreen() {
           <Text style={styles.insightStatLabel}>정시 도착률</Text>
         </View>
       </View>
+
+      {/* 알람 조정 제안 — 5회 이상 기록에서 정시율 60% 미만 */}
+      {logsWithFeedback.length >= 5 && onTimeRate < 60 && (
+        <View style={styles.suggestionCard}>
+          <View style={styles.suggestionTop}>
+            <Ionicons name="bulb-outline" size={18} color="#E65100" />
+            <Text style={styles.suggestionTitle}>알람 조정을 추천해요</Text>
+          </View>
+          <Text style={styles.suggestionText}>
+            최근 정시 도착률이 {onTimeRate}%예요. 여유 시간을 5분 더 늘리면 지각을 줄일 수 있어요.
+          </Text>
+          <TouchableOpacity style={styles.suggestionBtn} onPress={() => navigation.navigate('Alarm')}>
+            <Text style={styles.suggestionBtnText}>여유 시간 조정하기 →</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* 피드백 미입력 배너 */}
       {pendingFeedbackLog && (
@@ -324,6 +342,12 @@ const styles = StyleSheet.create({
   insightStat:      { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 12, padding: 12 },
   insightStatValue: { fontSize: 24, fontWeight: '800', color: '#fff' },
   insightStatLabel: { fontSize: 13, color: 'rgba(255,255,255,0.8)' },
+  suggestionCard:    { marginHorizontal: 20, marginBottom: 12, backgroundColor: '#FFF3E0', borderRadius: 12, padding: 14, gap: 8, borderLeftWidth: 3, borderLeftColor: '#E65100' },
+  suggestionTop:     { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  suggestionTitle:   { fontSize: 14, fontFamily: fonts.bold, color: '#E65100' },
+  suggestionText:    { fontSize: 13, fontFamily: fonts.regular, color: '#5D4037', lineHeight: 18 },
+  suggestionBtn:     { alignSelf: 'flex-start', backgroundColor: '#E65100', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
+  suggestionBtnText: { fontSize: 13, fontFamily: fonts.semiBold, color: '#fff' },
   feedbackBanner:       { marginHorizontal: 20, marginBottom: 12, backgroundColor: colors.primaryLight, borderRadius: 12, padding: 12, gap: 8 },
   feedbackBannerText:   { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textPrimary, flex: 1 },
   feedbackBannerBtns:   { flexDirection: 'row', gap: 8 },

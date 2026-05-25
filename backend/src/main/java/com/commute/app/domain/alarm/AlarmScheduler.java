@@ -142,6 +142,33 @@ public class AlarmScheduler {
         }
     }
 
+    // 매 분마다 실행 — 도착 예정 시간 30분 후 피드백 FCM 발송
+    @Scheduled(cron = "0 * * * * *")
+    @Transactional(readOnly = true)
+    public void sendFeedbackRequests() {
+        LocalTime now   = LocalTime.now().withSecond(0).withNano(0);
+        LocalDate today = LocalDate.now();
+
+        List<CommuteRoute> routes = routeRepository.findAllByIsActiveTrue();
+        for (CommuteRoute route : routes) {
+            String fcmToken = route.getUser().getFcmToken();
+            if (fcmToken == null || fcmToken.isBlank()) continue;
+
+            LocalTime feedbackTime = route.getArrivalTime().plusMinutes(30);
+            if (!now.equals(feedbackTime)) continue;
+
+            logRepository.findByUserIdAndLogDate(route.getUser().getId(), today)
+                    .ifPresent(commuteLog -> {
+                        if (commuteLog.getIsLate() != null) return;
+                        fcmService.sendPushNotification(
+                                fcmToken,
+                                "오늘 출근은 어떠셨나요? 😊",
+                                "정시 도착 여부를 기록하면 맞춤 알람이 더 정확해져요.");
+                        log.info("피드백 알림 발송 — userId={}", route.getUser().getId());
+                    });
+        }
+    }
+
     // 매시 정각 — 지난 약속 자동 종료
     @Scheduled(cron = "0 0 * * * *")
     @Transactional

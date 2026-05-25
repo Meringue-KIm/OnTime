@@ -37,6 +37,7 @@ export default function HomeScreen() {
   const [weather, setWeather] = useState<WeatherSummary | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [weatherError, setWeatherError] = useState(false);
+  const [bannerDismissed, setBannerDismissed] = useState(false);
 
   const { routes, fetchRoutes } = useRouteStore();
   const { appointments, fetchAppointments } = useAppointmentStore();
@@ -144,6 +145,17 @@ export default function HomeScreen() {
 
   const { alarmFired, dismissAlarmBanner } = useNotification();
 
+  // 출발 배너: 알람 탭 응답 OR 출발 시간이 지난 후 1시간 이내 (dismiss 안 한 경우)
+  const timeBasedBanner = !bannerDismissed && !today?.logDate && (() => {
+    if (!today?.recommendedDeparture) return false;
+    const [hh, mm] = today.recommendedDeparture.split(':').map(Number);
+    const dep = new Date(); dep.setHours(hh, mm, 0, 0);
+    const diff = Date.now() - dep.getTime();
+    return diff > 0 && diff < 60 * 60 * 1000;
+  })();
+  const showDepartureBanner = alarmFired || timeBasedBanner;
+  const handleDismissBanner = () => { dismissAlarmBanner(); setBannerDismissed(true); };
+
   const cacheAgeLabel = (() => {
     if (!cachedAt) return '';
     const diffMin = Math.round((Date.now() - new Date(cachedAt).getTime()) / 60000);
@@ -196,12 +208,12 @@ export default function HomeScreen() {
         </TouchableOpacity>
       </View>
 
-      {/* 출발 배너 — 알람 탭 후 표시 */}
-      {alarmFired && (
+      {/* 출발 배너 — 알람 탭 후 or 출발 시간 경과 시 자동 표시 */}
+      {showDepartureBanner && (
         <View style={styles.departureBanner}>
           <View style={styles.departureBannerTop}>
             <Text style={styles.departureBannerTitle}>지금 출발할 시간이에요! 🚀</Text>
-            <TouchableOpacity onPress={dismissAlarmBanner} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+            <TouchableOpacity onPress={handleDismissBanner} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
               <Ionicons name="close" size={20} color="rgba(255,255,255,0.8)" />
             </TouchableOpacity>
           </View>
@@ -240,6 +252,12 @@ export default function HomeScreen() {
                   {Math.round(weather.currentTemp)}°
                   <Text style={styles.weatherHighLow}>  최고 {Math.round(weather.highTemp)}° · 최저 {Math.round(weather.lowTemp)}°</Text>
                 </Text>
+                {(weather.currentPop ?? 0) > 0 && (
+                  <View style={styles.weatherPopRow}>
+                    <Ionicons name="umbrella-outline" size={11} color="#1976D2" />
+                    <Text style={styles.weatherPopText}>강수 {weather.currentPop}%</Text>
+                  </View>
+                )}
               </View>
             </View>
             <TouchableOpacity
@@ -278,6 +296,9 @@ export default function HomeScreen() {
                   style={{ marginVertical: 4 }}
                 />
                 <Text style={styles.hourlyTemp}>{Math.round(item.temperature)}°</Text>
+                {(item.precipitationProb ?? 0) > 0 && (
+                  <Text style={styles.hourlyPop}>{item.precipitationProb}%</Text>
+                )}
               </View>
             ))}
           </ScrollView>
@@ -287,6 +308,11 @@ export default function HomeScreen() {
       {/* Departure Card */}
       <View style={styles.departureCard}>
         <Text style={styles.departureLabel}>{departureLabel}</Text>
+        {activeRoute && today?.recommendedDeparture && (
+          <Text style={styles.routeHint}>
+            {activeRoute.homeAddress.split(' ').slice(0, 2).join(' ')} → {activeRoute.workAddress.split(' ').slice(0, 2).join(' ')}
+          </Text>
+        )}
         {todayLoading ? (
           <ActivityIndicator color="#fff" size="large" style={{ marginVertical: 8 }} />
         ) : todayError && !today?.recommendedDeparture ? (
@@ -478,6 +504,10 @@ const styles = StyleSheet.create({
   breakdownChip:    { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(255,255,255,0.18)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20 },
   breakdownChipText:{ fontSize: 11, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.9)' },
   breakdownPlus:    { fontSize: 11, color: 'rgba(255,255,255,0.6)', fontFamily: fonts.regular },
+  routeHint:        { fontSize: 11, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.6)', marginBottom: 6 },
+  weatherPopRow:    { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 3 },
+  weatherPopText:   { fontSize: 11, fontFamily: fonts.semiBold, color: '#1976D2' },
+  hourlyPop:        { fontSize: 9, fontFamily: fonts.semiBold, color: '#1976D2' },
   offlineBadge:     { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(0,0,0,0.2)', alignSelf: 'flex-start', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 20, marginTop: 6 },
   offlineBadgeText: { fontSize: 11, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.7)' },
   trafficRow:       { marginTop: 8 },

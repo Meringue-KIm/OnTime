@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import HomeScreen from '../screens/HomeScreen';
 import RouteScreen from '../screens/RouteScreen';
 import AppointmentScreen from '../screens/AppointmentScreen';
@@ -23,9 +24,20 @@ const TAB_ICONS: Record<string, [IoniconName, IoniconName]> = {
 
 export default function TabNavigator() {
   const insets = useSafeAreaInsets();
+  const [startTab, setStartTab] = useState<string | null>(null);
+
+  useEffect(() => {
+    AsyncStorage.getItem('onboarding_done').then(v => {
+      setStartTab(v ? 'Home' : 'Route');
+      if (!v) AsyncStorage.setItem('onboarding_done', 'true');
+    });
+  }, []);
+
+  if (!startTab) return null;
 
   return (
     <Tab.Navigator
+      initialRouteName={startTab}
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarActiveTintColor: colors.primary,
