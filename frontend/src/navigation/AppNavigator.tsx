@@ -13,6 +13,7 @@ import SettingsScreen from '../screens/SettingsScreen';
 import TabNavigator from './TabNavigator';
 import { colors } from '../constants/colors';
 import { pingServer } from '../api/ping';
+import { cancelAllAlarms } from '../utils/localAlarm';
 
 const Stack = createNativeStackNavigator();
 const logo = require('../../assets/logo.png');
@@ -33,12 +34,13 @@ export default function AppNavigator() {
 
   useEffect(() => { pingServer(); loadToken(); }, []);
 
-  // 로그아웃 시 모든 스토어 초기화 — 다른 계정 로그인 시 이전 데이터 노출 방지
+  // 로그아웃 시 모든 스토어 + 로컬 알람 초기화
   useEffect(() => {
     if (!isLoggedIn && !isLoading) {
       resetRoutes();
       resetAppointments();
       resetToday();
+      cancelAllAlarms().catch(() => {});
     }
   }, [isLoggedIn, isLoading]);
 
