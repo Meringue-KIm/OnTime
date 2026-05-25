@@ -27,7 +27,7 @@ public class WeatherService {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
 
-    private static final long CACHE_TTL_MINUTES = 10;
+    private static final long CACHE_TTL_MINUTES = 25;
 
     public WeatherService(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
         this.redisTemplate = redisTemplate;

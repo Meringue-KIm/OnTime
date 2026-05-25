@@ -21,8 +21,8 @@ public class WeatherCacheWarmupScheduler {
     private final CommuteRouteRepository routeRepository;
     private final WeatherService weatherService;
 
-    // 서버 시작 직후 1분 후 첫 실행, 이후 10분마다 반복
-    @Scheduled(initialDelay = 60_000, fixedDelay = 600_000)
+    // 서버 기동 15초 후 첫 실행, 이후 10분마다 정기 실행 (fixedRate = 시작 기준)
+    @Scheduled(initialDelay = 15_000, fixedRate = 600_000)
     @Transactional(readOnly = true)
     public void warmupWeatherCache() {
         List<CommuteRoute> routes = routeRepository.findAllByIsActiveTrue();
