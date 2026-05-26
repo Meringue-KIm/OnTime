@@ -255,7 +255,7 @@ export default function AppointmentScreen() {
               <Ionicons name={showDone ? 'eye-off-outline' : 'eye-outline'} size={13} color={colors.primary} />
               <Text style={styles.toggleBtn}>{showDone ? '예정만 보기' : '완료 포함 보기'}</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.addApptBtn} onPress={() => { setShowForm(v => !v); setEditingId(null); }}>
+            <TouchableOpacity style={styles.addApptBtn} onPress={() => { handleReset(); setShowForm(v => !v); }}>
               <Ionicons name={showForm ? 'remove' : 'add'} size={16} color="#fff" />
               <Text style={styles.addApptBtnText}>{showForm ? '닫기' : '새 약속'}</Text>
             </TouchableOpacity>
@@ -290,19 +290,18 @@ export default function AppointmentScreen() {
             })();
             return (
               <View key={item.id} style={styles.apptItem}>
-                <View style={{ flex: 1 }}>
+                <TouchableOpacity style={{ flex: 1 }} onPress={() => !item.isDone && openEdit(item)} activeOpacity={item.isDone ? 1 : 0.6}>
                   <Text style={styles.apptTitle}>{item.title || item.destAddress}</Text>
                   {item.title ? <Text style={styles.apptAddr} numberOfLines={1}>{item.destAddress}</Text> : null}
                   <Text style={styles.apptTime}>{timeStr}</Text>
                   {alarmLabel && <Text style={styles.apptAlarmHint}>{alarmLabel}</Text>}
-                </View>
+                </TouchableOpacity>
                 <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
                   <Text style={[styles.statusText, { color: statusColor }]}>{dDayText}</Text>
                 </View>
+                {/* 수정: 행 전체 탭으로 대체됨, 아이콘은 시각적 힌트만 */}
                 {!item.isDone && (
-                  <TouchableOpacity style={styles.apptActionBtn} onPress={() => openEdit(item)}>
-                    <Ionicons name="pencil-outline" size={19} color={colors.textSecondary} />
-                  </TouchableOpacity>
+                  <Ionicons name="pencil-outline" size={16} color={colors.textMuted} style={{ marginHorizontal: 4 }} />
                 )}
                 {!item.isDone && (
                   <TouchableOpacity

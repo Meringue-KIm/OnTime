@@ -112,7 +112,7 @@ export default function AlarmScreen() {
       setWakeUpEnabled(false); // null → false: 로드 완료 후 실제 값 확정
     }
     isInitialMount.current = false;
-  }, [activeRoute?.id]);
+  }, [activeRoute?.id, activeRoute?.activeDays]);
 
   // 요일/버퍼/기상알람 변경 시 자동 저장 (wakeUpEnabled null = 아직 로드 중, 저장 안 함)
   useEffect(() => {
@@ -311,6 +311,12 @@ export default function AlarmScreen() {
               {saveStatus === 'saving' && <Text style={styles.autoSaveText}>저장 중...</Text>}
               {saveStatus === 'saved'  && <Text style={[styles.autoSaveText, { color: colors.success }]}>✓ 저장됨</Text>}
             </View>
+            {today?.logDate && (
+              <View style={[styles.infoBanner, { marginTop: 0, marginBottom: 8 }]}>
+                <Ionicons name="checkmark-circle-outline" size={14} color={colors.success} />
+                <Text style={[styles.infoText, { color: '#2E7D32' }]}>오늘 알람은 이미 발송됐어요. 변경 사항은 내일부터 적용됩니다.</Text>
+              </View>
+            )}
             <View style={styles.bufferDisplay}>
               <Text style={styles.bufferValue}>{buffer}</Text>
               <Text style={styles.bufferUnit}>분</Text>

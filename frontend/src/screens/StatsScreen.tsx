@@ -299,8 +299,16 @@ export default function StatsScreen() {
         ) : (
           recentLogs.map((log) => (
             <View key={log.id} style={styles.tripItem}>
-              <View style={styles.tripIconWrap}>
-                <Ionicons name="briefcase-outline" size={18} color={colors.primary} />
+              <View style={[styles.tripIconWrap, {
+                backgroundColor: log.isLate === null
+                  ? colors.primaryLight
+                  : log.isLate ? colors.danger + '20' : colors.success + '20',
+              }]}>
+                <Ionicons
+                  name="briefcase-outline"
+                  size={18}
+                  color={log.isLate === null ? colors.textMuted : log.isLate ? colors.danger : colors.success}
+                />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.tripTitle}>{formatDate(log.logDate)}</Text>

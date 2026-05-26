@@ -126,6 +126,10 @@ export default function RouteScreen() {
       Alert.alert('직장 주소 확인 필요', '검색 결과 목록에서 주소를 선택해주세요.\n직접 입력하면 위치를 찾을 수 없습니다.');
       return;
     }
+    if (activeDays.length === 0) {
+      Alert.alert('요일 선택 필요', '최소 1개 이상의 반복 요일을 선택해주세요.');
+      return;
+    }
     const timeParts = arrivalTime.split(':');
     if (timeParts.length !== 2 || timeParts.some(p => isNaN(Number(p)))) {
       Alert.alert('시간 형식을 확인하세요 (HH:mm)');
@@ -254,7 +258,7 @@ export default function RouteScreen() {
         <View style={styles.undoBanner}>
           <Ionicons name="trash-outline" size={15} color={colors.warning} />
           <Text style={styles.undoBannerText} numberOfLines={1}>
-            루트가 삭제됐어요 · {undoSecondsLeft}초 후 사라짐
+            루트가 삭제됐어요 · {undoSecondsLeft > 0 ? `${undoSecondsLeft}초 후 사라짐` : '사라지는 중...'}
           </Text>
           <TouchableOpacity onPress={handleUndo} style={styles.undoBtn}>
             <Text style={styles.undoBtnText}>되돌리기</Text>

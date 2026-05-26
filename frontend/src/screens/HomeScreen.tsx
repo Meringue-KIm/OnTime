@@ -241,7 +241,7 @@ export default function HomeScreen() {
   })();
 
   const departureCountdown = (() => {
-    if (!today?.recommendedDeparture || today.logDate) return null;
+    if (!today?.recommendedDeparture || today.logDate || !isActiveToday) return null;
     const [hh, mm] = today.recommendedDeparture.split(':').map(Number);
     const dep = new Date(); dep.setHours(hh, mm, 0, 0);
     const diffMin = Math.round((dep.getTime() - Date.now()) / 60000);
@@ -277,7 +277,7 @@ export default function HomeScreen() {
     .sort((a, b) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime())[0];
 
   const upcomingCount = appointments.filter(a => !a.isDone && (
-    (a.dDay === 0 && new Date(a.appointmentTime) > new Date()) || a.dDay > 0
+    (a.dDay === 0 && new Date(a.appointmentTime) > now) || a.dDay > 0
   )).length;
 
   return (

@@ -41,6 +41,7 @@ export default function SettingsScreen({ navigation }: any) {
       await changePassword(curPw, newPw);
       Alert.alert('변경 완료', '비밀번호가 변경되었습니다.');
       setCurPw(''); setNewPw('');
+      setShowCurPw(false); setShowNewPw(false);
     } catch (e: any) {
       const msg = e?.response?.data?.message ?? '비밀번호 변경에 실패했습니다. 현재 비밀번호를 확인해주세요.';
       Alert.alert('오류', msg);
