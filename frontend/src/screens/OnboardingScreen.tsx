@@ -1,8 +1,10 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Image, ScrollView, Platform } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Notifications from 'expo-notifications';
+import * as Device from 'expo-device';
 import { colors, fonts, cardShadow } from '../constants/colors';
 
 const logo = require('../../assets/logo.png');
@@ -34,7 +36,12 @@ const FEATURES = [
 export default function OnboardingScreen({ navigation }: any) {
   const handleStart = async () => {
     await AsyncStorage.setItem('onboarding_done', 'true');
-    navigation.replace('Main');
+    // 알림 권한 요청 (iOS/Android — 알람 앱이므로 온보딩 시점이 가장 적절)
+    if (Device.isDevice && Platform.OS !== 'web') {
+      await Notifications.requestPermissionsAsync().catch(() => {});
+    }
+    // Route 탭으로 바로 이동해 루트 등록 유도
+    navigation.replace('Main', { screen: 'Route' });
   };
 
   return (
@@ -62,7 +69,12 @@ export default function OnboardingScreen({ navigation }: any) {
           ))}
         </View>
 
-        <Text style={styles.hint}>먼저 루트를 등록해볼게요. 1분이면 충분해요!</Text>
+        <View style={styles.permissionNote}>
+          <Ionicons name="notifications-outline" size={15} color={colors.primary} />
+          <Text style={styles.permissionNoteText}>
+            알람을 받으려면 다음 화면에서 <Text style={{ fontFamily: fonts.semiBold }}>알림 권한을 허용</Text>해주세요.
+          </Text>
+        </View>
 
         <TouchableOpacity style={styles.startBtn} onPress={handleStart}>
           <Text style={styles.startBtnText}>루트 등록하러 가기 →</Text>
@@ -87,6 +99,8 @@ const styles = StyleSheet.create({
   featureTitle:    { fontSize: 15, fontFamily: fonts.semiBold, color: colors.textPrimary, marginBottom: 4 },
   featureDesc:     { fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 19 },
   hint:            { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', marginBottom: 16, lineHeight: 19 },
+  permissionNote:  { flexDirection: 'row', alignItems: 'flex-start', gap: 8, backgroundColor: colors.primaryLight, borderRadius: 10, padding: 12, marginBottom: 16 },
+  permissionNoteText: { flex: 1, fontSize: 13, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 19 },
   startBtn:        { backgroundColor: colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   startBtnText:    { fontSize: 16, fontFamily: fonts.bold, color: '#fff' },
 });

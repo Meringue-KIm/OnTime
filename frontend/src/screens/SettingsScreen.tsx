@@ -166,6 +166,16 @@ export default function SettingsScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.card}>
+          <TouchableOpacity style={styles.rowItem} onPress={() => navigation.navigate('PrivacyPolicy')}>
+            <View style={[styles.rowIcon, { backgroundColor: colors.primaryLight }]}>
+              <Ionicons name="document-text-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.rowItemText}>개인정보처리방침</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+        </View>
+
         <View style={styles.versionWrap}>
           <Text style={styles.versionText}>OnTime v{appVersion}</Text>
         </View>

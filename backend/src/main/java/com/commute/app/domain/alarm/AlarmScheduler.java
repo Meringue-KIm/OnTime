@@ -85,25 +85,24 @@ public class AlarmScheduler {
                 }
             }
 
-            // 출발 알람
-            if (now.equals(departureTime) && !alarmedUsers.contains(userId)) {
+            // 출발 알람 — cold start 대비: 최대 1분 지연까지 복구 (로그 없는 경우만)
+            boolean inWindow = !now.isBefore(departureTime) && !now.isAfter(departureTime.plusMinutes(1));
+            boolean alreadySent = logRepository.findByUserIdAndLogDate(userId, today).isPresent();
+            if (inWindow && !alreadySent && !alarmedUsers.contains(userId)) {
                 String title = "출발할 시간이에요!";
                 String body  = buildAlarmBody(drivingMinutes, weatherOpt.orElse(null));
                 fcmService.sendPushNotification(fcmToken, title, body,
                         java.util.Map.of("type", "departure"));
                 alarmedUsers.add(userId);
-                log.info("알람 발송 — userId={}, 출발={}", userId, departureTime);
+                log.info("알람 발송 — userId={}, 출발={}, 현재={}", userId, departureTime, now);
 
-                // 오늘 로그가 없을 때만 생성 (중복 방지)
-                if (logRepository.findByUserIdAndLogDate(userId, today).isEmpty()) {
-                    logRepository.save(CommuteLog.builder()
-                            .user(route.getUser())
-                            .route(route)
-                            .logDate(today)
-                            .recommendedDeparture(departureTime)
-                            .build());
-                    log.info("출근 로그 생성 — userId={}, 출발={}", userId, departureTime);
-                }
+                logRepository.save(CommuteLog.builder()
+                        .user(route.getUser())
+                        .route(route)
+                        .logDate(today)
+                        .recommendedDeparture(departureTime)
+                        .build());
+                log.info("출근 로그 생성 — userId={}, 출발={}", userId, departureTime);
             }
         }
     }
@@ -165,8 +164,9 @@ public class AlarmScheduler {
     @Scheduled(cron = "0 * * * * *")
     @Transactional(readOnly = true)
     public void sendFeedbackRequests() {
-        LocalTime now   = LocalTime.now().withSecond(0).withNano(0);
-        LocalDate today = LocalDate.now();
+        ZoneId kst      = ZoneId.of("Asia/Seoul");
+        LocalTime now   = LocalTime.now(kst).withSecond(0).withNano(0);
+        LocalDate today = LocalDate.now(kst);
 
         List<CommuteRoute> routes = routeRepository.findAllByIsActiveTrue();
         for (CommuteRoute route : routes) {
@@ -193,7 +193,7 @@ public class AlarmScheduler {
     @Scheduled(cron = "0 0 * * * *")
     @Transactional
     public void autoClosePastAppointments() {
-        LocalDateTime now = LocalDateTime.now();
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul"));
         List<Appointment> past = appointmentRepository.findByIsDoneFalseAndAppointmentTimeBefore(now);
         past.forEach(Appointment::markDone);
         if (!past.isEmpty()) {

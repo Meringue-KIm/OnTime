@@ -16,6 +16,7 @@ import SignupScreen from '../screens/SignupScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
 import SettingsScreen from '../screens/SettingsScreen';
 import OnboardingScreen from '../screens/OnboardingScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import TabNavigator from './TabNavigator';
 import { colors } from '../constants/colors';
 import { pingServer } from '../api/ping';
@@ -46,12 +47,16 @@ export default function AppNavigator() {
     AsyncStorage.getItem('onboarding_done').then(v => setIntroSeen(!!v));
   }, []);
 
-  // 로그인 상태가 되면 FCM 토큰 즉시 재등록 — 앱 재설치/토큰 만료 대응
+  // 로그인 상태가 되면 알림 권한 요청 + FCM 토큰 즉시 재등록
   useEffect(() => {
     if (!isLoggedIn || !Device.isDevice || Platform.OS === 'web') return;
-    Notifications.getDevicePushTokenAsync()
-      .then(({ data }) => updateFcmToken(data))
-      .catch(() => {});
+    (async () => {
+      const { status } = await Notifications.requestPermissionsAsync();
+      if (status !== 'granted') return;
+      Notifications.getDevicePushTokenAsync()
+        .then(({ data }) => updateFcmToken(data))
+        .catch(() => {});
+    })();
   }, [isLoggedIn]);
 
   // 로그아웃 시 모든 스토어 + 로컬 알람 초기화
@@ -87,8 +92,9 @@ export default function AppNavigator() {
         {isLoggedIn ? (
           <>
             {!introSeen && <Stack.Screen name="Onboarding" component={OnboardingScreen} />}
-            <Stack.Screen name="Main"     component={TabNavigator} />
-            <Stack.Screen name="Settings" component={SettingsScreen} />
+            <Stack.Screen name="Main"          component={TabNavigator} />
+            <Stack.Screen name="Settings"      component={SettingsScreen} />
+            <Stack.Screen name="PrivacyPolicy" component={PrivacyPolicyScreen} />
           </>
         ) : (
           <>
