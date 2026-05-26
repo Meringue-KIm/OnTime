@@ -40,7 +40,7 @@ export default function RouteScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { routes, loading, fetchRoutes, saveRoute, activateRoute, removeRoute } = useRouteStore();
-  const { today } = useTodayStore();
+  const { today, fetchToday } = useTodayStore();
 
   const [showForm, setShowForm]     = useState(false);
   const [editingId, setEditingId]   = useState<number | null>(null);
@@ -134,6 +134,7 @@ export default function RouteScreen() {
     setSaving(true);
     try {
       await saveRoute(routeData, editingId ?? undefined);
+      fetchToday();
       setShowForm(false);
       scrollRef.current?.scrollTo({ y: 0, animated: true });
       if (editingId) {

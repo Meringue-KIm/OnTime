@@ -88,13 +88,12 @@ export default function StatsScreen() {
     if (log.actualDiffMinutes !== null) return;
     Alert.alert(
       '출근 결과 입력',
-      `${formatDate(log.logDate)}\n도착 목표 시간 기준으로 어떠셨나요?`,
+      `${formatDate(log.logDate)} 도착 목표 기준으로 어떠셨나요?`,
       [
         { text: '15분+ 일찍', onPress: () => doSubmitFeedback(log, -15) },
-        { text: '5분 일찍',   onPress: () => doSubmitFeedback(log, -5) },
         { text: '딱 맞게',    onPress: () => doSubmitFeedback(log, 0) },
-        { text: '5~10분 늦음', onPress: () => doSubmitFeedback(log, 7) },
-        { text: '15분+ 늦음', onPress: () => doSubmitFeedback(log, 20) },
+        { text: '살짝 늦음',  onPress: () => doSubmitFeedback(log, 7) },
+        { text: '많이 늦음',  onPress: () => doSubmitFeedback(log, 20) },
         { text: '취소', style: 'cancel' },
       ],
     );

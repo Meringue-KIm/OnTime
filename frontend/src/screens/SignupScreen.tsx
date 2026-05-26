@@ -41,7 +41,7 @@ export default function SignupScreen({ navigation }: any) {
     try {
       await signup(email, password);
       const { data } = await login(email, password);
-      await setTokens(data.accessToken, data.refreshToken);
+      await setTokens(data.accessToken, data.refreshToken, email);
     } catch (e: any) {
       Alert.alert('가입 실패', e.response?.data?.message ?? '다시 시도해주세요.');
       setLoading(false);

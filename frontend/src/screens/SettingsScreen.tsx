@@ -11,9 +11,10 @@ import { useAuthStore } from '../store/authStore';
 
 export default function SettingsScreen({ navigation }: any) {
   const { logout, email: storedEmail } = useAuthStore();
-  const [curPw, setCurPw]     = useState('');
-  const [newPw, setNewPw]     = useState('');
+  const [curPw, setCurPw]       = useState('');
+  const [newPw, setNewPw]       = useState('');
   const [pwSaving, setPwSaving] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [email, setEmail]     = useState<string | null>(storedEmail);
   const [joinedAt, setJoinedAt] = useState<string | null>(null);
 
@@ -47,11 +48,14 @@ export default function SettingsScreen({ navigation }: any) {
     Alert.alert('회원 탈퇴', '탈퇴하면 모든 데이터가 삭제됩니다. 계속하시겠습니까?', [
       { text: '취소', style: 'cancel' },
       { text: '탈퇴', style: 'destructive', onPress: async () => {
+        setDeleteLoading(true);
         try {
           await deleteAccount();
           await logout();
         } catch {
           Alert.alert('오류', '탈퇴 처리 중 문제가 발생했습니다.');
+        } finally {
+          setDeleteLoading(false);
         }
       }},
     ]);
@@ -127,12 +131,14 @@ export default function SettingsScreen({ navigation }: any) {
             <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
           </TouchableOpacity>
           <View style={styles.divider} />
-          <TouchableOpacity style={styles.rowItem} onPress={handleDeleteAccount}>
+          <TouchableOpacity style={styles.rowItem} onPress={handleDeleteAccount} disabled={deleteLoading}>
             <View style={[styles.rowIcon, { backgroundColor: colors.danger + '18' }]}>
               <Ionicons name="trash-outline" size={18} color={colors.danger} />
             </View>
             <Text style={[styles.rowItemText, { color: colors.danger }]}>회원 탈퇴</Text>
-            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+            {deleteLoading
+              ? <ActivityIndicator size="small" color={colors.danger} />
+              : <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />}
           </TouchableOpacity>
         </View>
 

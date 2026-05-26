@@ -260,7 +260,7 @@ export default function HomeScreen() {
   })();
 
   const todayAppts = appointments
-    .filter(a => !a.isDone && a.dDay === 0)
+    .filter(a => !a.isDone && a.dDay === 0 && new Date(a.appointmentTime) > new Date())
     .sort((a, b) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime());
 
   const nextAppt = appointments
@@ -307,141 +307,7 @@ export default function HomeScreen() {
         <Text style={styles.greeting}>{greeting}</Text>
       </View>
 
-      {/* Weather */}
-      {weatherError && !weather && (
-        <View style={styles.weatherErrorWrap}>
-          <Ionicons name="cloud-offline-outline" size={14} color={colors.textMuted} />
-          <Text style={styles.weatherErrorText}>날씨 정보를 불러오지 못했습니다.</Text>
-        </View>
-      )}
-      {weather && (
-        <View style={styles.weatherWrap}>
-          {/* 상단: 아이콘 + 기온 + 위치 */}
-          <View style={styles.weatherTopRow}>
-            <View style={styles.weatherLeft}>
-              <Ionicons
-                name={getWeatherIonicon(weather.icon) as any}
-                size={36}
-                color={colors.textPrimary}
-              />
-              <View style={styles.weatherTempBlock}>
-                <Text style={styles.weatherCurrentTemp}>
-                  {Math.round(weather.currentTemp)}°
-                  <Text style={styles.weatherHighLow}>  최고 {Math.round(weather.highTemp)}° · 최저 {Math.round(weather.lowTemp)}°</Text>
-                </Text>
-                {(weather.currentPop ?? 0) > 0 && (
-                  <View style={styles.weatherPopRow}>
-                    <Ionicons name="umbrella-outline" size={11} color="#1976D2" />
-                    <Text style={styles.weatherPopText}>강수 {weather.currentPop}%</Text>
-                  </View>
-                )}
-              </View>
-            </View>
-            <TouchableOpacity
-              style={styles.weatherLocationBtn}
-              onPress={() => setShowWeatherInfo(v => !v)}
-            >
-              <Ionicons name="location-outline" size={12} color={colors.primary} />
-              <Text style={styles.weatherLocation}>
-                {selectedCity
-                  ? selectedCity.name
-                  : gpsCoords
-                  ? '현재 위치'
-                  : activeRoute?.homeAddress?.split(' ').slice(0, 2).join(' ') ?? '서울'}
-              </Text>
-              <Text style={styles.weatherLocationChange}>지역 변경</Text>
-              <Ionicons name={showWeatherInfo ? 'chevron-up' : 'chevron-down'} size={11} color={colors.primary} />
-            </TouchableOpacity>
-          </View>
-          {showWeatherInfo && (
-            <View style={styles.weatherInfoPanel}>
-              <Text style={styles.weatherInfoLabel}>날씨 지역 선택</Text>
-              <View style={styles.cityGrid}>
-                <TouchableOpacity
-                  style={[styles.cityBtn, !selectedCity && styles.cityBtnActive]}
-                  onPress={() => handleSelectCity(null)}
-                >
-                  <Text style={[styles.cityBtnText, !selectedCity && styles.cityBtnTextActive]}>
-                    {gpsCoords ? 'GPS' : '기본'}
-                  </Text>
-                </TouchableOpacity>
-                {CITIES.map(city => (
-                  <TouchableOpacity
-                    key={city.name}
-                    style={[styles.cityBtn, selectedCity?.name === city.name && styles.cityBtnActive]}
-                    onPress={() => handleSelectCity(city)}
-                  >
-                    <Text style={[styles.cityBtnText, selectedCity?.name === city.name && styles.cityBtnTextActive]}>
-                      {city.name}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
-          )}
-
-          {/* 하단: 시간대별 스크롤 */}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyRow}>
-            {weather.hourly.map((item, i) => (
-              <View key={i} style={styles.hourlyItem}>
-                <Text style={styles.hourlyTime}>{item.time}</Text>
-                <Ionicons
-                  name={item.icon === 'sunny' ? 'sunny-outline' : item.icon === 'snowy' ? 'snow-outline' : item.icon === 'cloudy' ? 'cloudy-outline' : 'rainy-outline'}
-                  size={16}
-                  color={colors.textSecondary}
-                  style={{ marginVertical: 4 }}
-                />
-                <Text style={styles.hourlyTemp}>{Math.round(item.temperature)}°</Text>
-                {(item.precipitationProb ?? 0) > 0 && (
-                  <Text style={styles.hourlyPop}>{item.precipitationProb}%</Text>
-                )}
-              </View>
-            ))}
-          </ScrollView>
-        </View>
-      )}
-
-      {/* 오늘 준비물 */}
-      {weather && (() => {
-        const rec = getWeatherRecommendations(weather);
-        return (
-          <View style={styles.assistantCard}>
-            <Text style={styles.assistantTitle}>오늘 준비물</Text>
-            <View style={styles.assistantRow}>
-              {/* 옷차림 */}
-              <View style={styles.assistantItem}>
-                <Ionicons name="shirt-outline" size={18} color={colors.primary} />
-                <Text style={styles.assistantLabel}>{rec.outfit}</Text>
-              </View>
-              {/* 우산 */}
-              {rec.umbrella && (
-                <View style={styles.assistantItem}>
-                  <Ionicons name="umbrella-outline" size={18} color={rec.umbrella.urgent ? '#D32F2F' : '#1976D2'} />
-                  <Text style={[styles.assistantLabel, { color: rec.umbrella.urgent ? '#D32F2F' : '#1976D2' }]}>
-                    {rec.umbrella.label}
-                  </Text>
-                </View>
-              )}
-              {/* 일교차 */}
-              {rec.tempGap && (
-                <View style={styles.assistantItem}>
-                  <Ionicons name="thermometer-outline" size={18} color="#E65100" />
-                  <Text style={[styles.assistantLabel, { color: '#E65100' }]}>일교차 커요 · 겉옷 챙기세요</Text>
-                </View>
-              )}
-              {/* 자외선 */}
-              {rec.sunscreen && (
-                <View style={styles.assistantItem}>
-                  <Ionicons name="sunny-outline" size={18} color="#F9A825" />
-                  <Text style={[styles.assistantLabel, { color: '#F9A825' }]}>자외선 강해요 · 선크림 바르세요</Text>
-                </View>
-              )}
-            </View>
-          </View>
-        );
-      })()}
-
-      {/* Departure Card */}
+      {/* Departure Card — 핵심 정보 최우선 */}
       <View style={styles.departureCard}>
         <Text style={styles.departureLabel}>{departureLabel}</Text>
         {activeRoute && today?.recommendedDeparture && (
@@ -552,6 +418,14 @@ export default function HomeScreen() {
             <Ionicons name="moon-outline" size={28} color="rgba(255,255,255,0.7)" />
             <Text style={styles.noRouteSubText}>오늘 알람 건너뛰기가 설정됐어요.{'\n'}내일부터 자동으로 다시 울려요.</Text>
           </View>
+        ) : activeRoute ? (
+          <View style={styles.onboardingWrap}>
+            <Ionicons name="calendar-outline" size={28} color="rgba(255,255,255,0.7)" />
+            <Text style={styles.noRouteSubText}>오늘은 알람이 없는 날이에요.{'\n'}반복 요일에 오늘이 포함됐는지 확인해보세요.</Text>
+            <TouchableOpacity style={styles.onboardingBtn} onPress={() => navigation.navigate('Alarm')}>
+              <Text style={styles.onboardingBtnText}>알람 설정 확인하기 →</Text>
+            </TouchableOpacity>
+          </View>
         ) : (
           <View style={styles.onboardingWrap}>
             <Ionicons name="map-outline" size={32} color="rgba(255,255,255,0.7)" />
@@ -580,6 +454,132 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {/* Weather */}
+      {weatherError && !weather && (
+        <View style={styles.weatherErrorWrap}>
+          <Ionicons name="cloud-offline-outline" size={14} color={colors.textMuted} />
+          <Text style={styles.weatherErrorText}>날씨 정보를 불러오지 못했습니다.</Text>
+        </View>
+      )}
+      {weather && (
+        <View style={styles.weatherWrap}>
+          <View style={styles.weatherTopRow}>
+            <View style={styles.weatherLeft}>
+              <Ionicons
+                name={getWeatherIonicon(weather.icon) as any}
+                size={36}
+                color={colors.textPrimary}
+              />
+              <View style={styles.weatherTempBlock}>
+                <Text style={styles.weatherCurrentTemp}>
+                  {Math.round(weather.currentTemp)}°
+                  <Text style={styles.weatherHighLow}>  최고 {Math.round(weather.highTemp)}° · 최저 {Math.round(weather.lowTemp)}°</Text>
+                </Text>
+                {(weather.currentPop ?? 0) > 0 && (
+                  <View style={styles.weatherPopRow}>
+                    <Ionicons name="umbrella-outline" size={11} color="#1976D2" />
+                    <Text style={styles.weatherPopText}>강수 {weather.currentPop}%</Text>
+                  </View>
+                )}
+              </View>
+            </View>
+            <TouchableOpacity
+              style={styles.weatherLocationBtn}
+              onPress={() => setShowWeatherInfo(v => !v)}
+            >
+              <Ionicons name="location-outline" size={12} color={colors.primary} />
+              <Text style={styles.weatherLocation}>
+                {selectedCity
+                  ? selectedCity.name
+                  : gpsCoords
+                  ? '현재 위치'
+                  : activeRoute?.homeAddress?.split(' ').slice(0, 2).join(' ') ?? '서울'}
+              </Text>
+              <Ionicons name={showWeatherInfo ? 'chevron-up' : 'chevron-forward'} size={11} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+          {showWeatherInfo && (
+            <View style={styles.weatherInfoPanel}>
+              <Text style={styles.weatherInfoLabel}>날씨 지역 선택</Text>
+              <View style={styles.cityGrid}>
+                <TouchableOpacity
+                  style={[styles.cityBtn, !selectedCity && styles.cityBtnActive]}
+                  onPress={() => handleSelectCity(null)}
+                >
+                  <Text style={[styles.cityBtnText, !selectedCity && styles.cityBtnTextActive]}>
+                    {gpsCoords ? 'GPS' : '기본'}
+                  </Text>
+                </TouchableOpacity>
+                {CITIES.map(city => (
+                  <TouchableOpacity
+                    key={city.name}
+                    style={[styles.cityBtn, selectedCity?.name === city.name && styles.cityBtnActive]}
+                    onPress={() => handleSelectCity(city)}
+                  >
+                    <Text style={[styles.cityBtnText, selectedCity?.name === city.name && styles.cityBtnTextActive]}>
+                      {city.name}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </View>
+          )}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyRow}>
+            {weather.hourly.map((item, i) => (
+              <View key={i} style={styles.hourlyItem}>
+                <Text style={styles.hourlyTime}>{item.time}</Text>
+                <Ionicons
+                  name={item.icon === 'sunny' ? 'sunny-outline' : item.icon === 'snowy' ? 'snow-outline' : item.icon === 'cloudy' ? 'cloudy-outline' : 'rainy-outline'}
+                  size={16}
+                  color={colors.textSecondary}
+                  style={{ marginVertical: 4 }}
+                />
+                <Text style={styles.hourlyTemp}>{Math.round(item.temperature)}°</Text>
+                {(item.precipitationProb ?? 0) > 0 && (
+                  <Text style={styles.hourlyPop}>{item.precipitationProb}%</Text>
+                )}
+              </View>
+            ))}
+          </ScrollView>
+        </View>
+      )}
+
+      {/* 오늘 준비물 */}
+      {weather && (() => {
+        const rec = getWeatherRecommendations(weather);
+        return (
+          <View style={styles.assistantCard}>
+            <Text style={styles.assistantTitle}>오늘 준비물</Text>
+            <View style={styles.assistantRow}>
+              <View style={styles.assistantItem}>
+                <Ionicons name="shirt-outline" size={18} color={colors.primary} />
+                <Text style={styles.assistantLabel}>{rec.outfit}</Text>
+              </View>
+              {rec.umbrella && (
+                <View style={styles.assistantItem}>
+                  <Ionicons name="umbrella-outline" size={18} color={rec.umbrella.urgent ? '#D32F2F' : '#1976D2'} />
+                  <Text style={[styles.assistantLabel, { color: rec.umbrella.urgent ? '#D32F2F' : '#1976D2' }]}>
+                    {rec.umbrella.label}
+                  </Text>
+                </View>
+              )}
+              {rec.tempGap && (
+                <View style={styles.assistantItem}>
+                  <Ionicons name="thermometer-outline" size={18} color="#E65100" />
+                  <Text style={[styles.assistantLabel, { color: '#E65100' }]}>일교차 커요 · 겉옷 챙기세요</Text>
+                </View>
+              )}
+              {rec.sunscreen && (
+                <View style={styles.assistantItem}>
+                  <Ionicons name="sunny-outline" size={18} color="#F9A825" />
+                  <Text style={[styles.assistantLabel, { color: '#F9A825' }]}>자외선 강해요 · 선크림 바르세요</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        );
+      })()}
+
       {/* Schedule */}
       <View style={[styles.card, { marginBottom: 28 }]}>
         <View style={styles.rowBetween}>
@@ -594,7 +594,7 @@ export default function HomeScreen() {
             <Text style={styles.emptyText}>오늘 예정된 약속이 없습니다.</Text>
             {nextAppt ? (
               <Text style={styles.nextApptHint}>
-                다음 약속: {formatKoreanDateTime(nextAppt.appointmentTime)} · {nextAppt.title || nextAppt.destAddress}
+                D-{nextAppt.dDay} · {formatKoreanDateTime(nextAppt.appointmentTime)} · {nextAppt.title || nextAppt.destAddress}
               </Text>
             ) : (
               <TouchableOpacity onPress={() => navigation.navigate('Appointment')}>

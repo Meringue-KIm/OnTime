@@ -110,10 +110,7 @@ export default function AppointmentScreen() {
   };
 
   const handleComplete = (id: number) => {
-    Alert.alert('약속 완료', '이 약속을 완료 처리하시겠습니까?', [
-      { text: '취소', style: 'cancel' },
-      { text: '완료', onPress: () => completeDone(id).catch((e: any) => Alert.alert('오류', getErrorMessage(e))) },
-    ]);
+    completeDone(id).catch((e: any) => Alert.alert('오류', getErrorMessage(e)));
   };
 
   const handleDelete = (id: number, onSuccess?: () => void) => {
