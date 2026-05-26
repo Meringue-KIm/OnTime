@@ -501,6 +501,11 @@ export default function HomeScreen() {
               )}
             </View>
           </>
+        ) : activeRoute?.isSkippedToday ? (
+          <View style={styles.onboardingWrap}>
+            <Ionicons name="moon-outline" size={28} color="rgba(255,255,255,0.7)" />
+            <Text style={styles.noRouteSubText}>오늘 알람 건너뛰기가 설정됐어요.{'\n'}내일부터 자동으로 다시 울려요.</Text>
+          </View>
         ) : (
           <View style={styles.onboardingWrap}>
             <Ionicons name="map-outline" size={32} color="rgba(255,255,255,0.7)" />

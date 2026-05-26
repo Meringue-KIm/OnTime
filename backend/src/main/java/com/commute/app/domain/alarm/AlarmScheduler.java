@@ -19,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
 
@@ -38,11 +39,12 @@ public class AlarmScheduler {
     @Scheduled(cron = "0 * * * * *")
     @Transactional
     public void sendDepartureAlarms() {
-        LocalTime now   = LocalTime.now().withSecond(0).withNano(0);
-        LocalDate today = LocalDate.now();
+        ZoneId kst      = ZoneId.of("Asia/Seoul");
+        LocalTime now   = LocalTime.now(kst).withSecond(0).withNano(0);
+        LocalDate today = LocalDate.now(kst);
 
         // 오늘 요일 (프론트 인덱스 기준: 0=일,1=월...6=토)
-        int todayIndex = LocalDate.now().getDayOfWeek().getValue() % 7;
+        int todayIndex = today.getDayOfWeek().getValue() % 7;
 
         // 분당 1회만 발송 — 복수 루트 활성 시 중복 알람 방지
         java.util.Set<Long> alarmedUsers     = new java.util.HashSet<>();
@@ -110,7 +112,7 @@ public class AlarmScheduler {
     @Scheduled(cron = "0 * * * * *")
     @Transactional(readOnly = true)
     public void sendAppointmentAlarms() {
-        LocalDateTime now = LocalDateTime.now().withSecond(0).withNano(0);
+        LocalDateTime now = LocalDateTime.now(ZoneId.of("Asia/Seoul")).withSecond(0).withNano(0);
 
         List<Appointment> appointments = appointmentRepository
                 .findByIsDoneFalseAndAppointmentTimeAfter(now);

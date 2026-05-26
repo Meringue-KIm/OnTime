@@ -24,11 +24,12 @@ const STORAGE_KEYS = {
 
 const DAY_LABELS = ['일', '월', '화', '수', '목', '금', '토'];
 
-function getNextAlarmLabel(departureTimeStr: string | null, activeDays: number[]): string | null {
+function getNextAlarmLabel(departureTimeStr: string | null, activeDays: number[], skipToday = false): string | null {
   if (!departureTimeStr || activeDays.length === 0) return null;
   const [hh, mm] = departureTimeStr.split(':').map(Number);
   const now = new Date();
   for (let i = 0; i < 8; i++) {
+    if (i === 0 && skipToday) continue;
     const candidate = new Date(now);
     candidate.setDate(candidate.getDate() + i);
     candidate.setHours(hh, mm, 0, 0);
@@ -214,7 +215,7 @@ export default function AlarmScreen() {
           )}
         </View>
         {!loading && (() => {
-          const label = getNextAlarmLabel(departureTime, activeDays);
+          const label = getNextAlarmLabel(departureTime, activeDays, activeRoute?.isSkippedToday ?? false);
           if (!label) return null;
           const isToday = label.startsWith('오늘');
           return (
@@ -226,7 +227,7 @@ export default function AlarmScreen() {
             </View>
           );
         })()}
-        {!loading && !getNextAlarmLabel(departureTime, activeDays) && activeRoute && (
+        {!loading && !getNextAlarmLabel(departureTime, activeDays, activeRoute?.isSkippedToday ?? false) && activeRoute && (
           <View style={styles.nextAlarmRow}>
             <Ionicons name="alert-circle-outline" size={13} color="rgba(255,255,255,0.7)" />
             <Text style={[styles.nextAlarmText, { color: 'rgba(255,255,255,0.7)' }]}>

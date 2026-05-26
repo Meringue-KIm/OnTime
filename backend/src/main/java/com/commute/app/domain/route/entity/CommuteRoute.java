@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 
 @Entity
 @Table(name = "commute_routes")
@@ -99,9 +100,9 @@ public class CommuteRoute {
         this.wakeUpBeforeMinutes = wakeUpBeforeMinutes;
     }
 
-    public void skipToday() { this.skipDate = LocalDate.now(); }
+    public void skipToday() { this.skipDate = LocalDate.now(ZoneId.of("Asia/Seoul")); }
     public void clearSkip()  { this.skipDate = null; }
-    public boolean isSkippedToday() { return LocalDate.now().equals(this.skipDate); }
+    public boolean isSkippedToday() { return LocalDate.now(ZoneId.of("Asia/Seoul")).equals(this.skipDate); }
 
     public void activate() {
         this.isActive = true;

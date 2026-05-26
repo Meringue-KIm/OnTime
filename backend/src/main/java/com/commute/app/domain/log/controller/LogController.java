@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,7 +31,7 @@ public class LogController {
 
     @GetMapping("/api/today")
     public ResponseEntity<Map<String, Object>> getToday(@AuthenticationPrincipal Long userId) {
-        LocalDate today = LocalDate.now();
+        LocalDate today = LocalDate.now(ZoneId.of("Asia/Seoul"));
         return logRepository.findByUserIdAndLogDate(userId, today)
                 .map(log -> ResponseEntity.ok(Map.<String, Object>of(
                         "recommendedDeparture", log.getRecommendedDeparture(),
@@ -42,6 +43,9 @@ public class LogController {
                         return ResponseEntity.ok(Map.of("message", "등록된 출근 루트가 없습니다."));
                     }
                     CommuteRoute route = routes.get(0);
+                    if (route.isSkippedToday()) {
+                        return ResponseEntity.ok(Map.of("message", "오늘 알람이 건너뛰기로 설정됐습니다."));
+                    }
 
                     int drivingMinutes = kakaoMapService
                             .getTravelMinutes(route.getHomeLat(), route.getHomeLng(),

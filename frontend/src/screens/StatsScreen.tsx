@@ -45,7 +45,7 @@ export default function StatsScreen() {
   const pendingFeedbackLog = logs
     .find(l => l.actualDiffMinutes === null && (Date.now() - new Date(l.logDate).getTime()) / 86400000 <= 3);
 
-  const logsWithFeedback = logs.filter(l => l.isLate !== null);
+  const logsWithFeedback = logs.filter(l => l.actualDiffMinutes !== null);
   const onTimeCount     = logsWithFeedback.filter(l => l.isLate === false).length;
   const onTimeRate      = logsWithFeedback.length > 0
     ? Math.round((onTimeCount / logsWithFeedback.length) * 100)

@@ -115,6 +115,7 @@ export default function RouteScreen() {
       Alert.alert('이동 시간 오류', '직접 입력한 이동 시간은 1분 이상이어야 합니다.');
       return;
     }
+    const editingRoute = editingId != null ? routes.find(r => r.id === editingId) : null;
     const routeData: RouteRequest = {
       homeAddress: homeAddr.trim(), homeLat, homeLng,
       workAddress: workAddr.trim(), workLat, workLng,
@@ -123,6 +124,7 @@ export default function RouteScreen() {
       transportMode: transport,
       activeDays: activeDays.join(','),
       customTravelMinutes: (transport === 'transit' && parsedCustomMin !== undefined && !isNaN(parsedCustomMin)) ? parsedCustomMin : undefined,
+      wakeUpBeforeMinutes: editingRoute?.wakeUpBeforeMinutes ?? undefined,
     };
     setSaving(true);
     try {
