@@ -52,9 +52,10 @@ public class LogController {
                     Optional<WeatherInfo> weatherOpt = weatherService.getWeather(
                             route.getHomeLat(), route.getHomeLng());
                     int weatherBuffer = weatherOpt.map(WeatherInfo::bufferMinutes).orElse(0);
+                    int personalBuffer = calcPersonalBuffer(userId);
 
                     LocalTime recommended = route.getArrivalTime()
-                            .minusMinutes(drivingMinutes + route.getAlarmBeforeMinutes() + weatherBuffer);
+                            .minusMinutes(drivingMinutes + route.getAlarmBeforeMinutes() + weatherBuffer + personalBuffer);
 
                     Map<String, Object> result = new HashMap<>();
                     result.put("recommendedDeparture", recommended);
@@ -71,15 +72,25 @@ public class LogController {
                 });
     }
 
+    private int calcPersonalBuffer(Long userId) {
+        List<CommuteLog> recentLogs =
+                logRepository.findTop7ByUserIdAndActualDiffMinutesIsNotNullOrderByLogDateDesc(userId);
+        if (recentLogs.size() < 3) return 0;
+        double avg = recentLogs.stream()
+                .mapToInt(CommuteLog::getActualDiffMinutes)
+                .average().orElse(0);
+        return Math.max(-10, Math.min(20, (int) Math.round(avg)));
+    }
+
     @PostMapping("/api/logs/{id}/feedback")
     public ResponseEntity<Void> submitFeedback(
             @AuthenticationPrincipal Long userId,
             @PathVariable Long id,
-            @RequestBody Map<String, Boolean> body) {
+            @RequestBody Map<String, Integer> body) {
         CommuteLog log = logRepository.findById(id)
                 .filter(l -> l.getUser().getId().equals(userId))
                 .orElseThrow(() -> new IllegalArgumentException("로그를 찾을 수 없습니다."));
-        log.submitFeedback(body.get("isLate"));
+        log.submitFeedback(body.get("actualDiffMinutes"));
         logRepository.save(log);
         return ResponseEntity.ok().build();
     }

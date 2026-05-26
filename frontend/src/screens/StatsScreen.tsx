@@ -55,30 +55,26 @@ export default function StatsScreen() {
   const weeklyData = buildWeeklyData(logs);
   const recentLogs = showAllLogs ? logs : logs.slice(0, 5);
 
+  const doSubmitFeedback = async (log: CommuteLog, diffMinutes: number) => {
+    try {
+      await submitFeedback(log.id, diffMinutes);
+      setLogs(prev => prev.map(l =>
+        l.id === log.id ? { ...l, isLate: diffMinutes > 0, actualDiffMinutes: diffMinutes } : l
+      ));
+    } catch { Alert.alert('오류', '저장에 실패했습니다. 다시 시도해주세요.'); }
+  };
+
   const handleFeedback = (log: CommuteLog) => {
     if (log.isLate !== null) return;
     Alert.alert(
       '출근 결과 입력',
-      `${formatDate(log.logDate)} 출근은 어떠셨나요?`,
+      `${formatDate(log.logDate)}\n도착 목표 시간 기준으로 어떠셨나요?`,
       [
-        {
-          text: '정시 도착 ✅',
-          onPress: async () => {
-            try {
-              await submitFeedback(log.id, false);
-              setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: false } : l));
-            } catch { Alert.alert('오류', '저장에 실패했습니다. 다시 시도해주세요.'); }
-          },
-        },
-        {
-          text: '지각 😅',
-          onPress: async () => {
-            try {
-              await submitFeedback(log.id, true);
-              setLogs(prev => prev.map(l => l.id === log.id ? { ...l, isLate: true } : l));
-            } catch { Alert.alert('오류', '저장에 실패했습니다. 다시 시도해주세요.'); }
-          },
-        },
+        { text: '15분+ 일찍', onPress: () => doSubmitFeedback(log, -15) },
+        { text: '5분 일찍',   onPress: () => doSubmitFeedback(log, -5) },
+        { text: '딱 맞게',    onPress: () => doSubmitFeedback(log, 0) },
+        { text: '5~10분 늦음', onPress: () => doSubmitFeedback(log, 7) },
+        { text: '15분+ 늦음', onPress: () => doSubmitFeedback(log, 20) },
         { text: '취소', style: 'cancel' },
       ],
     );
@@ -159,21 +155,14 @@ export default function StatsScreen() {
             {formatDate(pendingFeedbackLog.logDate)} 출근 결과를 입력해주세요
           </Text>
           <View style={styles.feedbackBannerBtns}>
-            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={async () => {
-              try {
-                await submitFeedback(pendingFeedbackLog.id, false);
-                setLogs(prev => prev.map(l => l.id === pendingFeedbackLog.id ? { ...l, isLate: false } : l));
-              } catch { Alert.alert('오류', '저장에 실패했습니다.'); }
-            }}>
+            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, 0)}>
               <Text style={styles.feedbackBannerBtnText}>정시 ✅</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={async () => {
-              try {
-                await submitFeedback(pendingFeedbackLog.id, true);
-                setLogs(prev => prev.map(l => l.id === pendingFeedbackLog.id ? { ...l, isLate: true } : l));
-              } catch { Alert.alert('오류', '저장에 실패했습니다.'); }
-            }}>
+            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, 20)}>
               <Text style={styles.feedbackBannerBtnText}>지각 😅</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.feedbackBannerBtn, { backgroundColor: colors.primaryLight }]} onPress={() => handleFeedback(pendingFeedbackLog)}>
+              <Text style={[styles.feedbackBannerBtnText, { color: colors.primary }]}>세부 입력</Text>
             </TouchableOpacity>
           </View>
         </View>

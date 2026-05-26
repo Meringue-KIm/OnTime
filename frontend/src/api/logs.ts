@@ -5,8 +5,9 @@ export interface CommuteLog {
   logDate: string;
   recommendedDeparture: string | null;
   isLate: boolean | null;
+  actualDiffMinutes: number | null;
 }
 
 export const getLogs = () => client.get<CommuteLog[]>('/logs');
-export const submitFeedback = (id: number, isLate: boolean) =>
-  client.post(`/logs/${id}/feedback`, { isLate });
+export const submitFeedback = (id: number, actualDiffMinutes: number) =>
+  client.post(`/logs/${id}/feedback`, { actualDiffMinutes });

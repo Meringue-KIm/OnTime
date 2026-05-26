@@ -63,9 +63,10 @@ public class AlarmScheduler {
             Optional<WeatherInfo> weatherOpt = weatherService.getWeather(
                     route.getHomeLat(), route.getHomeLng());
             int weatherBuffer = weatherOpt.map(WeatherInfo::bufferMinutes).orElse(0);
+            int personalBuffer = calcPersonalBuffer(route.getUser().getId());
 
             LocalTime departureTime = route.getArrivalTime()
-                    .minusMinutes(drivingMinutes + route.getAlarmBeforeMinutes() + weatherBuffer);
+                    .minusMinutes(drivingMinutes + route.getAlarmBeforeMinutes() + weatherBuffer + personalBuffer);
 
             Long userId = route.getUser().getId();
             if (now.equals(departureTime) && !alarmedUsers.contains(userId)) {
@@ -191,6 +192,16 @@ public class AlarmScheduler {
             sb.append(bufferMinutes).append("분 후 출발하세요");
         }
         return sb.toString();
+    }
+
+    private int calcPersonalBuffer(Long userId) {
+        List<com.commute.app.domain.log.entity.CommuteLog> recentLogs =
+                logRepository.findTop7ByUserIdAndActualDiffMinutesIsNotNullOrderByLogDateDesc(userId);
+        if (recentLogs.size() < 3) return 0;
+        double avg = recentLogs.stream()
+                .mapToInt(com.commute.app.domain.log.entity.CommuteLog::getActualDiffMinutes)
+                .average().orElse(0);
+        return Math.max(-10, Math.min(20, (int) Math.round(avg)));
     }
 
     private String buildAlarmBody(int drivingMinutes, WeatherInfo weather) {

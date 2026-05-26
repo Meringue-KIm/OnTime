@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface CommuteLogRepository extends JpaRepository<CommuteLog, Long> {
     Optional<CommuteLog> findByUserIdAndLogDate(Long userId, LocalDate logDate);
     List<CommuteLog> findByUserIdOrderByLogDateDesc(Long userId);
+    List<CommuteLog> findTop7ByUserIdAndActualDiffMinutesIsNotNullOrderByLogDateDesc(Long userId);
 }
