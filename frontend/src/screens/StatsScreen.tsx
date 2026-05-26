@@ -152,15 +152,6 @@ export default function StatsScreen() {
               ? `피드백 ${logsWithFeedback.length}개 입력됨 · ${3 - logsWithFeedback.length}개 더 입력하면 개인화 알람이 시작돼요.`
               : '아직 피드백 기록이 없어요. 출근 후 결과를 입력하면 통계와 개인화 알람이 시작됩니다.'}
         </Text>
-        <View style={styles.insightStat}>
-          <Text style={styles.insightStatValue}>{onTimeRate}%</Text>
-          <Ionicons
-            name={onTimeRate >= 50 ? 'trending-up' : 'trending-down'}
-            size={20}
-            color={onTimeRate >= 80 ? colors.success : onTimeRate >= 50 ? '#FFA000' : colors.danger}
-          />
-          <Text style={styles.insightStatLabel}>정시 도착률</Text>
-        </View>
       </View>
 
       {/* 이번 달 요약 */}
@@ -214,28 +205,17 @@ export default function StatsScreen() {
             {formatDate(pendingFeedbackLog.logDate)} 출근 결과를 입력해주세요
           </Text>
           <View style={styles.feedbackBannerBtns}>
-            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() =>
-              Alert.alert('얼마나 일찍?', '도착 목표 기준 얼마나 일찍 도착했나요?', [
-                { text: '5~10분', onPress: () => doSubmitFeedback(pendingFeedbackLog, -7) },
-                { text: '15~20분', onPress: () => doSubmitFeedback(pendingFeedbackLog, -15) },
-                { text: '30분 이상', onPress: () => doSubmitFeedback(pendingFeedbackLog, -30) },
-                { text: '취소', style: 'cancel' },
-              ])
-            }>
-              <Text style={styles.feedbackBannerBtnText}>일찍 🎉</Text>
+            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, -15)}>
+              <Text style={styles.feedbackBannerBtnText}>15분+ 일찍</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, 0)}>
-              <Text style={styles.feedbackBannerBtnText}>딱 맞게 ✅</Text>
+              <Text style={styles.feedbackBannerBtnText}>딱 맞게</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() =>
-              Alert.alert('얼마나 늦었나요?', '도착 목표 기준 얼마나 늦었나요?', [
-                { text: '5~10분', onPress: () => doSubmitFeedback(pendingFeedbackLog, 7) },
-                { text: '15~20분', onPress: () => doSubmitFeedback(pendingFeedbackLog, 17) },
-                { text: '30분 이상', onPress: () => doSubmitFeedback(pendingFeedbackLog, 30) },
-                { text: '취소', style: 'cancel' },
-              ])
-            }>
-              <Text style={styles.feedbackBannerBtnText}>늦음 😅</Text>
+            <TouchableOpacity style={[styles.feedbackBannerBtn, { backgroundColor: '#EF9A9A' }]} onPress={() => doSubmitFeedback(pendingFeedbackLog, 7)}>
+              <Text style={[styles.feedbackBannerBtnText, { color: '#B71C1C' }]}>살짝 늦음</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.feedbackBannerBtn, { backgroundColor: '#EF9A9A' }]} onPress={() => doSubmitFeedback(pendingFeedbackLog, 20)}>
+              <Text style={[styles.feedbackBannerBtnText, { color: '#B71C1C' }]}>많이 늦음</Text>
             </TouchableOpacity>
           </View>
         </View>

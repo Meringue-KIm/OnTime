@@ -447,20 +447,9 @@ export default function RouteScreen() {
             </View>
           )}
 
-          {/* 반복 요일 */}
-          <Text style={[styles.inputLabel, { marginTop: 12 }]}>📅 알람 반복 요일</Text>
-          <View style={styles.daysRow}>
-            {['일', '월', '화', '수', '목', '금', '토'].map((d, i) => (
-              <TouchableOpacity
-                key={i}
-                style={[styles.dayBtn, activeDays.includes(i) && styles.dayBtnActive]}
-                onPress={() => setActiveDays(prev =>
-                  prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i]
-                )}
-              >
-                <Text style={[styles.dayText, activeDays.includes(i) && styles.dayTextActive]}>{d}</Text>
-              </TouchableOpacity>
-            ))}
+          <View style={styles.alarmTabNote}>
+            <Ionicons name="alarm-outline" size={13} color={colors.primary} />
+            <Text style={styles.alarmTabNoteText}>반복 요일과 여유 시간은 저장 후 알람 탭에서 조정할 수 있어요.</Text>
           </View>
 
           {/* 버튼 */}
@@ -552,4 +541,6 @@ const styles = StyleSheet.create({
   undoBannerText:       { flex: 1, fontSize: 13, fontFamily: fonts.regular, color: colors.textPrimary },
   undoBtn:              { paddingHorizontal: 12, paddingVertical: 5, backgroundColor: colors.warning, borderRadius: 16 },
   undoBtnText:          { fontSize: 12, fontFamily: fonts.semiBold, color: '#fff' },
+  alarmTabNote:         { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, backgroundColor: colors.primaryLight, borderRadius: 8, padding: 10 },
+  alarmTabNoteText:     { flex: 1, fontSize: 12, fontFamily: fonts.regular, color: colors.primary, lineHeight: 17 },
 });

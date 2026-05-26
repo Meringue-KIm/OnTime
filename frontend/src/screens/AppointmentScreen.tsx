@@ -116,10 +116,11 @@ export default function AppointmentScreen() {
     ]);
   };
 
-  const handleDelete = (id: number) => {
+  const handleDelete = (id: number, onSuccess?: () => void) => {
     Alert.alert('약속 삭제', '삭제하면 기록이 완전히 사라집니다.\n(완료 처리와 달리 복구 불가)', [
       { text: '취소', style: 'cancel' },
-      { text: '삭제', style: 'destructive', onPress: () => removeAppointment(id).catch((e: any) => Alert.alert('오류', getErrorMessage(e))) },
+      { text: '삭제', style: 'destructive', onPress: () =>
+        removeAppointment(id).then(() => onSuccess?.()).catch((e: any) => Alert.alert('오류', getErrorMessage(e))) },
     ]);
   };
 
@@ -282,9 +283,11 @@ export default function AppointmentScreen() {
                   <Ionicons name="checkmark-circle-outline" size={22} color={colors.success} />
                 </TouchableOpacity>
               )}
-              <TouchableOpacity style={styles.apptActionBtn} onPress={() => handleDelete(item.id)}>
-                <Ionicons name="trash-outline" size={20} color={colors.danger} />
-              </TouchableOpacity>
+              {item.isDone && (
+                <TouchableOpacity style={styles.apptActionBtn} onPress={() => handleDelete(item.id)}>
+                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                </TouchableOpacity>
+              )}
             </View>
           );
         })}
@@ -465,7 +468,16 @@ export default function AppointmentScreen() {
           </View>
         )}
 
-        <View style={[styles.row, { marginTop: 16, gap: 12 }]}>
+        {editingId !== null && (
+          <TouchableOpacity
+            style={styles.deleteInFormBtn}
+            onPress={() => handleDelete(editingId, () => { setShowForm(false); setEditingId(null); })}
+          >
+            <Ionicons name="trash-outline" size={14} color={colors.danger} />
+            <Text style={styles.deleteInFormBtnText}>약속 삭제</Text>
+          </TouchableOpacity>
+        )}
+        <View style={[styles.row, { marginTop: 12, gap: 12 }]}>
           <TouchableOpacity style={styles.cancelBtn} onPress={handleReset}>
             <Text style={styles.cancelText}>초기화</Text>
           </TouchableOpacity>
@@ -530,4 +542,6 @@ const styles = StyleSheet.create({
   addApptBtn:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },
   addApptBtnText:     { fontSize: 13, fontFamily: fonts.semiBold, color: '#fff' },
   formTitle:          { fontSize: 15, fontFamily: fonts.bold, color: colors.textPrimary, marginBottom: 4 },
+  deleteInFormBtn:    { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 16, paddingVertical: 11, borderRadius: 10, borderWidth: 1, borderColor: colors.danger + '50', backgroundColor: colors.danger + '0D' },
+  deleteInFormBtnText:{ fontSize: 13, fontFamily: fonts.semiBold, color: colors.danger },
 });

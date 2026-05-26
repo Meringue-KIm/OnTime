@@ -168,6 +168,8 @@ export default function HomeScreen() {
   };
 
   const activeRoute = routes.find(r => r.isActive) ?? routes[0];
+  const todayDow = new Date().getDay();
+  const isActiveToday = activeRoute?.activeDays?.split(',').map(Number).includes(todayDow) ?? false;
 
   // 저장된 도시 선택 복원
   useEffect(() => {
@@ -225,6 +227,7 @@ export default function HomeScreen() {
     if (!today?.recommendedDeparture) return '다음 출발 시간';
     const [hh, mm] = today.recommendedDeparture.split(':').map(Number);
     const dep = new Date(); dep.setHours(hh, mm, 0, 0);
+    if (!isActiveToday && !today.logDate) return '참고용 출발 시간 (오늘 알람 없음)';
     if (dep > new Date()) return '오늘 출발 시간';
     return today.logDate ? '오늘 출발 완료' : '오늘 출발 기준 시간';
   })();
@@ -270,6 +273,7 @@ export default function HomeScreen() {
     <ScrollView
       style={styles.container}
       showsVerticalScrollIndicator={false}
+      onScrollBeginDrag={() => setShowWeatherInfo(false)}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={colors.primary} colors={[colors.primary]} />}
     >
 
@@ -560,8 +564,8 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* 내비게이션 */}
-      {activeRoute && (
+      {/* 내비게이션 — 출발 배너가 이미 내비 버튼을 포함하므로 배너 없을 때만 표시 */}
+      {activeRoute && !showDepartureBanner && (
         <TouchableOpacity style={[styles.navBtn, { marginHorizontal: 20, marginBottom: 12 }]} onPress={handleNavigation}>
           <Ionicons name="navigate" size={16} color="#fff" />
           <Text style={styles.navBtnText}>내비게이션 시작</Text>
@@ -608,7 +612,17 @@ export default function HomeScreen() {
                 <Text style={styles.scheduleTitle}>{item.title || item.destAddress}</Text>
                 {item.title && <Text style={styles.scheduleLocation} numberOfLines={1}>{item.destAddress}</Text>}
               </View>
-              <Text style={styles.scheduleTime}>{formatApptTime(item.appointmentTime)}</Text>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.scheduleTime}>{formatApptTime(item.appointmentTime)}</Text>
+                {(() => {
+                  const alarmMs = new Date(item.appointmentTime).getTime() - item.alarmBeforeMinutes * 60000;
+                  if (alarmMs > Date.now()) {
+                    const d = new Date(alarmMs);
+                    return <Text style={styles.scheduleAlarmHint}>알람 {String(d.getHours()).padStart(2,'0')}:{String(d.getMinutes()).padStart(2,'0')}</Text>;
+                  }
+                  return null;
+                })()}
+              </View>
             </View>
           ))
         )}
@@ -699,6 +713,7 @@ const styles = StyleSheet.create({
   scheduleTitle:    { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },
   scheduleLocation: { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
   scheduleTime:     { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary },
+  scheduleAlarmHint:{ fontSize: 10, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
   footer:           { alignItems: 'center', paddingVertical: 20, gap: 4, marginTop: 8 },
   footerText:       { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted },
   weatherInfoPanel: { backgroundColor: colors.primaryLight, borderRadius: 10, padding: 12, marginTop: 8 },

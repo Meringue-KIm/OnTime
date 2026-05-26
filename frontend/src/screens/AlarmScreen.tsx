@@ -52,6 +52,22 @@ export default function AlarmScreen() {
   const { today, loading, error: todayError, fetchToday } = useTodayStore();
   const departureTime = today?.recommendedDeparture ? extractTimeHHmm(today.recommendedDeparture) : null;
 
+  // 버퍼 변경 시 즉시 출발 시간 계산 (서버 응답 대기 없이 로컬 반영)
+  const localDepartureTime = React.useMemo(() => {
+    if (!today?.drivingMinutes || !activeRoute?.arrivalTime) return null;
+    const arrParts = activeRoute.arrivalTime.split(':').map(Number);
+    const arrivalMin = arrParts[0] * 60 + arrParts[1];
+    const travel = today.drivingMinutes + (today.weather?.bufferMinutes ?? 0);
+    const personal = today.personalBuffer ?? 0;
+    const depMin = arrivalMin - travel - buffer - personal;
+    const norm = ((depMin % 1440) + 1440) % 1440;
+    const h = Math.floor(norm / 60);
+    const m = norm % 60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
+  }, [buffer, today?.drivingMinutes, today?.weather?.bufferMinutes, today?.personalBuffer, activeRoute?.arrivalTime]);
+
+  const displayDepartureTime = localDepartureTime ?? departureTime;
+
   const [notifStatus, setNotifStatus]     = useState<string | null>(null);
   const [activeDays, setActiveDays]       = useState([1, 2, 3, 4, 5]);
   const [vibration, setVibration]         = useState(true);
@@ -204,9 +220,9 @@ export default function AlarmScreen() {
             <Text style={styles.wakeTimePlaceholder}>--:--</Text>
             <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', textAlign: 'center' }}>서버에 연결할 수 없습니다. 당겨서 새로고침하거나 잠시 후 자동으로 재시도합니다.</Text>
           </View>
-        ) : departureTime ? (
+        ) : displayDepartureTime ? (
           <>
-            <Text style={styles.wakeTime}>{departureTime}</Text>
+            <Text style={styles.wakeTime}>{displayDepartureTime}</Text>
             <Text style={styles.wakeTimeSubLabel}>이 시각에 알람이 울립니다</Text>
           </>
         ) : (
@@ -220,7 +236,7 @@ export default function AlarmScreen() {
           )}
         </View>
         {!loading && (() => {
-          const label = getNextAlarmLabel(departureTime, activeDays, activeRoute?.isSkippedToday ?? false);
+          const label = getNextAlarmLabel(displayDepartureTime, activeDays, activeRoute?.isSkippedToday ?? false);
           if (!label) return null;
           const isToday = label.startsWith('오늘');
           return (
@@ -232,7 +248,7 @@ export default function AlarmScreen() {
             </View>
           );
         })()}
-        {!loading && !getNextAlarmLabel(departureTime, activeDays, activeRoute?.isSkippedToday ?? false) && activeRoute && (
+        {!loading && !getNextAlarmLabel(displayDepartureTime, activeDays, activeRoute?.isSkippedToday ?? false) && activeRoute && (
           <View style={styles.nextAlarmRow}>
             <Ionicons name="alert-circle-outline" size={13} color="rgba(255,255,255,0.7)" />
             <Text style={[styles.nextAlarmText, { color: 'rgba(255,255,255,0.7)' }]}>
