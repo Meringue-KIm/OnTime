@@ -450,12 +450,24 @@ export default function RouteScreen() {
 
           <View style={styles.alarmTabNote}>
             <Ionicons name="alarm-outline" size={13} color={colors.primary} />
-            <Text style={styles.alarmTabNoteText}>반복 요일과 여유 시간은 저장 후 알람 탭에서 조정할 수 있어요.</Text>
+            <Text style={styles.alarmTabNoteText}>
+              기본 설정: 여유 {buffer}분 · {activeDays.map(d => ['일','월','화','수','목','금','토'][d]).join('・')} 반복{'\n'}저장 후 알람 탭에서 세부 조정 가능해요.
+            </Text>
           </View>
 
           {/* 버튼 */}
           <View style={styles.formBtns}>
-            <TouchableOpacity style={styles.cancelBtn} onPress={() => setShowForm(false)}>
+            <TouchableOpacity style={styles.cancelBtn} onPress={() => {
+              const hasInput = homeAddr.trim() || workAddr.trim();
+              if (hasInput) {
+                Alert.alert('변경사항 버리기', '입력한 내용이 사라집니다. 취소하시겠습니까?', [
+                  { text: '계속 수정', style: 'cancel' },
+                  { text: '취소', style: 'destructive', onPress: () => setShowForm(false) },
+                ]);
+              } else {
+                setShowForm(false);
+              }
+            }}>
               <Text style={styles.cancelText}>취소</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.saveBtn, saving && { opacity: 0.6 }]} onPress={handleSave} disabled={saving}>

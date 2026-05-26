@@ -267,7 +267,9 @@ export default function HomeScreen() {
     .filter(a => !a.isDone && a.dDay > 0)
     .sort((a, b) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime())[0];
 
-  const upcomingCount = appointments.filter(a => !a.isDone && a.dDay >= 0).length;
+  const upcomingCount = appointments.filter(a => !a.isDone && (
+    (a.dDay === 0 && new Date(a.appointmentTime) > new Date()) || a.dDay > 0
+  )).length;
 
   return (
     <ScrollView
@@ -603,28 +605,36 @@ export default function HomeScreen() {
             )}
           </View>
         ) : (
-          todayAppts.slice(0, 2).map((item) => (
-            <View key={item.id} style={styles.scheduleItem}>
-              <View style={styles.scheduleIconWrap}>
-                <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+          <>
+            {todayAppts.slice(0, 2).map((item) => (
+              <View key={item.id} style={styles.scheduleItem}>
+                <View style={styles.scheduleIconWrap}>
+                  <Ionicons name="calendar-outline" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.scheduleTitle}>{item.title || item.destAddress}</Text>
+                  {item.title && <Text style={styles.scheduleLocation} numberOfLines={1}>{item.destAddress}</Text>}
+                </View>
+                <View style={{ alignItems: 'flex-end' }}>
+                  <Text style={styles.scheduleTime}>{formatApptTime(item.appointmentTime)}</Text>
+                  {(() => {
+                    const alarmMs = new Date(item.appointmentTime).getTime() - item.alarmBeforeMinutes * 60000;
+                    if (alarmMs > Date.now()) {
+                      const d = new Date(alarmMs);
+                      return <Text style={styles.scheduleAlarmHint}>알람 {String(d.getHours()).padStart(2,'0')}:{String(d.getMinutes()).padStart(2,'0')}</Text>;
+                    }
+                    return null;
+                  })()}
+                </View>
               </View>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.scheduleTitle}>{item.title || item.destAddress}</Text>
-                {item.title && <Text style={styles.scheduleLocation} numberOfLines={1}>{item.destAddress}</Text>}
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.scheduleTime}>{formatApptTime(item.appointmentTime)}</Text>
-                {(() => {
-                  const alarmMs = new Date(item.appointmentTime).getTime() - item.alarmBeforeMinutes * 60000;
-                  if (alarmMs > Date.now()) {
-                    const d = new Date(alarmMs);
-                    return <Text style={styles.scheduleAlarmHint}>알람 {String(d.getHours()).padStart(2,'0')}:{String(d.getMinutes()).padStart(2,'0')}</Text>;
-                  }
-                  return null;
-                })()}
-              </View>
-            </View>
-          ))
+            ))}
+            {todayAppts.length > 2 && (
+              <TouchableOpacity onPress={() => navigation.navigate('Appointment')} style={styles.scheduleMoreBtn}>
+                <Text style={styles.scheduleMoreText}>+{todayAppts.length - 2}건 더 보기</Text>
+                <Ionicons name="chevron-forward" size={13} color={colors.primary} />
+              </TouchableOpacity>
+            )}
+          </>
         )}
       </View>
 
@@ -714,6 +724,8 @@ const styles = StyleSheet.create({
   scheduleLocation: { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
   scheduleTime:     { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary },
   scheduleAlarmHint:{ fontSize: 10, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
+  scheduleMoreBtn:  { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3, paddingTop: 10, borderTopWidth: 1, borderTopColor: colors.border },
+  scheduleMoreText: { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary },
   footer:           { alignItems: 'center', paddingVertical: 20, gap: 4, marginTop: 8 },
   footerText:       { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted },
   weatherInfoPanel: { backgroundColor: colors.primaryLight, borderRadius: 10, padding: 12, marginTop: 8 },

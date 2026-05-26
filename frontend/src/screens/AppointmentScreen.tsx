@@ -260,12 +260,22 @@ export default function AppointmentScreen() {
             : item.dDay < 0 ? colors.danger
             : colors.primary;
 
+          const alarmMs = new Date(item.appointmentTime).getTime() - item.alarmBeforeMinutes * 60000;
+          const alarmLabel = (() => {
+            if (item.isDone || alarmMs <= Date.now()) return null;
+            const d = new Date(alarmMs);
+            return `알람 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+          })();
+
           return (
             <View key={item.id} style={styles.apptItem}>
               <View style={{ flex: 1 }}>
                 <Text style={styles.apptTitle}>{item.title || item.destAddress}</Text>
                 {item.title ? <Text style={styles.apptAddr} numberOfLines={1}>{item.destAddress}</Text> : null}
                 <Text style={styles.apptTime}>{timeStr}</Text>
+                {alarmLabel && (
+                  <Text style={styles.apptAlarmHint}>{alarmLabel}</Text>
+                )}
               </View>
               <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
                 <Text style={[styles.statusText, { color: statusColor }]}>{dDayText}</Text>
@@ -475,8 +485,8 @@ export default function AppointmentScreen() {
           </TouchableOpacity>
         )}
         <View style={[styles.row, { marginTop: 12, gap: 12 }]}>
-          <TouchableOpacity style={styles.cancelBtn} onPress={handleReset}>
-            <Text style={styles.cancelText}>초기화</Text>
+          <TouchableOpacity style={styles.cancelBtn} onPress={() => { handleReset(); setShowForm(false); }}>
+            <Text style={styles.cancelText}>취소</Text>
           </TouchableOpacity>
           <TouchableOpacity style={styles.submitBtn} onPress={async () => { const ok = await handleSubmit(); if (ok) setShowForm(false); }} disabled={submitting}>
             {submitting
@@ -524,6 +534,7 @@ const styles = StyleSheet.create({
   apptTitle:          { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },
   apptAddr:           { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 1 },
   apptTime:           { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
+  apptAlarmHint:      { fontSize: 11, fontFamily: fonts.regular, color: colors.primary, marginTop: 2 },
   statusBadge:        { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusText:         { fontSize: 12, fontFamily: fonts.semiBold },
   apptActionBtn:      { padding: 6, marginLeft: 2 },

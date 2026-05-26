@@ -85,9 +85,9 @@ export default function StatsScreen() {
   };
 
   const handleFeedback = (log: CommuteLog) => {
-    if (log.actualDiffMinutes !== null) return;
+    const isEdit = log.actualDiffMinutes !== null;
     Alert.alert(
-      '출근 결과 입력',
+      isEdit ? '출근 결과 수정' : '출근 결과 입력',
       `${formatDate(log.logDate)} 도착 목표 기준으로 어떠셨나요?`,
       [
         { text: '15분+ 일찍', onPress: () => doSubmitFeedback(log, -15) },
@@ -314,16 +314,20 @@ export default function StatsScreen() {
                   추천 출발: {log.recommendedDeparture ? extractTimeHHmm(log.recommendedDeparture) : '--:--'}
                 </Text>
               </View>
-              {log.isLate === null ? (
-                <TouchableOpacity
-                  style={[styles.tripBadge, styles.feedbackBtn]}
-                  onPress={() => handleFeedback(log)}
-                >
-                  <Ionicons name="pencil-outline" size={11} color={colors.primary} />
-                  <Text style={[styles.tripStatus, { color: colors.primary }]}>입력</Text>
-                </TouchableOpacity>
-              ) : (
-                <View style={[styles.tripBadge, { backgroundColor: log.isLate ? colors.danger + '20' : colors.success + '20' }]}>
+              <TouchableOpacity
+                style={[styles.tripBadge,
+                  log.isLate === null
+                    ? styles.feedbackBtn
+                    : { backgroundColor: log.isLate ? colors.danger + '20' : colors.success + '20' }
+                ]}
+                onPress={() => handleFeedback(log)}
+              >
+                {log.isLate === null ? (
+                  <>
+                    <Ionicons name="pencil-outline" size={11} color={colors.primary} />
+                    <Text style={[styles.tripStatus, { color: colors.primary }]}>입력</Text>
+                  </>
+                ) : (
                   <Text style={[styles.tripStatus, { color: log.isLate ? colors.danger : colors.success }]}>
                     {log.isLate
                       ? `+${log.actualDiffMinutes}분 지각`
@@ -331,8 +335,8 @@ export default function StatsScreen() {
                         ? '딱 맞게'
                         : `${Math.abs(log.actualDiffMinutes!)}분 일찍`}
                   </Text>
-                </View>
-              )}
+                )}
+              </TouchableOpacity>
             </View>
           ))
         )}

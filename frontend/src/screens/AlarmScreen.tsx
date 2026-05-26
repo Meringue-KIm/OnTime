@@ -52,6 +52,15 @@ export default function AlarmScreen() {
   const { today, loading, error: todayError, fetchToday } = useTodayStore();
   const departureTime = today?.recommendedDeparture ? extractTimeHHmm(today.recommendedDeparture) : null;
 
+  const [notifStatus, setNotifStatus]     = useState<string | null>(null);
+  const [activeDays, setActiveDays]       = useState([1, 2, 3, 4, 5]);
+  const [vibration, setVibration]         = useState(true);
+  const [refreshing, setRefreshing]       = useState(false);
+
+  const { routes, fetchRoutes, saveRoute, skipToday } = useRouteStore();
+  const activeRoute = routes.find(r => r.isActive) ?? routes[0];
+  const [buffer, setBuffer] = useState(20);
+
   // 버퍼 변경 시 즉시 출발 시간 계산 (서버 응답 대기 없이 로컬 반영)
   const localDepartureTime = React.useMemo(() => {
     if (!today?.drivingMinutes || !activeRoute?.arrivalTime) return null;
@@ -67,16 +76,7 @@ export default function AlarmScreen() {
   }, [buffer, today?.drivingMinutes, today?.weather?.bufferMinutes, today?.personalBuffer, activeRoute?.arrivalTime]);
 
   const displayDepartureTime = localDepartureTime ?? departureTime;
-
-  const [notifStatus, setNotifStatus]     = useState<string | null>(null);
-  const [activeDays, setActiveDays]       = useState([1, 2, 3, 4, 5]);
-  const [vibration, setVibration]         = useState(true);
-  const [refreshing, setRefreshing]       = useState(false);
-
-  const { routes, fetchRoutes, saveRoute, skipToday } = useRouteStore();
-  const activeRoute = routes.find(r => r.isActive) ?? routes[0];
-  const [buffer, setBuffer] = useState(20);
-  const [wakeUpEnabled, setWakeUpEnabled] = useState(false);
+  const [wakeUpEnabled, setWakeUpEnabled] = useState<boolean | null>(null);
   const [wakeUpMinutes, setWakeUpMinutes] = useState(60);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
   const [skipLoading, setSkipLoading] = useState(false);
@@ -106,14 +106,15 @@ export default function AlarmScreen() {
       setWakeUpEnabled(true);
       setWakeUpMinutes(activeRoute.wakeUpBeforeMinutes);
     } else {
-      setWakeUpEnabled(false);
+      setWakeUpEnabled(false); // null → false: 로드 완료 후 실제 값 확정
     }
     isInitialMount.current = false;
   }, [activeRoute?.id]);
 
-  // 요일/버퍼/기상알람 변경 시 자동 저장
+  // 요일/버퍼/기상알람 변경 시 자동 저장 (wakeUpEnabled null = 아직 로드 중, 저장 안 함)
   useEffect(() => {
     if (isInitialMount.current) return;
+    if (wakeUpEnabled === null) return;
     autoSave(buffer, activeDays, wakeUpEnabled ? wakeUpMinutes : null);
   }, [buffer, activeDays, wakeUpEnabled, wakeUpMinutes]);
 
@@ -311,12 +312,20 @@ export default function AlarmScreen() {
               </Text>
             </View>
             <View style={styles.bufferControls}>
-              <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.max(BUFFER_MIN, b - BUFFER_STEP))}>
-                <Ionicons name="remove" size={20} color={colors.primary} />
+              <TouchableOpacity
+                style={[styles.bufferBtn, buffer <= BUFFER_MIN && styles.bufferBtnDisabled]}
+                onPress={() => setBuffer(b => Math.max(BUFFER_MIN, b - BUFFER_STEP))}
+                disabled={buffer <= BUFFER_MIN}
+              >
+                <Ionicons name="remove" size={20} color={buffer <= BUFFER_MIN ? colors.textMuted : colors.primary} />
               </TouchableOpacity>
               <Text style={styles.bufferControlValue}>{buffer}분</Text>
-              <TouchableOpacity style={styles.bufferBtn} onPress={() => setBuffer(b => Math.min(BUFFER_MAX, b + BUFFER_STEP))}>
-                <Ionicons name="add" size={20} color={colors.primary} />
+              <TouchableOpacity
+                style={[styles.bufferBtn, buffer >= BUFFER_MAX && styles.bufferBtnDisabled]}
+                onPress={() => setBuffer(b => Math.min(BUFFER_MAX, b + BUFFER_STEP))}
+                disabled={buffer >= BUFFER_MAX}
+              >
+                <Ionicons name="add" size={20} color={buffer >= BUFFER_MAX ? colors.textMuted : colors.primary} />
               </TouchableOpacity>
             </View>
           </View>
@@ -353,8 +362,8 @@ export default function AlarmScreen() {
         </View>
       )}
 
-      {/* 기상 알람 */}
-      {activeRoute && (
+      {/* 기상 알람 — wakeUpEnabled가 null이면 루트 로드 전이므로 렌더링 생략(깜빡임 방지) */}
+      {activeRoute && wakeUpEnabled !== null && (
         <View style={styles.card}>
           <View style={styles.rowBetween}>
             <Text style={styles.sectionTitle}>⏰ 기상 알람</Text>
@@ -384,12 +393,20 @@ export default function AlarmScreen() {
                 출발 {wakeUpMinutes}분 전에 기상 알람이 울려요
               </Text>
               <View style={styles.bufferControls}>
-                <TouchableOpacity style={styles.bufferBtn} onPress={() => setWakeUpMinutes(m => Math.max(15, m - 15))}>
-                  <Ionicons name="remove" size={20} color={colors.primary} />
+                <TouchableOpacity
+                  style={[styles.bufferBtn, wakeUpMinutes <= 15 && styles.bufferBtnDisabled]}
+                  onPress={() => setWakeUpMinutes(m => Math.max(15, m - 15))}
+                  disabled={wakeUpMinutes <= 15}
+                >
+                  <Ionicons name="remove" size={20} color={wakeUpMinutes <= 15 ? colors.textMuted : colors.primary} />
                 </TouchableOpacity>
                 <Text style={styles.bufferControlValue}>{wakeUpMinutes}분 전</Text>
-                <TouchableOpacity style={styles.bufferBtn} onPress={() => setWakeUpMinutes(m => Math.min(120, m + 15))}>
-                  <Ionicons name="add" size={20} color={colors.primary} />
+                <TouchableOpacity
+                  style={[styles.bufferBtn, wakeUpMinutes >= 120 && styles.bufferBtnDisabled]}
+                  onPress={() => setWakeUpMinutes(m => Math.min(120, m + 15))}
+                  disabled={wakeUpMinutes >= 120}
+                >
+                  <Ionicons name="add" size={20} color={wakeUpMinutes >= 120 ? colors.textMuted : colors.primary} />
                 </TouchableOpacity>
               </View>
             </>
@@ -496,6 +513,7 @@ const styles = StyleSheet.create({
   infoText:            { flex: 1, fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 18 },
   bufferControls:      { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 24 },
   bufferBtn:           { width: 40, height: 40, borderRadius: 20, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  bufferBtnDisabled:   { backgroundColor: colors.border, opacity: 0.5 },
   bufferControlValue:  { fontSize: 18, fontFamily: fonts.bold, color: colors.textPrimary, minWidth: 60, textAlign: 'center' },
   settingRow:          { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 12, borderTopWidth: 1, borderTopColor: colors.border },
   settingIconWrap:     { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
