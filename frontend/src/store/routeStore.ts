@@ -10,6 +10,7 @@ interface RouteState {
   saveRoute: (data: RouteRequest, id?: number) => Promise<void>;
   activateRoute: (id: number) => Promise<void>;
   removeRoute: (id: number) => Promise<void>;
+  skipToday: () => Promise<void>;
   reset: () => void;
 }
 
@@ -60,6 +61,11 @@ export const useRouteStore = create<RouteState>((set) => ({
     await routeApi.deleteRoute(id);
     set(state => ({ routes: state.routes.filter(r => r.id !== id) }));
     if (wasActive) cancelAllAlarms().catch(() => {});
+  },
+
+  skipToday: async () => {
+    const { data: updated } = await routeApi.skipToday();
+    set(state => ({ routes: state.routes.map(r => r.isActive ? updated : r) }));
   },
 
   reset: () => set({ routes: [], loading: false }),

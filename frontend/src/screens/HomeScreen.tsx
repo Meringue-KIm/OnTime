@@ -448,6 +448,17 @@ export default function HomeScreen() {
                     </View>
                   </>
                 )}
+                {(today.personalBuffer ?? 0) !== 0 && (
+                  <>
+                    <Text style={styles.breakdownPlus}>+</Text>
+                    <View style={styles.breakdownChip}>
+                      <Ionicons name="analytics-outline" size={11} color="rgba(255,255,255,0.9)" />
+                      <Text style={styles.breakdownChipText}>
+                        패턴 {(today.personalBuffer ?? 0) > 0 ? '+' : ''}{today.personalBuffer}분
+                      </Text>
+                    </View>
+                  </>
+                )}
               </View>
             )}
             <View style={styles.trafficRow}>

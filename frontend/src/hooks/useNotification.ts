@@ -6,6 +6,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Audio } from 'expo-av';
 import { updateFcmToken } from '../api/auth';
 import { cancelLocalAlarm } from '../utils/localAlarm';
+import { submitFeedback } from '../api/logs';
 
 const STORAGE_KEYS = {
   vibration: 'alarm_vibration',
@@ -80,16 +81,15 @@ export function useNotification(): UseNotificationResult {
       updateFcmToken(token).catch(() => {});
     })();
 
-    // 포그라운드 알림 수신 — 출발 알람이면 로컬 알람 취소 후 사운드 재생
+    // 포그라운드 알림 수신
     const sub = Notifications.addNotificationReceivedListener(async (notification) => {
       if (Platform.OS === 'web') return;
+      const type = notification.request.content.data?.type as string | undefined;
+      // 기상·피드백 알람은 사운드 없이 조용히 표시
+      if (type === 'wakeup' || type === 'feedback') return;
 
-      const title = notification.request.content.title ?? '';
-      if (title.includes('출발할 시간')) {
-        // FCM이 도착했으면 로컬 알람은 필요 없음 — 이중 알람 방지
-        cancelLocalAlarm().catch(() => {});
-      }
-
+      // 출발 알람: 로컬 알람 취소 + 사운드 재생
+      cancelLocalAlarm().catch(() => {});
       await stopAlarm();
       try {
         await Audio.setAudioModeAsync({ playsInSilentModeIOS: true });
@@ -102,13 +102,37 @@ export function useNotification(): UseNotificationResult {
       } catch {}
     });
 
-    // 알림 탭 — 사운드 중단 + 스누즈 or 끄기 선택
+    // 알림 탭
     const responseSub = Notifications.addNotificationResponseReceivedListener((response) => {
       stopAlarm();
-      const title = response.notification.request.content.title ?? '';
+      const data  = response.notification.request.content.data as Record<string, string> | undefined;
+      const type  = data?.type;
       const body  = response.notification.request.content.body ?? '';
-      const isDepartureAlarm = title.includes('출발할 시간');
 
+      // 피드백 알람 탭 → 바로 피드백 다이얼로그
+      if (type === 'feedback' && data?.logId) {
+        const logId = Number(data.logId);
+        const doFeedback = (diff: number) =>
+          submitFeedback(logId, diff).catch(() => Alert.alert('오류', '저장 실패. 통계 탭에서 다시 입력해주세요.'));
+        Alert.alert(
+          '오늘 출근 결과',
+          '도착 목표 시간 기준으로 어떠셨나요?',
+          [
+            { text: '15분+ 일찍', onPress: () => doFeedback(-15) },
+            { text: '5분 일찍',   onPress: () => doFeedback(-5)  },
+            { text: '딱 맞게',    onPress: () => doFeedback(0)   },
+            { text: '5~10분 늦음', onPress: () => doFeedback(7)  },
+            { text: '15분+ 늦음', onPress: () => doFeedback(20)  },
+            { text: '취소', style: 'cancel' },
+          ],
+        );
+        return;
+      }
+
+      // 기상 알람 탭 → 조용히 닫기
+      if (type === 'wakeup') return;
+
+      // 출발 알람 탭 → 스누즈 or 끄기
       Alert.alert(
         '알람을 끄시겠어요?',
         body,
@@ -125,10 +149,7 @@ export function useNotification(): UseNotificationResult {
           {
             text: '알람 끄기',
             style: 'destructive',
-            onPress: () => {
-              // 출발 알람이면 홈화면에 배너 표시
-              if (isDepartureAlarm) setAlarmFired(true);
-            },
+            onPress: () => setAlarmFired(true),
           },
         ],
       );

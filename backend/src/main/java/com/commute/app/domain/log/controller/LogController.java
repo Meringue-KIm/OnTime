@@ -59,6 +59,7 @@ public class LogController {
 
                     Map<String, Object> result = new HashMap<>();
                     result.put("recommendedDeparture", recommended);
+                    if (personalBuffer != 0) result.put("personalBuffer", personalBuffer);
                     result.put("arrivalTime", route.getArrivalTime());
                     result.put("drivingMinutes", drivingMinutes);
                     weatherOpt.ifPresent(w -> result.put("weather", Map.of(

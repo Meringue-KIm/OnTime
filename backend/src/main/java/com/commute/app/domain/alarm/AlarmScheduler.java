@@ -45,11 +45,13 @@ public class AlarmScheduler {
         int todayIndex = LocalDate.now().getDayOfWeek().getValue() % 7;
 
         // 분당 1회만 발송 — 복수 루트 활성 시 중복 알람 방지
-        java.util.Set<Long> alarmedUsers = new java.util.HashSet<>();
+        java.util.Set<Long> alarmedUsers     = new java.util.HashSet<>();
+        java.util.Set<Long> wakeUpAlarmedUsers = new java.util.HashSet<>();
 
         List<CommuteRoute> routes = routeRepository.findAllByIsActiveTrue();
         for (CommuteRoute route : routes) {
             if (!route.isActiveDay(todayIndex)) continue;
+            if (route.isSkippedToday()) continue;
             String fcmToken = route.getUser().getFcmToken();
             if (fcmToken == null || fcmToken.isBlank()) continue;
 
@@ -69,10 +71,24 @@ public class AlarmScheduler {
                     .minusMinutes(drivingMinutes + route.getAlarmBeforeMinutes() + weatherBuffer + personalBuffer);
 
             Long userId = route.getUser().getId();
+
+            // 기상 알람
+            if (route.getWakeUpBeforeMinutes() != null && !wakeUpAlarmedUsers.contains(userId)) {
+                LocalTime wakeUpTime = departureTime.minusMinutes(route.getWakeUpBeforeMinutes());
+                if (now.equals(wakeUpTime)) {
+                    fcmService.sendPushNotification(fcmToken, "기상 시간이에요! ☀️",
+                            "출발까지 " + route.getWakeUpBeforeMinutes() + "분 남았어요. 준비를 시작하세요.",
+                            java.util.Map.of("type", "wakeup"));
+                    wakeUpAlarmedUsers.add(userId);
+                }
+            }
+
+            // 출발 알람
             if (now.equals(departureTime) && !alarmedUsers.contains(userId)) {
                 String title = "출발할 시간이에요!";
                 String body  = buildAlarmBody(drivingMinutes, weatherOpt.orElse(null));
-                fcmService.sendPushNotification(fcmToken, title, body);
+                fcmService.sendPushNotification(fcmToken, title, body,
+                        java.util.Map.of("type", "departure"));
                 alarmedUsers.add(userId);
                 log.info("알람 발송 — userId={}, 출발={}", userId, departureTime);
 
@@ -160,11 +176,12 @@ public class AlarmScheduler {
 
             logRepository.findByUserIdAndLogDate(route.getUser().getId(), today)
                     .ifPresent(commuteLog -> {
-                        if (commuteLog.getIsLate() != null) return;
+                        if (commuteLog.getActualDiffMinutes() != null) return;
                         fcmService.sendPushNotification(
                                 fcmToken,
                                 "오늘 출근은 어떠셨나요? 😊",
-                                "정시 도착 여부를 기록하면 맞춤 알람이 더 정확해져요.");
+                                "도착 결과를 기록하면 맞춤 알람이 더 정확해져요.",
+                                java.util.Map.of("type", "feedback", "logId", String.valueOf(commuteLog.getId())));
                         log.info("피드백 알림 발송 — userId={}", route.getUser().getId());
                     });
         }

@@ -56,10 +56,13 @@ export default function AlarmScreen() {
   const [vibration, setVibration]         = useState(true);
   const [refreshing, setRefreshing]       = useState(false);
 
-  const { routes, fetchRoutes, saveRoute } = useRouteStore();
+  const { routes, fetchRoutes, saveRoute, skipToday } = useRouteStore();
   const activeRoute = routes.find(r => r.isActive) ?? routes[0];
   const [buffer, setBuffer] = useState(20);
+  const [wakeUpEnabled, setWakeUpEnabled] = useState(false);
+  const [wakeUpMinutes, setWakeUpMinutes] = useState(60);
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [skipLoading, setSkipLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialMount = useRef(true);
 
@@ -82,31 +85,38 @@ export default function AlarmScreen() {
     if (activeRoute.activeDays) {
       setActiveDays(activeRoute.activeDays.split(',').map(Number));
     }
+    if (activeRoute.wakeUpBeforeMinutes) {
+      setWakeUpEnabled(true);
+      setWakeUpMinutes(activeRoute.wakeUpBeforeMinutes);
+    } else {
+      setWakeUpEnabled(false);
+    }
     isInitialMount.current = false;
   }, [activeRoute?.id]);
 
-  // 요일/버퍼 변경 시 자동 저장
+  // 요일/버퍼/기상알람 변경 시 자동 저장
   useEffect(() => {
     if (isInitialMount.current) return;
-    autoSave(buffer, activeDays);
-  }, [buffer, activeDays]);
+    autoSave(buffer, activeDays, wakeUpEnabled ? wakeUpMinutes : null);
+  }, [buffer, activeDays, wakeUpEnabled, wakeUpMinutes]);
 
-  const autoSave = useCallback((newBuffer: number, newDays: number[]) => {
+  const autoSave = useCallback((newBuffer: number, newDays: number[], newWakeUp: number | null) => {
     if (!activeRoute) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     setSaveStatus('saving');
     debounceRef.current = setTimeout(async () => {
       try {
         await saveRoute({
-          homeAddress:        activeRoute.homeAddress,
-          homeLat:            activeRoute.homeLat,
-          homeLng:            activeRoute.homeLng,
-          workAddress:        activeRoute.workAddress,
-          workLat:            activeRoute.workLat,
-          workLng:            activeRoute.workLng,
-          arrivalTime:        activeRoute.arrivalTime,
-          alarmBeforeMinutes: newBuffer,
-          activeDays:         newDays.join(','),
+          homeAddress:          activeRoute.homeAddress,
+          homeLat:              activeRoute.homeLat,
+          homeLng:              activeRoute.homeLng,
+          workAddress:          activeRoute.workAddress,
+          workLat:              activeRoute.workLat,
+          workLng:              activeRoute.workLng,
+          arrivalTime:          activeRoute.arrivalTime,
+          alarmBeforeMinutes:   newBuffer,
+          activeDays:           newDays.join(','),
+          wakeUpBeforeMinutes:  newWakeUp,
         }, activeRoute.id);
         fetchToday(); // 버퍼/요일 변경 반영된 출발 시간 즉시 갱신
         setSaveStatus('saved');
@@ -282,6 +292,71 @@ export default function AlarmScreen() {
             </View>
           </View>
         </>
+      )}
+
+      {/* 오늘 쉬어요 */}
+      {activeRoute && (
+        <View style={styles.card}>
+          <View style={styles.rowBetween}>
+            <View>
+              <Text style={styles.sectionTitle}>🏖️ 오늘 알람 건너뛰기</Text>
+              <Text style={[styles.autoSaveText, { marginTop: -10, marginBottom: 4 }]}>
+                재택·반차·휴가 등 오늘 하루만 알람을 끕니다
+              </Text>
+            </View>
+            <Switch
+              value={activeRoute.isSkippedToday}
+              onValueChange={async () => {
+                setSkipLoading(true);
+                try { await skipToday(); } finally { setSkipLoading(false); }
+              }}
+              disabled={skipLoading}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
+          {activeRoute.isSkippedToday && (
+            <View style={[styles.infoBanner, { marginTop: 0 }]}>
+              <Ionicons name="moon-outline" size={14} color={colors.primary} />
+              <Text style={styles.infoText}>오늘 출발 알람이 비활성화됐어요. 내일부터 자동으로 다시 울려요.</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* 기상 알람 */}
+      {activeRoute && (
+        <View style={styles.card}>
+          <View style={styles.rowBetween}>
+            <Text style={styles.sectionTitle}>⏰ 기상 알람</Text>
+            <Switch
+              value={wakeUpEnabled}
+              onValueChange={v => setWakeUpEnabled(v)}
+              trackColor={{ false: colors.border, true: colors.primary }}
+              thumbColor="#fff"
+            />
+          </View>
+          {wakeUpEnabled ? (
+            <>
+              <Text style={[styles.autoSaveText, { marginBottom: 12 }]}>
+                출발 {wakeUpMinutes}분 전에 기상 알람이 울려요
+              </Text>
+              <View style={styles.bufferControls}>
+                <TouchableOpacity style={styles.bufferBtn} onPress={() => setWakeUpMinutes(m => Math.max(15, m - 15))}>
+                  <Ionicons name="remove" size={20} color={colors.primary} />
+                </TouchableOpacity>
+                <Text style={styles.bufferControlValue}>{wakeUpMinutes}분 전</Text>
+                <TouchableOpacity style={styles.bufferBtn} onPress={() => setWakeUpMinutes(m => Math.min(120, m + 15))}>
+                  <Ionicons name="add" size={20} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <Text style={[styles.autoSaveText, { marginTop: -10 }]}>
+              출발 전 미리 기상 알람을 받으려면 켜주세요
+            </Text>
+          )}
+        </View>
       )}
 
       {/* 테스트 알람 */}

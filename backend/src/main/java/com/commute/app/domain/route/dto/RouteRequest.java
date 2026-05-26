@@ -15,5 +15,6 @@ public record RouteRequest(
         @NotNull Integer alarmBeforeMinutes,
         String activeDays,
         String transportMode,
-        Integer customTravelMinutes
+        Integer customTravelMinutes,
+        Integer wakeUpBeforeMinutes
 ) {}

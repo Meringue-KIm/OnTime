@@ -18,6 +18,7 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Base64;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -54,9 +55,13 @@ public class FcmService {
     }
 
     public void sendPushNotification(String fcmToken, String title, String body) {
+        sendPushNotification(fcmToken, title, body, Map.of());
+    }
+
+    public void sendPushNotification(String fcmToken, String title, String body, Map<String, String> data) {
         if (fcmToken == null || fcmToken.isBlank()) return;
         try {
-            Message message = Message.builder()
+            Message.Builder builder = Message.builder()
                     .setToken(fcmToken)
                     .setNotification(Notification.builder()
                             .setTitle(title)
@@ -66,9 +71,9 @@ public class FcmService {
                             .setNotification(AndroidNotification.builder()
                                     .setChannelId("alarm")
                                     .build())
-                            .build())
-                    .build();
-            String response = FirebaseMessaging.getInstance().send(message);
+                            .build());
+            data.forEach(builder::putData);
+            String response = FirebaseMessaging.getInstance().send(builder.build());
             log.info("FCM 전송 성공: {}", response);
         } catch (Exception e) {
             log.warn("FCM 전송 실패 (token={}): {}", fcmToken, e.getMessage());

@@ -14,6 +14,7 @@ export interface TodayResponse {
   logDate?: string;
   message?: string;
   weather?: WeatherData;
+  personalBuffer?: number;
 }
 
 export const getToday = () => client.get<TodayResponse>('/today');
