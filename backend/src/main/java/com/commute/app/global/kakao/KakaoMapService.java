@@ -1,5 +1,6 @@
 package com.commute.app.global.kakao;
 
+import com.commute.app.global.odsay.OdsayService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -20,9 +21,11 @@ public class KakaoMapService {
 
     private final RestClient restClient = RestClient.create();
     private final StringRedisTemplate redisTemplate;
+    private final OdsayService odsayService;
 
-    public KakaoMapService(StringRedisTemplate redisTemplate) {
+    public KakaoMapService(StringRedisTemplate redisTemplate, OdsayService odsayService) {
         this.redisTemplate = redisTemplate;
+        this.odsayService = odsayService;
     }
 
     public record Coordinates(Double lat, Double lng) {}
@@ -78,6 +81,11 @@ public class KakaoMapService {
             return Optional.of(minutes);
         }
 
+        if ("transit".equals(transportMode)) {
+            Optional<Integer> odsayResult = odsayService.getTransitMinutes(originLat, originLng, destLat, destLng);
+            if (odsayResult.isPresent()) return odsayResult;
+        }
+
         if (restApiKey.isBlank()) return Optional.empty();
 
         String key = String.format("kakao:directions:%s:%.4f:%.4f:%.4f:%.4f",
@@ -105,9 +113,7 @@ public class KakaoMapService {
             if (summary == null) return Optional.empty();
 
             int carMinutes = (int) Math.ceil(summary.duration() / 60.0);
-            int minutes = "transit".equals(transportMode)
-                    ? (int) Math.ceil(carMinutes * 1.4)
-                    : carMinutes;
+            int minutes = carMinutes;
 
             try {
                 redisTemplate.opsForValue().set(key, String.valueOf(minutes), 30, TimeUnit.MINUTES);
