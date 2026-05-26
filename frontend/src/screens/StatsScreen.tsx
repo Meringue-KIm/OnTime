@@ -99,14 +99,6 @@ export default function StatsScreen() {
     );
   };
 
-  if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator color={colors.primary} size="large" />
-      </View>
-    );
-  }
-
   return (
     <ScrollView
       style={styles.container}
@@ -120,6 +112,13 @@ export default function StatsScreen() {
           <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
         </TouchableOpacity>
       </View>
+
+      {loading && (
+        <View style={styles.loadingInline}>
+          <ActivityIndicator color={colors.primary} size="large" />
+          <Text style={styles.loadingText}>통계를 불러오는 중...</Text>
+        </View>
+      )}
 
       {loadError && !usingCache && (
         <View style={styles.errorInline}>
@@ -136,7 +135,7 @@ export default function StatsScreen() {
         </View>
       )}
 
-      {(!loadError || usingCache) && (
+      {!loading && (!loadError || usingCache) && (
       <>
       {/* Insight Card */}
       <View style={styles.insightCard}>
@@ -196,28 +195,15 @@ export default function StatsScreen() {
         </View>
       )}
 
-      {/* 피드백 미입력 배너 */}
+      {/* 피드백 미입력 배너 — 탭하면 아래 목록과 동일한 Alert 표시 */}
       {pendingFeedbackLog && (
-        <View style={styles.feedbackBanner}>
+        <TouchableOpacity style={styles.feedbackBanner} onPress={() => handleFeedback(pendingFeedbackLog)}>
           <Ionicons name="pencil-outline" size={16} color={colors.primary} />
-          <Text style={styles.feedbackBannerText}>
+          <Text style={[styles.feedbackBannerText, { flex: 1 }]}>
             {formatDate(pendingFeedbackLog.logDate)} 출근 결과를 입력해주세요
           </Text>
-          <View style={styles.feedbackBannerBtns}>
-            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, -15)}>
-              <Text style={styles.feedbackBannerBtnText}>15분+ 일찍</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, 0)}>
-              <Text style={styles.feedbackBannerBtnText}>딱 맞게</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.feedbackBannerBtn, { backgroundColor: '#EF9A9A' }]} onPress={() => doSubmitFeedback(pendingFeedbackLog, 7)}>
-              <Text style={[styles.feedbackBannerBtnText, { color: '#B71C1C' }]}>살짝 늦음</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.feedbackBannerBtn, { backgroundColor: '#EF9A9A' }]} onPress={() => doSubmitFeedback(pendingFeedbackLog, 20)}>
-              <Text style={[styles.feedbackBannerBtnText, { color: '#B71C1C' }]}>많이 늦음</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+        </TouchableOpacity>
       )}
 
       {/* Weekly Chart */}
@@ -380,6 +366,8 @@ function getWeekLabel(d: Date): string {
 const styles = StyleSheet.create({
   container:        { flex: 1, backgroundColor: colors.bg },
   center:           { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.bg, gap: 12 },
+  loadingInline:    { alignItems: 'center', paddingVertical: 48, gap: 12 },
+  loadingText:      { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted },
   errorInline:      { alignItems: 'center', paddingVertical: 48, gap: 8, marginHorizontal: 20 },
   errorText:        { fontSize: 14, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center' },
   retryBtn:         { marginTop: 4, backgroundColor: colors.primaryLight, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
@@ -400,11 +388,8 @@ const styles = StyleSheet.create({
   suggestionText:    { fontSize: 13, fontFamily: fonts.regular, color: '#5D4037', lineHeight: 18 },
   suggestionBtn:     { alignSelf: 'flex-start', backgroundColor: '#E65100', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20 },
   suggestionBtnText: { fontSize: 13, fontFamily: fonts.semiBold, color: '#fff' },
-  feedbackBanner:       { marginHorizontal: 20, marginBottom: 12, backgroundColor: colors.primaryLight, borderRadius: 12, padding: 12, gap: 8 },
-  feedbackBannerText:   { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textPrimary, flex: 1 },
-  feedbackBannerBtns:   { flexDirection: 'row', gap: 8 },
-  feedbackBannerBtn:    { flex: 1, paddingVertical: 8, borderRadius: 8, backgroundColor: colors.primary, alignItems: 'center' },
-  feedbackBannerBtnText:{ fontSize: 13, fontFamily: fonts.semiBold, color: '#fff' },
+  feedbackBanner:       { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginBottom: 12, backgroundColor: colors.primaryLight, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13 },
+  feedbackBannerText:   { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textPrimary },
   card:             { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   sectionTitle:     { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 },
   chartContainer:   { flexDirection: 'row', alignItems: 'flex-end', height: 120, gap: 8, paddingTop: 8 },

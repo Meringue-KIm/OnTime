@@ -64,6 +64,7 @@ export default function HomeScreen() {
   }, []);
   const [showWeatherInfo, setShowWeatherInfo] = useState(false);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
+  const [weatherRefreshToken, setWeatherRefreshToken] = useState(0);
 
   const { routes, fetchRoutes } = useRouteStore();
   const { appointments, fetchAppointments } = useAppointmentStore();
@@ -72,6 +73,7 @@ export default function HomeScreen() {
 
   const onRefresh = async () => {
     setRefreshing(true);
+    setWeatherRefreshToken(t => t + 1);
     await Promise.all([fetchRoutes(), fetchAppointments(), fetchToday()]);
     setRefreshing(false);
   };
@@ -186,7 +188,7 @@ export default function HomeScreen() {
     getWeatherSummary(lat, lng)
       .then(({ data }) => { setWeather(data); setWeatherError(false); })
       .catch(() => setWeatherError(true));
-  }, [selectedCity, gpsCoords?.lat, gpsCoords?.lng, activeRoute?.homeLat, activeRoute?.homeLng]);
+  }, [selectedCity, gpsCoords?.lat, gpsCoords?.lng, activeRoute?.homeLat, activeRoute?.homeLng, weatherRefreshToken]);
 
   const handleSelectCity = (city: City | null) => {
     setSelectedCity(city);
@@ -341,7 +343,10 @@ export default function HomeScreen() {
             {today.drivingMinutes !== undefined && (
               <View style={styles.breakdownRow}>
                 <View style={styles.breakdownChip}>
-                  <Ionicons name="car-outline" size={11} color="rgba(255,255,255,0.9)" />
+                  <Ionicons
+                    name={activeRoute?.transportMode === 'transit' ? 'bus-outline' : activeRoute?.transportMode === 'walk' ? 'walk-outline' : 'car-outline'}
+                    size={11} color="rgba(255,255,255,0.9)"
+                  />
                   <Text style={styles.breakdownChipText}>이동 {today.drivingMinutes}분</Text>
                 </View>
                 {(today.weather?.bufferMinutes ?? 0) > 0 && (

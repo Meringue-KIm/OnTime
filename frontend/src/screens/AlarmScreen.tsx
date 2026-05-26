@@ -61,8 +61,9 @@ export default function AlarmScreen() {
   const activeRoute = routes.find(r => r.isActive) ?? routes[0];
   const [buffer, setBuffer] = useState(20);
 
-  // 버퍼 변경 시 즉시 출발 시간 계산 (서버 응답 대기 없이 로컬 반영)
+  // 버퍼 변경 시 즉시 출발 시간 계산 (단, 오늘 알람 발송 완료 후에는 서버 값 유지)
   const localDepartureTime = React.useMemo(() => {
+    if (today?.logDate) return null; // 발송 완료 → 서버 값 그대로, 혼란 방지
     if (!today?.drivingMinutes || !activeRoute?.arrivalTime) return null;
     const arrParts = activeRoute.arrivalTime.split(':').map(Number);
     const arrivalMin = arrParts[0] * 60 + arrParts[1];
@@ -73,7 +74,7 @@ export default function AlarmScreen() {
     const h = Math.floor(norm / 60);
     const m = norm % 60;
     return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}`;
-  }, [buffer, today?.drivingMinutes, today?.weather?.bufferMinutes, today?.personalBuffer, activeRoute?.arrivalTime]);
+  }, [today?.logDate, buffer, today?.drivingMinutes, today?.weather?.bufferMinutes, today?.personalBuffer, activeRoute?.arrivalTime]);
 
   const displayDepartureTime = localDepartureTime ?? departureTime;
   const [wakeUpEnabled, setWakeUpEnabled] = useState<boolean | null>(null);

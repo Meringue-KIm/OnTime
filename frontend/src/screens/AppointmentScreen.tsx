@@ -3,6 +3,7 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Image, Platform, RefreshControl,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
@@ -55,6 +56,7 @@ export default function AppointmentScreen() {
   const [webTime, setWebTime] = useState('09:00');
 
   const [refreshing, setRefreshing] = useState(false);
+  const [completingId, setCompletingId] = useState<number | null>(null);
   const [showDone, setShowDone] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -75,20 +77,25 @@ export default function AppointmentScreen() {
     }, [])
   );
 
-  // 세션 내 최초 1회 — 미완료 지난 약속 일괄 완료 제안
+  // 하루 1회 — 미완료 지난 약속 일괄 완료 제안
   useEffect(() => {
     if (loading || expiredAlertShownRef.current) return;
     const expired = appointments.filter(a => !a.isDone && a.dDay < 0);
     if (expired.length === 0) return;
     expiredAlertShownRef.current = true;
-    Alert.alert(
-      '지난 약속 정리',
-      `${expired.length}건의 지난 약속이 완료 처리되지 않았어요.\n일괄 완료 처리할까요?`,
-      [
-        { text: '나중에', style: 'cancel' },
-        { text: '완료 처리', onPress: () => Promise.all(expired.map(a => completeDone(a.id))).catch(() => {}) },
-      ],
-    );
+    const todayStr = new Date().toISOString().slice(0, 10);
+    AsyncStorage.getItem('expired_alert_date').then(last => {
+      if (last === todayStr) return;
+      AsyncStorage.setItem('expired_alert_date', todayStr).catch(() => {});
+      Alert.alert(
+        '지난 약속 정리',
+        `${expired.length}건의 지난 약속이 완료 처리되지 않았어요.\n일괄 완료 처리할까요?`,
+        [
+          { text: '나중에', style: 'cancel' },
+          { text: '완료 처리', onPress: () => Promise.all(expired.map(a => completeDone(a.id))).catch(() => {}) },
+        ],
+      );
+    });
   }, [loading]);
 
   const onRefresh = async () => {
@@ -110,7 +117,11 @@ export default function AppointmentScreen() {
   };
 
   const handleComplete = (id: number) => {
-    completeDone(id).catch((e: any) => Alert.alert('오류', getErrorMessage(e)));
+    if (completingId !== null) return;
+    setCompletingId(id);
+    completeDone(id)
+      .catch((e: any) => Alert.alert('오류', getErrorMessage(e)))
+      .finally(() => setCompletingId(null));
   };
 
   const handleDelete = (id: number, onSuccess?: () => void) => {
@@ -248,56 +259,78 @@ export default function AppointmentScreen() {
           </View>
         )}
 
-        {appointments
-          .filter(item => showDone || (!item.isDone && item.dDay >= 0))
-          .map((item) => {
-          const timeStr = formatKoreanDateTime(item.appointmentTime);
-          const dDayText = item.isDone ? '완료'
-            : item.dDay === 0 ? 'D-Day'
-            : item.dDay > 0  ? `D-${item.dDay}`
-            : '종료';
-          const statusColor = item.isDone ? colors.success
-            : item.dDay < 0 ? colors.danger
-            : colors.primary;
-
-          const alarmMs = new Date(item.appointmentTime).getTime() - item.alarmBeforeMinutes * 60000;
-          const alarmLabel = (() => {
-            if (item.isDone || alarmMs <= Date.now()) return null;
-            const d = new Date(alarmMs);
-            return `알람 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
-          })();
-
-          return (
-            <View key={item.id} style={styles.apptItem}>
-              <View style={{ flex: 1 }}>
-                <Text style={styles.apptTitle}>{item.title || item.destAddress}</Text>
-                {item.title ? <Text style={styles.apptAddr} numberOfLines={1}>{item.destAddress}</Text> : null}
-                <Text style={styles.apptTime}>{timeStr}</Text>
-                {alarmLabel && (
-                  <Text style={styles.apptAlarmHint}>{alarmLabel}</Text>
+        {(() => {
+          const renderItem = (item: import('../api/appointments').AppointmentResponse) => {
+            const timeStr = formatKoreanDateTime(item.appointmentTime);
+            const isPastToday = item.dDay === 0 && !item.isDone && new Date(item.appointmentTime) <= new Date();
+            const dDayText = item.isDone ? '완료'
+              : (item.dDay < 0 || isPastToday) ? '종료'
+              : item.dDay === 0 ? 'D-Day'
+              : `D-${item.dDay}`;
+            const statusColor = item.isDone ? colors.success
+              : (item.dDay < 0 || isPastToday) ? colors.danger
+              : colors.primary;
+            const alarmMs = new Date(item.appointmentTime).getTime() - item.alarmBeforeMinutes * 60000;
+            const alarmLabel = (() => {
+              if (item.isDone || alarmMs <= Date.now()) return null;
+              const d = new Date(alarmMs);
+              return `알람 ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+            })();
+            return (
+              <View key={item.id} style={styles.apptItem}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.apptTitle}>{item.title || item.destAddress}</Text>
+                  {item.title ? <Text style={styles.apptAddr} numberOfLines={1}>{item.destAddress}</Text> : null}
+                  <Text style={styles.apptTime}>{timeStr}</Text>
+                  {alarmLabel && <Text style={styles.apptAlarmHint}>{alarmLabel}</Text>}
+                </View>
+                <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
+                  <Text style={[styles.statusText, { color: statusColor }]}>{dDayText}</Text>
+                </View>
+                {!item.isDone && (
+                  <TouchableOpacity style={styles.apptActionBtn} onPress={() => openEdit(item)}>
+                    <Ionicons name="pencil-outline" size={19} color={colors.textSecondary} />
+                  </TouchableOpacity>
+                )}
+                {!item.isDone && (
+                  <TouchableOpacity
+                    style={styles.apptActionBtn}
+                    onPress={() => handleComplete(item.id)}
+                    disabled={completingId === item.id}
+                  >
+                    {completingId === item.id
+                      ? <ActivityIndicator size="small" color={colors.success} />
+                      : <Ionicons name="checkmark-circle-outline" size={22} color={colors.success} />}
+                  </TouchableOpacity>
+                )}
+                {item.isDone && (
+                  <TouchableOpacity style={styles.apptActionBtn} onPress={() => handleDelete(item.id)}>
+                    <Ionicons name="trash-outline" size={20} color={colors.danger} />
+                  </TouchableOpacity>
                 )}
               </View>
-              <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
-                <Text style={[styles.statusText, { color: statusColor }]}>{dDayText}</Text>
-              </View>
-              {!item.isDone && (
-                <TouchableOpacity style={styles.apptActionBtn} onPress={() => openEdit(item)}>
-                  <Ionicons name="pencil-outline" size={19} color={colors.textSecondary} />
-                </TouchableOpacity>
+            );
+          };
+
+          const activeItems = appointments.filter(a => !a.isDone && a.dDay >= 0);
+          const doneItems   = appointments.filter(a => a.isDone || a.dDay < 0);
+
+          if (!showDone) return activeItems.map(renderItem);
+
+          return (
+            <>
+              {activeItems.map(renderItem)}
+              {doneItems.length > 0 && (
+                <>
+                  <View style={styles.doneSectionDivider}>
+                    <Text style={styles.doneSectionLabel}>완료 / 종료</Text>
+                  </View>
+                  {doneItems.map(renderItem)}
+                </>
               )}
-              {!item.isDone && (
-                <TouchableOpacity style={styles.apptActionBtn} onPress={() => handleComplete(item.id)}>
-                  <Ionicons name="checkmark-circle-outline" size={22} color={colors.success} />
-                </TouchableOpacity>
-              )}
-              {item.isDone && (
-                <TouchableOpacity style={styles.apptActionBtn} onPress={() => handleDelete(item.id)}>
-                  <Ionicons name="trash-outline" size={20} color={colors.danger} />
-                </TouchableOpacity>
-              )}
-            </View>
+            </>
           );
-        })}
+        })()}
       </View>
 
       {/* 등록/수정 폼 (접기/펼치기) */}
@@ -535,6 +568,8 @@ const styles = StyleSheet.create({
   apptAddr:           { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 1 },
   apptTime:           { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
   apptAlarmHint:      { fontSize: 11, fontFamily: fonts.regular, color: colors.primary, marginTop: 2 },
+  doneSectionDivider: { paddingTop: 14, paddingBottom: 6, borderTopWidth: 1, borderTopColor: colors.border, marginTop: 4 },
+  doneSectionLabel:   { fontSize: 11, fontFamily: fonts.semiBold, color: colors.textMuted },
   statusBadge:        { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 },
   statusText:         { fontSize: 12, fontFamily: fonts.semiBold },
   apptActionBtn:      { padding: 6, marginLeft: 2 },

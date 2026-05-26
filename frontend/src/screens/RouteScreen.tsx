@@ -59,10 +59,25 @@ export default function RouteScreen() {
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [customTravelMin, setCustomTravelMin] = useState<string>('');
   const [deletedRoute, setDeletedRoute] = useState<RouteResponse | null>(null);
+  const [undoSecondsLeft, setUndoSecondsLeft] = useState(0);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const undoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const scrollRef    = useRef<ScrollViewType>(null);
 
   useEffect(() => { fetchRoutes(); }, []);
+
+  useEffect(() => {
+    if (undoIntervalRef.current) clearInterval(undoIntervalRef.current);
+    if (!deletedRoute) { setUndoSecondsLeft(0); return; }
+    setUndoSecondsLeft(6);
+    undoIntervalRef.current = setInterval(() => {
+      setUndoSecondsLeft(s => {
+        if (s <= 1) { clearInterval(undoIntervalRef.current!); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+    return () => { if (undoIntervalRef.current) clearInterval(undoIntervalRef.current); };
+  }, [deletedRoute]);
 
   useEffect(() => {
     if (!loading && routes.length === 0 && !showForm) openNewForm();
@@ -232,7 +247,7 @@ export default function RouteScreen() {
         <View style={styles.undoBanner}>
           <Ionicons name="trash-outline" size={15} color={colors.warning} />
           <Text style={styles.undoBannerText} numberOfLines={1}>
-            루트가 삭제됐어요
+            루트가 삭제됐어요 · {undoSecondsLeft}초 후 사라짐
           </Text>
           <TouchableOpacity onPress={handleUndo} style={styles.undoBtn}>
             <Text style={styles.undoBtnText}>되돌리기</Text>
