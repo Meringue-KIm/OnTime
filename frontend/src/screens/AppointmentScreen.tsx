@@ -273,7 +273,17 @@ export default function AppointmentScreen() {
 
         {(() => {
           const renderItem = (item: import('../api/appointments').AppointmentResponse) => {
-            const timeStr = formatKoreanDateTime(item.appointmentTime);
+            const timeStr = (() => {
+              const d = new Date(item.appointmentTime);
+              const today = new Date();
+              const isToday = d.getFullYear() === today.getFullYear() && d.getMonth() === today.getMonth() && d.getDate() === today.getDate();
+              if (isToday && item.dDay === 0) {
+                const h = d.getHours(), m = String(d.getMinutes()).padStart(2, '0');
+                const ampm = h < 12 ? '오전' : '오후';
+                return `오늘 ${ampm} ${h % 12 || 12}:${m}`;
+              }
+              return formatKoreanDateTime(item.appointmentTime);
+            })();
             const isPastToday = item.dDay === 0 && !item.isDone && new Date(item.appointmentTime) <= new Date();
             const dDayText = item.isDone ? '완료'
               : (item.dDay < 0 || isPastToday) ? '종료'
@@ -290,12 +300,20 @@ export default function AppointmentScreen() {
             })();
             return (
               <View key={item.id} style={styles.apptItem}>
-                <TouchableOpacity style={{ flex: 1 }} onPress={() => !item.isDone && openEdit(item)} activeOpacity={item.isDone ? 1 : 0.6}>
-                  <Text style={styles.apptTitle}>{item.title || item.destAddress}</Text>
-                  {item.title ? <Text style={styles.apptAddr} numberOfLines={1}>{item.destAddress}</Text> : null}
-                  <Text style={styles.apptTime}>{timeStr}</Text>
-                  {alarmLabel && <Text style={styles.apptAlarmHint}>{alarmLabel}</Text>}
-                </TouchableOpacity>
+                {item.isDone ? (
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.apptTitle, { color: colors.textMuted }]}>{item.title || item.destAddress}</Text>
+                    {item.title ? <Text style={styles.apptAddr} numberOfLines={1}>{item.destAddress}</Text> : null}
+                    <Text style={styles.apptTime}>{timeStr}</Text>
+                  </View>
+                ) : (
+                  <TouchableOpacity style={{ flex: 1 }} onPress={() => openEdit(item)} activeOpacity={0.6}>
+                    <Text style={styles.apptTitle}>{item.title || item.destAddress}</Text>
+                    {item.title ? <Text style={styles.apptAddr} numberOfLines={1}>{item.destAddress}</Text> : null}
+                    <Text style={styles.apptTime}>{timeStr}</Text>
+                    {alarmLabel && <Text style={styles.apptAlarmHint}>{alarmLabel}</Text>}
+                  </TouchableOpacity>
+                )}
                 <View style={[styles.statusBadge, { backgroundColor: statusColor + '20' }]}>
                   <Text style={[styles.statusText, { color: statusColor }]}>{dDayText}</Text>
                 </View>

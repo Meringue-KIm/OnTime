@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView,
+  TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView, Linking,
 } from 'react-native';
 import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -130,6 +130,14 @@ export default function SettingsScreen({ navigation }: any) {
         </View>
 
         <View style={styles.card}>
+          <TouchableOpacity style={styles.rowItem} onPress={() => Linking.openURL('mailto:kimsung3879@gmail.com?subject=OnTime%20문의')}>
+            <View style={[styles.rowIcon, { backgroundColor: colors.primaryLight }]}>
+              <Ionicons name="mail-outline" size={18} color={colors.primary} />
+            </View>
+            <Text style={styles.rowItemText}>문의 / 피드백 보내기</Text>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} />
+          </TouchableOpacity>
+          <View style={styles.divider} />
           <TouchableOpacity style={styles.rowItem} onPress={() => {
             if (Platform.OS === 'web') {
               if ((window as any).confirm('정말 로그아웃하시겠습니까?')) logout();

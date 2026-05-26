@@ -57,8 +57,9 @@ export default function StatsScreen() {
   }, [loadError]);
 
   // 최근 3일 내 피드백 미입력 로그
-  const pendingFeedbackLog = logs
-    .find(l => l.actualDiffMinutes === null && (Date.now() - new Date(l.logDate).getTime()) / 86400000 <= 3);
+  const pendingFeedbackLogs = logs
+    .filter(l => l.actualDiffMinutes === null && (Date.now() - new Date(l.logDate).getTime()) / 86400000 <= 3);
+  const pendingFeedbackLog = pendingFeedbackLogs[0];
 
   const logsWithFeedback = logs.filter(l => l.actualDiffMinutes !== null);
   const onTimeCount     = logsWithFeedback.filter(l => l.isLate === false).length;
@@ -204,12 +205,19 @@ export default function StatsScreen() {
       )}
 
       {/* 피드백 미입력 배너 — 탭하면 아래 목록과 동일한 Alert 표시 */}
-      {pendingFeedbackLog && (
+      {pendingFeedbackLogs.length > 0 && (
         <TouchableOpacity style={styles.feedbackBanner} onPress={() => handleFeedback(pendingFeedbackLog)}>
           <Ionicons name="pencil-outline" size={16} color={colors.primary} />
           <Text style={[styles.feedbackBannerText, { flex: 1 }]}>
-            {formatDate(pendingFeedbackLog.logDate)} 출근 결과를 입력해주세요
+            {pendingFeedbackLogs.length > 1
+              ? `최근 ${pendingFeedbackLogs.length}건 출근 결과를 입력해주세요`
+              : `${formatDate(pendingFeedbackLog.logDate)} 출근 결과를 입력해주세요`}
           </Text>
+          {pendingFeedbackLogs.length > 1 && (
+            <View style={styles.feedbackBannerBadge}>
+              <Text style={styles.feedbackBannerBadgeText}>{pendingFeedbackLogs.length}</Text>
+            </View>
+          )}
           <Ionicons name="chevron-forward" size={14} color={colors.primary} />
         </TouchableOpacity>
       )}
@@ -409,6 +417,8 @@ const styles = StyleSheet.create({
   suggestionBtnText: { fontSize: 13, fontFamily: fonts.semiBold, color: '#fff' },
   feedbackBanner:       { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginBottom: 12, backgroundColor: colors.primaryLight, borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13 },
   feedbackBannerText:   { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textPrimary },
+  feedbackBannerBadge:  { backgroundColor: colors.primary, borderRadius: 10, paddingHorizontal: 7, paddingVertical: 2 },
+  feedbackBannerBadgeText: { fontSize: 11, fontFamily: fonts.semiBold, color: '#fff' },
   card:             { marginHorizontal: 20, backgroundColor: colors.card, borderRadius: 16, padding: 16, marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2 },
   sectionTitle:     { fontSize: 15, fontWeight: '700', color: colors.textPrimary, marginBottom: 12 },
   chartContainer:   { flexDirection: 'row', alignItems: 'flex-end', height: 120, gap: 8, paddingTop: 8 },

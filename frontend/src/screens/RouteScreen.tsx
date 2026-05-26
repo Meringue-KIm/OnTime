@@ -465,6 +465,27 @@ export default function RouteScreen() {
             );
           })()}
 
+          {/* 예상 출발 시간 미리보기 */}
+          {today?.drivingMinutes != null && (() => {
+            const [h, m] = arrivalTime.split(':').map(Number);
+            const arrMin = h * 60 + m;
+            const depMin = arrMin - today.drivingMinutes - buffer;
+            const norm = ((depMin % 1440) + 1440) % 1440;
+            const dh = Math.floor(norm / 60);
+            const dm = norm % 60;
+            const ampm = dh < 12 ? '오전' : '오후';
+            const h12 = dh % 12 === 0 ? 12 : dh % 12;
+            return (
+              <View style={styles.depPreview}>
+                <Ionicons name="alarm-outline" size={14} color={colors.primary} />
+                <Text style={styles.depPreviewText}>
+                  예상 출발 <Text style={{ fontFamily: fonts.bold, color: colors.primary }}>{ampm} {h12}:{String(dm).padStart(2, '0')}</Text>
+                  <Text style={{ color: colors.textMuted }}>  (이동 {today.drivingMinutes}분 + 여유 {buffer}분)</Text>
+                </Text>
+              </View>
+            );
+          })()}
+
           {transport === 'transit' && (
             <View style={styles.transitNote}>
               <Ionicons name="information-circle-outline" size={16} color="#1565C0" />
@@ -601,6 +622,8 @@ const styles = StyleSheet.create({
   undoBannerText:       { flex: 1, fontSize: 13, fontFamily: fonts.regular, color: colors.textPrimary },
   undoBtn:              { paddingHorizontal: 12, paddingVertical: 5, backgroundColor: colors.warning, borderRadius: 16 },
   undoBtnText:          { fontSize: 12, fontFamily: fonts.semiBold, color: '#fff' },
+  depPreview:           { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, backgroundColor: colors.primaryLight, borderRadius: 8, padding: 10 },
+  depPreviewText:       { flex: 1, fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 17 },
   alarmTabNote:         { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 14, backgroundColor: colors.primaryLight, borderRadius: 8, padding: 10 },
   alarmTabNoteText:     { flex: 1, fontSize: 12, fontFamily: fonts.regular, color: colors.primary, lineHeight: 17 },
 });

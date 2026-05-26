@@ -206,6 +206,13 @@ export default function AlarmScreen() {
           </Text>
         </View>
       )}
+      {activeRoute && !activeRoute.isActive && routes.length > 0 && (
+        <TouchableOpacity style={styles.inactiveRouteBanner} onPress={() => navigation.navigate('Route')}>
+          <Ionicons name="alert-circle-outline" size={15} color="#E65100" />
+          <Text style={styles.inactiveRouteBannerText}>활성 루트가 없어 알람이 울리지 않아요. 탭해서 루트 탭으로 이동하세요.</Text>
+          <Ionicons name="chevron-forward" size={13} color="#E65100" />
+        </TouchableOpacity>
+      )}
 
       {notifStatus === 'denied' && (
         <TouchableOpacity style={styles.permissionBanner} onPress={() => Linking.openSettings()}>
@@ -239,6 +246,11 @@ export default function AlarmScreen() {
           {activeRoute && (
             <View style={styles.badge}>
               <Text style={styles.badgeText}>여유 {buffer}분 설정됨</Text>
+            </View>
+          )}
+          {activeRoute?.isSkippedToday && (
+            <View style={[styles.badge, { backgroundColor: 'rgba(255,255,255,0.35)' }]}>
+              <Text style={styles.badgeText}>오늘 건너뜀</Text>
             </View>
           )}
         </View>
@@ -390,6 +402,12 @@ export default function AlarmScreen() {
               thumbColor="#fff"
             />
           </View>
+          {today?.logDate && (
+            <View style={[styles.infoBanner, { marginTop: 0, marginBottom: 8 }]}>
+              <Ionicons name="checkmark-circle-outline" size={14} color={colors.success} />
+              <Text style={[styles.infoText, { color: '#2E7D32' }]}>오늘 알람은 이미 발송됐어요. 변경 사항은 내일부터 적용됩니다.</Text>
+            </View>
+          )}
           <View style={styles.alarmDiffRow}>
             <View style={styles.alarmDiffItem}>
               <Ionicons name="alarm-outline" size={15} color={colors.primary} />
@@ -546,6 +564,8 @@ const styles = StyleSheet.create({
   settingSub:          { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
   noRouteMsg:          { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', marginTop: 10, lineHeight: 20 },
   noRouteMsgLink:      { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary, marginTop: 12 },
+  inactiveRouteBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginBottom: 8, backgroundColor: '#FFF3E0', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10 },
+  inactiveRouteBannerText: { flex: 1, fontSize: 12, fontFamily: fonts.regular, color: '#E65100', lineHeight: 17 },
   alarmDiffRow:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 14, backgroundColor: colors.bg, borderRadius: 10, paddingVertical: 10 },
   alarmDiffItem:       { alignItems: 'center', gap: 3, flex: 1 },
   alarmDiffLabel:      { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },

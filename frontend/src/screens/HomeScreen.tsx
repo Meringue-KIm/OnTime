@@ -539,21 +539,34 @@ export default function HomeScreen() {
             </View>
           )}
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyRow}>
-            {weather.hourly.map((item, i) => (
-              <View key={i} style={styles.hourlyItem}>
-                <Text style={styles.hourlyTime}>{item.time}</Text>
-                <Ionicons
-                  name={item.icon === 'sunny' ? 'sunny-outline' : item.icon === 'snowy' ? 'snow-outline' : item.icon === 'cloudy' ? 'cloudy-outline' : 'rainy-outline'}
-                  size={16}
-                  color={colors.textSecondary}
-                  style={{ marginVertical: 4 }}
-                />
-                <Text style={styles.hourlyTemp}>{Math.round(item.temperature)}°</Text>
-                {(item.precipitationProb ?? 0) > 0 && (
-                  <Text style={styles.hourlyPop}>{item.precipitationProb}%</Text>
-                )}
-              </View>
-            ))}
+            {(() => {
+              const nowHour = new Date().getHours();
+              const currentIdx = weather.hourly.reduce((best, item, i) => {
+                const h = parseInt(item.time.split(':')[0], 10);
+                const bestH = parseInt(weather.hourly[best].time.split(':')[0], 10);
+                return Math.abs(h - nowHour) < Math.abs(bestH - nowHour) ? i : best;
+              }, 0);
+              return weather.hourly.map((item, i) => {
+                const isCurrent = i === currentIdx;
+                return (
+                  <View key={i} style={[styles.hourlyItem, isCurrent && styles.hourlyItemCurrent]}>
+                    <Text style={[styles.hourlyTime, isCurrent && { color: colors.primary, fontFamily: fonts.semiBold }]}>
+                      {isCurrent ? '지금' : item.time}
+                    </Text>
+                    <Ionicons
+                      name={item.icon === 'sunny' ? 'sunny-outline' : item.icon === 'snowy' ? 'snow-outline' : item.icon === 'cloudy' ? 'cloudy-outline' : 'rainy-outline'}
+                      size={16}
+                      color={isCurrent ? colors.primary : colors.textSecondary}
+                      style={{ marginVertical: 4 }}
+                    />
+                    <Text style={[styles.hourlyTemp, isCurrent && { color: colors.primary, fontFamily: fonts.bold }]}>{Math.round(item.temperature)}°</Text>
+                    {(item.precipitationProb ?? 0) > 0 && (
+                      <Text style={styles.hourlyPop}>{item.precipitationProb}%</Text>
+                    )}
+                  </View>
+                );
+              });
+            })()}
           </ScrollView>
         </View>
       )}
@@ -619,7 +632,7 @@ export default function HomeScreen() {
         ) : (
           <>
             {todayAppts.slice(0, 2).map((item) => (
-              <View key={item.id} style={styles.scheduleItem}>
+              <TouchableOpacity key={item.id} style={styles.scheduleItem} onPress={() => navigation.navigate('Appointment')} activeOpacity={0.7}>
                 <View style={styles.scheduleIconWrap}>
                   <Ionicons name="calendar-outline" size={18} color={colors.primary} />
                 </View>
@@ -638,7 +651,7 @@ export default function HomeScreen() {
                     return null;
                   })()}
                 </View>
-              </View>
+              </TouchableOpacity>
             ))}
             {todayAppts.length > 2 && (
               <TouchableOpacity onPress={() => navigation.navigate('Appointment')} style={styles.scheduleMoreBtn}>
@@ -686,6 +699,7 @@ const styles = StyleSheet.create({
   weatherLocationChange: { fontSize: 10, fontFamily: fonts.regular, color: colors.primary, opacity: 0.7 },
   hourlyRow:          { gap: 4, paddingVertical: 2 },
   hourlyItem:         { alignItems: 'center', minWidth: 52, paddingHorizontal: 6 },
+  hourlyItemCurrent:  { backgroundColor: colors.primaryLight, borderRadius: 10, paddingVertical: 4 },
   hourlyTime:         { fontSize: 10, color: colors.textSecondary, fontFamily: fonts.regular },
   hourlyTemp:         { fontSize: 12, fontFamily: fonts.bold, color: colors.textPrimary },
   assistantCard:    { marginHorizontal: 20, marginBottom: 12, backgroundColor: colors.card, borderRadius: 16, padding: 14, ...cardShadow },
