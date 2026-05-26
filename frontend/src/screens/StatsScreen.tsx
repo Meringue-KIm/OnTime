@@ -97,13 +97,16 @@ export default function StatsScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={{ padding: 6 }}>
+          <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
       {loadError && (
         <View style={styles.errorInline}>
           <Ionicons name="cloud-offline-outline" size={36} color={colors.textMuted} />
           <Text style={styles.errorText}>서버에 연결할 수 없습니다.</Text>
-          <Text style={[styles.errorText, { fontSize: 12 }]}>당겨서 새로고침하거나 잠시 후 자동으로 재시도합니다.</Text>
+          <Text style={[styles.errorText, { fontSize: 12 }]}>당겨서 새로고침하거나 잠시 후 자동으로 재시도합니다.{'\n'}이전 기록은 화면을 당기면 복원됩니다.</Text>
         </View>
       )}
 
@@ -117,8 +120,8 @@ export default function StatsScreen() {
         <Text style={styles.insightTitle}>나의 정시 도착률</Text>
         <Text style={styles.insightDesc}>
           {logsWithFeedback.length > 0
-            ? `총 ${logsWithFeedback.length}번의 출근 기록 중 ${onTimeCount}번 정시 도착했어요.`
-            : '아직 출근 기록이 없어요. 출근 후 피드백을 남겨보세요!'}
+            ? `피드백 입력 ${logsWithFeedback.length}회 중 ${onTimeCount}번 정시 도착했어요.`
+            : '아직 피드백 기록이 없어요. 출근 후 결과를 입력하면 통계가 쌓입니다.'}
         </Text>
         <View style={styles.insightStat}>
           <Text style={styles.insightStatValue}>{onTimeRate}%</Text>
@@ -155,14 +158,17 @@ export default function StatsScreen() {
             {formatDate(pendingFeedbackLog.logDate)} 출근 결과를 입력해주세요
           </Text>
           <View style={styles.feedbackBannerBtns}>
-            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, 0)}>
-              <Text style={styles.feedbackBannerBtnText}>정시 ✅</Text>
+            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, -5)}>
+              <Text style={styles.feedbackBannerBtnText}>일찍 🎉</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, 20)}>
-              <Text style={styles.feedbackBannerBtnText}>지각 😅</Text>
+            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, 0)}>
+              <Text style={styles.feedbackBannerBtnText}>딱 맞게 ✅</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, 7)}>
+              <Text style={styles.feedbackBannerBtnText}>늦음 😅</Text>
             </TouchableOpacity>
             <TouchableOpacity style={[styles.feedbackBannerBtn, { backgroundColor: colors.primaryLight }]} onPress={() => handleFeedback(pendingFeedbackLog)}>
-              <Text style={[styles.feedbackBannerBtnText, { color: colors.primary }]}>세부 입력</Text>
+              <Text style={[styles.feedbackBannerBtnText, { color: colors.primary }]}>세부</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -321,7 +327,7 @@ const styles = StyleSheet.create({
   errorText:        { fontSize: 14, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center' },
   retryBtn:         { marginTop: 4, backgroundColor: colors.primaryLight, paddingHorizontal: 20, paddingVertical: 10, borderRadius: 20 },
   retryBtnText:     { fontSize: 14, fontFamily: fonts.semiBold, color: colors.primary },
-  header:           { paddingHorizontal: 20, paddingBottom: 8 },
+  header:           { paddingHorizontal: 20, paddingBottom: 8, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   logoImg:          { width: 180, height: 81 },
   insightCard:      { margin: 20, backgroundColor: colors.primary, borderRadius: 16, padding: 20 },
   insightBadge:     { backgroundColor: 'rgba(255,255,255,0.2)', alignSelf: 'flex-start', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20, marginBottom: 10 },

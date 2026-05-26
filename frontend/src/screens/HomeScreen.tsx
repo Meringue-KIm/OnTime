@@ -206,6 +206,16 @@ export default function HomeScreen() {
     return today.logDate ? '오늘 출발 완료' : '오늘 출발 기준 시간';
   })();
 
+  const departureCountdown = (() => {
+    if (!today?.recommendedDeparture || today.logDate) return null;
+    const [hh, mm] = today.recommendedDeparture.split(':').map(Number);
+    const dep = new Date(); dep.setHours(hh, mm, 0, 0);
+    const diffMin = Math.round((dep.getTime() - Date.now()) / 60000);
+    if (diffMin > 0 && diffMin <= 180) return `${diffMin}분 후 출발`;
+    if (diffMin <= 0 && diffMin >= -60) return `${Math.abs(diffMin)}분 경과`;
+    return null;
+  })();
+
   const greeting = (() => {
     if (today?.recommendedDeparture) {
       const [hh, mm] = today.recommendedDeparture.split(':').map(Number);
@@ -411,13 +421,16 @@ export default function HomeScreen() {
         ) : todayError && !today?.recommendedDeparture ? (
           <View style={styles.onboardingWrap}>
             <Ionicons name="cloud-offline-outline" size={28} color="rgba(255,255,255,0.7)" />
-            <Text style={styles.noRouteSubText}>잠시 후 자동으로 다시 시도합니다...</Text>
+            <Text style={styles.noRouteSubText}>서버에 연결할 수 없습니다.{'\n'}당겨서 새로고침하거나 잠시 후 자동으로 재시도합니다.</Text>
           </View>
         ) : today?.recommendedDeparture ? (
           <>
             <Text style={styles.departureTime}>
               {extractTimeHHmm(today.recommendedDeparture)}
             </Text>
+            {departureCountdown && (
+              <Text style={styles.departureCountdown}>{departureCountdown}</Text>
+            )}
             {todayError && cachedAt && (
               <View style={styles.offlineBadge}>
                 <Ionicons name="cloud-offline-outline" size={11} color="rgba(255,255,255,0.7)" />
@@ -609,6 +622,7 @@ const styles = StyleSheet.create({
   departureCard:    { marginHorizontal: 20, borderRadius: 20, backgroundColor: colors.primary, padding: 20, marginBottom: 16 },
   departureLabel:   { fontSize: 13, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.8)', marginBottom: 4 },
   departureTime:    { fontSize: 44, fontFamily: fonts.extraBold, color: '#fff', letterSpacing: -1 },
+  departureCountdown: { fontSize: 15, color: 'rgba(255,255,255,0.85)', marginTop: 2, fontFamily: fonts.medium },
   onboardingWrap:   { alignItems: 'center', gap: 8, paddingVertical: 8 },
   noRouteText:      { fontSize: 18, fontFamily: fonts.bold, color: '#fff' },
   noRouteSubText:   { fontSize: 13, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.75)', textAlign: 'center' },

@@ -15,11 +15,11 @@ const Tab = createBottomTabNavigator();
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
 const TAB_ICONS: Record<string, [IoniconName, IoniconName]> = {
-  Home:        ['grid',     'grid-outline'],
-  Route:       ['navigate', 'navigate-outline'],
-  Appointment: ['calendar', 'calendar-outline'],
-  Alarm:       ['alarm',    'alarm-outline'],
-  Stats:       ['bar-chart','bar-chart-outline'],
+  Home:        ['home',          'home-outline'],
+  Route:       ['navigate',      'navigate-outline'],
+  Appointment: ['calendar',      'calendar-outline'],
+  Alarm:       ['alarm',         'alarm-outline'],
+  Stats:       ['bar-chart',     'bar-chart-outline'],
 };
 
 export default function TabNavigator() {
@@ -54,8 +54,8 @@ export default function TabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Home"        component={HomeScreen}        options={{ tabBarLabel: '대시보드' }} />
-      <Tab.Screen name="Route"       component={RouteScreen}       options={{ tabBarLabel: '루트' }} />
+      <Tab.Screen name="Home"        component={HomeScreen}        options={{ tabBarLabel: '홈' }} />
+      <Tab.Screen name="Route"       component={RouteScreen}       options={{ tabBarLabel: '경로' }} />
       <Tab.Screen name="Appointment" component={AppointmentScreen} options={{ tabBarLabel: '약속' }} />
       <Tab.Screen name="Alarm"       component={AlarmScreen}       options={{ tabBarLabel: '알람' }} />
       <Tab.Screen name="Stats"       component={StatsScreen}       options={{ tabBarLabel: '통계' }} />

@@ -78,6 +78,12 @@ export default function AddressInput({ value, onChange, onSelect, placeholder = 
           <Text style={styles.errorText}>주소 검색에 실패했습니다. 네트워크를 확인해주세요.</Text>
         </View>
       )}
+      {!isSelected && !searching && value.length > 1 && suggestions.length === 0 && !noResults && !searchFailed && (
+        <View style={styles.errorRow}>
+          <Ionicons name="information-circle-outline" size={13} color={colors.primary} />
+          <Text style={[styles.errorText, { color: colors.primary }]}>아래 검색 결과 목록에서 선택해야 위치가 저장됩니다.</Text>
+        </View>
+      )}
       {!searchFailed && noResults && (
         <View style={styles.errorRow}>
           <Ionicons name="search-outline" size={13} color={colors.textMuted} />

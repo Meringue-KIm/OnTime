@@ -134,11 +134,11 @@ export default function RouteScreen() {
         Alert.alert('수정 완료', '루트가 수정되었습니다.');
       } else {
         Alert.alert(
-          '등록 완료 🎉',
-          '루트가 저장되었습니다!\n\n다음으로 알람 탭에서 반복 요일과 여유 시간을 설정하면 매일 자동 알람이 울립니다.',
+          '설정 완료 ✅',
+          '알람이 활성화됐어요!\n\n매일 출발 시간에 자동으로 알람이 울립니다.\n반복 요일이나 여유 시간을 바꾸려면 알람 탭에서 조정하세요.',
           [
-            { text: '알람 설정하러 가기', onPress: () => navigation.navigate('Alarm') },
-            { text: '나중에', style: 'cancel', onPress: () => navigation.navigate('Home') },
+            { text: '알람 탭 바로가기', onPress: () => navigation.navigate('Alarm') },
+            { text: '홈으로', onPress: () => navigation.navigate('Home') },
           ],
         );
       }
@@ -186,6 +186,9 @@ export default function RouteScreen() {
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />
+        <TouchableOpacity onPress={() => navigation.navigate('Settings')} style={{ padding: 6 }}>
+          <Ionicons name="settings-outline" size={22} color={colors.textSecondary} />
+        </TouchableOpacity>
       </View>
 
       {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 40 }} />}
@@ -364,8 +367,8 @@ export default function RouteScreen() {
               <Ionicons name="information-circle-outline" size={16} color="#1565C0" />
               <View style={{ flex: 1, gap: 8 }}>
                 <Text style={styles.transitNoteText}>
-                  카카오맵에서 대중교통 경로를 검색하면 정확한 소요 시간을 알 수 있어요.{'\n'}
-                  직접 입력하면 더 정확하고, 비워두면 자동으로 계산해드려요.
+                  자동 계산은 ODsay API 기반이지만 실제 환승·대기 시간에 따라 오차가 있을 수 있어요.{'\n'}
+                  카카오맵에서 직접 확인한 소요 시간을 입력하면 더 정확합니다.
                 </Text>
                 <View style={styles.customTravelRow}>
                   <TextInput
@@ -385,7 +388,7 @@ export default function RouteScreen() {
           {transport === 'walk' && (
             <View style={[styles.transitNote, { backgroundColor: '#E8F5E9' }]}>
               <Ionicons name="information-circle-outline" size={14} color={colors.success} />
-              <Text style={[styles.transitNoteText, { color: '#2E7D32' }]}>도보 시간은 Haversine 직선거리 기준 5km/h로 계산됩니다.</Text>
+              <Text style={[styles.transitNoteText, { color: '#2E7D32' }]}>도보 시간은 직선거리 기준으로 계산됩니다. 실제 경로·신호에 따라 차이가 있을 수 있어요.</Text>
             </View>
           )}
 
@@ -423,7 +426,7 @@ export default function RouteScreen() {
 
 const styles = StyleSheet.create({
   container:            { flex: 1, backgroundColor: colors.bg },
-  header:               { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 8 },
+  header:               { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 20, paddingBottom: 8 },
   logoImg:              { width: 180, height: 81 },
   heroCard:             { margin: 20, backgroundColor: colors.primary, borderRadius: 16, padding: 24 },
   heroTitle:            { fontSize: 24, fontWeight: '800', color: '#fff', lineHeight: 32 },

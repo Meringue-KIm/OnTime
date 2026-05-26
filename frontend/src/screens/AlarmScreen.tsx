@@ -200,10 +200,13 @@ export default function AlarmScreen() {
         ) : todayError ? (
           <View style={{ alignItems: 'center', gap: 4, marginVertical: 8 }}>
             <Text style={styles.wakeTimePlaceholder}>--:--</Text>
-            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', textAlign: 'center' }}>서버 연결 실패 · 잠시 후 자동 재시도</Text>
+            <Text style={{ fontSize: 12, color: 'rgba(255,255,255,0.65)', textAlign: 'center' }}>서버에 연결할 수 없습니다. 당겨서 새로고침하거나 잠시 후 자동으로 재시도합니다.</Text>
           </View>
         ) : departureTime ? (
-          <Text style={styles.wakeTime}>{departureTime}</Text>
+          <>
+            <Text style={styles.wakeTime}>{departureTime}</Text>
+            <Text style={styles.wakeTimeSubLabel}>이 시각에 알람이 울립니다</Text>
+          </>
         ) : (
           <Text style={styles.wakeTimePlaceholder}>루트를 설정해주세요</Text>
         )}
@@ -280,7 +283,7 @@ export default function AlarmScreen() {
             <View style={styles.infoBanner}>
               <Ionicons name="information-circle-outline" size={16} color={colors.primary} />
               <Text style={styles.infoText}>
-                설정한 여유 시간만큼 일찍 출발 알람이 울립니다. 날씨 상황에 따라 자동으로 추가됩니다.
+                알람 시각 = 도착 목표 - 이동 시간 - 여유 {buffer}분{today?.drivingMinutes ? ` (이동 ${today.drivingMinutes}분)` : ''}{'\n'}날씨·교통 상황에 따라 자동으로 추가됩니다.
               </Text>
             </View>
             <View style={styles.bufferControls}>
@@ -369,7 +372,7 @@ export default function AlarmScreen() {
           style={styles.testBtn}
           onPress={() =>
             sendTestAlarm()
-              .then(() => Alert.alert('전송 완료', '잠시 후 알림이 도착합니다.\n알림이 오지 않으면 설정 → 알림에서 OnTime 알림이 허용되어 있는지 확인해주세요.'))
+              .then(() => Alert.alert('전송 완료', '10~30초 이내 알림이 도착합니다.\n도착하지 않으면 설정 → 알림에서 OnTime 알림이 허용되어 있는지 확인해주세요.'))
               .catch((e: any) => Alert.alert('알람 테스트 실패', e?.response?.data ?? '앱을 완전히 종료했다가 다시 열고 시도해주세요.\n문제가 계속되면 로그아웃 후 재로그인해주세요.'))
           }
         >
@@ -428,6 +431,7 @@ const styles = StyleSheet.create({
   wakeCard:            { margin: 20, backgroundColor: colors.primary, borderRadius: 16, padding: 24, alignItems: 'center' },
   wakeLabel:           { fontSize: 13, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.75)', marginBottom: 4 },
   wakeTime:            { fontSize: 48, fontFamily: fonts.extraBold, color: '#fff', letterSpacing: -1 },
+  wakeTimeSubLabel:    { fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 2 },
   wakeTimePlaceholder: { fontSize: 16, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.7)', marginVertical: 12 },
   badgeRow:            { flexDirection: 'row', gap: 8, marginTop: 12 },
   badge:               { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 5, borderRadius: 20 },
