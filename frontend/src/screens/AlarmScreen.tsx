@@ -123,6 +123,7 @@ export default function AlarmScreen() {
         setTimeout(() => setSaveStatus('idle'), 2000);
       } catch {
         setSaveStatus('idle');
+        Alert.alert('저장 실패', '설정을 저장하지 못했습니다. 잠시 후 다시 시도해주세요.');
       }
     }, 1000);
   }, [activeRoute, saveRoute, fetchToday]);

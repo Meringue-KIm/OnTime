@@ -6,6 +6,7 @@ import com.commute.app.domain.route.entity.CommuteRoute;
 import com.commute.app.domain.route.repository.CommuteRouteRepository;
 import com.commute.app.domain.route.service.RouteService;
 import com.commute.app.global.exception.ErrorMessage;
+import jakarta.transaction.Transactional;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -49,6 +50,7 @@ public class RouteController {
         return ResponseEntity.ok(routeService.activateRoute(userId, id));
     }
 
+    @Transactional
     @PostMapping("/active/skip-today")
     public ResponseEntity<RouteResponse> skipToday(@AuthenticationPrincipal Long userId) {
         List<CommuteRoute> routes = routeRepository.findByUserIdAndIsActiveTrue(userId);

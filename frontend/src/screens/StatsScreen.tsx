@@ -43,7 +43,7 @@ export default function StatsScreen() {
 
   // 최근 3일 내 피드백 미입력 로그
   const pendingFeedbackLog = logs
-    .find(l => l.isLate === null && (Date.now() - new Date(l.logDate).getTime()) / 86400000 <= 3);
+    .find(l => l.actualDiffMinutes === null && (Date.now() - new Date(l.logDate).getTime()) / 86400000 <= 3);
 
   const logsWithFeedback = logs.filter(l => l.isLate !== null);
   const onTimeCount     = logsWithFeedback.filter(l => l.isLate === false).length;

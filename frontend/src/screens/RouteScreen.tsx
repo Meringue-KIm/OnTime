@@ -118,7 +118,7 @@ export default function RouteScreen() {
       alarmBeforeMinutes: buffer,
       transportMode: transport,
       activeDays: activeDays.join(','),
-      customTravelMinutes: (transport === 'transit' && parsedCustomMin && !isNaN(parsedCustomMin)) ? parsedCustomMin : undefined,
+      customTravelMinutes: (transport === 'transit' && parsedCustomMin !== undefined && !isNaN(parsedCustomMin)) ? parsedCustomMin : undefined,
     };
     setSaving(true);
     try {
@@ -267,7 +267,7 @@ export default function RouteScreen() {
                 {route.activeDays && (
                   <View style={styles.routeDaysRow}>
                     {['일','월','화','수','목','금','토'].map((d, i) => {
-                      const active = route.activeDays!.split(',').map(Number).includes(i);
+                      const active = (route.activeDays ?? '').split(',').map(Number).includes(i);
                       return (
                         <View key={i} style={[styles.dayDot, active && styles.dayDotActive]}>
                           <Text style={[styles.dayDotText, active && styles.dayDotTextActive]}>{d}</Text>
