@@ -3,11 +3,14 @@ import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Platform, KeyboardAvoidingView,
 } from 'react-native';
+import Constants from 'expo-constants';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
 import { changePassword, deleteAccount, getMe } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
+
+const appVersion = Constants.expoConfig?.version ?? (Constants as any).manifest?.version ?? '1.0.0';
 
 export default function SettingsScreen({ navigation }: any) {
   const { logout, email: storedEmail } = useAuthStore();
@@ -142,6 +145,9 @@ export default function SettingsScreen({ navigation }: any) {
           </TouchableOpacity>
         </View>
 
+        <View style={styles.versionWrap}>
+          <Text style={styles.versionText}>OnTime v{appVersion}</Text>
+        </View>
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -167,4 +173,6 @@ const styles = StyleSheet.create({
   rowIcon:       { width: 34, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   rowItemText:   { flex: 1, fontSize: 15, fontFamily: fonts.semiBold, color: colors.textPrimary },
   divider:       { height: 1, backgroundColor: colors.border, marginVertical: 4 },
+  versionWrap:   { alignItems: 'center', paddingVertical: 20 },
+  versionText:   { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted },
 });

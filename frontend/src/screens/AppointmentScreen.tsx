@@ -180,6 +180,13 @@ export default function AppointmentScreen() {
       Alert.alert('날짜와 시간을 입력해주세요.');
       return false;
     }
+    if (Platform.OS === 'web') {
+      const parsed = new Date(appointmentTime);
+      if (isNaN(parsed.getTime())) {
+        Alert.alert('날짜/시간 형식 오류', '날짜는 YYYY-MM-DD, 시간은 HH:MM 형식으로 입력해주세요.\n예) 2026-05-22 / 09:00');
+        return false;
+      }
+    }
 
     const apptData: AppointmentRequest = {
       title: title.trim() || undefined,
@@ -315,7 +322,18 @@ export default function AppointmentScreen() {
           const activeItems = appointments.filter(a => !a.isDone && a.dDay >= 0);
           const doneItems   = appointments.filter(a => a.isDone || a.dDay < 0);
 
-          if (!showDone) return activeItems.map(renderItem);
+          if (!showDone) {
+            if (activeItems.length === 0 && doneItems.length > 0) {
+              return (
+                <View style={styles.emptyWrap}>
+                  <Ionicons name="checkmark-circle-outline" size={28} color={colors.textMuted} />
+                  <Text style={styles.emptyText}>예정된 약속이 없습니다.</Text>
+                  <Text style={styles.emptySubText}>완료 포함 보기를 누르면 이전 약속 {doneItems.length}건을 볼 수 있어요.</Text>
+                </View>
+              );
+            }
+            return activeItems.map(renderItem);
+          }
 
           return (
             <>

@@ -245,7 +245,7 @@ export default function HomeScreen() {
   })();
 
   const greeting = (() => {
-    if (today?.recommendedDeparture) {
+    if (today?.recommendedDeparture && isActiveToday) {
       const [hh, mm] = today.recommendedDeparture.split(':').map(Number);
       const dep = new Date(); dep.setHours(hh, mm, 0, 0);
       const diffMin = (dep.getTime() - Date.now()) / 60000;

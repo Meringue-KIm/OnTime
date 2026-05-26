@@ -287,7 +287,14 @@ export default function RouteScreen() {
                 <View style={styles.routeStatusRow}>
                   <TouchableOpacity
                     style={[styles.activeBadge, !route.isActive && styles.inactiveBadge]}
-                    onPress={() => !route.isActive && handleActivate(route.id)}
+                    onPress={() => !route.isActive && Alert.alert(
+                      '알람 활성화',
+                      '이 루트로 알람을 켤까요?\n현재 켜진 루트는 자동으로 꺼집니다.',
+                      [
+                        { text: '취소', style: 'cancel' },
+                        { text: '활성화', onPress: () => handleActivate(route.id) },
+                      ],
+                    )}
                     disabled={route.isActive}
                   >
                     <Text style={[styles.activeBadgeText, !route.isActive && styles.inactiveBadgeText]}>
@@ -473,8 +480,8 @@ export default function RouteScreen() {
           {/* 버튼 */}
           <View style={styles.formBtns}>
             <TouchableOpacity style={styles.cancelBtn} onPress={() => {
-              const hasInput = homeAddr.trim() || workAddr.trim();
-              if (hasInput) {
+              const hasUnsavedInput = editingId === null && (homeAddr.trim() || workAddr.trim());
+              if (hasUnsavedInput) {
                 Alert.alert('변경사항 버리기', '입력한 내용이 사라집니다. 취소하시겠습니까?', [
                   { text: '계속 수정', style: 'cancel' },
                   { text: '취소', style: 'destructive', onPress: () => setShowForm(false) },

@@ -83,6 +83,7 @@ export default function AlarmScreen() {
   const [skipLoading, setSkipLoading] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const isInitialMount = useRef(true);
+  const skipNextSaveRef = useRef(false);
 
   useEffect(() => {
     Notifications.getPermissionsAsync().then(({ status }: { status: string }) => setNotifStatus(status));
@@ -99,6 +100,7 @@ export default function AlarmScreen() {
   // 루트 로드 후 설정 반영 (초기 1회만)
   useEffect(() => {
     if (!activeRoute) return;
+    skipNextSaveRef.current = true; // 로드 직후 autoSave 한 번 건너뜀
     setBuffer(activeRoute.alarmBeforeMinutes);
     if (activeRoute.activeDays) {
       setActiveDays(activeRoute.activeDays.split(',').map(Number));
@@ -116,6 +118,7 @@ export default function AlarmScreen() {
   useEffect(() => {
     if (isInitialMount.current) return;
     if (wakeUpEnabled === null) return;
+    if (skipNextSaveRef.current) { skipNextSaveRef.current = false; return; }
     autoSave(buffer, activeDays, wakeUpEnabled ? wakeUpMinutes : null);
   }, [buffer, activeDays, wakeUpEnabled, wakeUpMinutes]);
 
@@ -225,7 +228,9 @@ export default function AlarmScreen() {
         ) : displayDepartureTime ? (
           <>
             <Text style={styles.wakeTime}>{displayDepartureTime}</Text>
-            <Text style={styles.wakeTimeSubLabel}>이 시각에 알람이 울립니다</Text>
+            <Text style={styles.wakeTimeSubLabel}>
+              {today?.logDate ? '오늘 알람이 발송됐습니다' : '이 시각에 알람이 울립니다'}
+            </Text>
           </>
         ) : (
           <Text style={styles.wakeTimePlaceholder}>루트를 설정해주세요</Text>
@@ -301,7 +306,11 @@ export default function AlarmScreen() {
 
           {/* 여유 시간 */}
           <View style={styles.card}>
-            <Text style={styles.sectionTitle}>✨ 여유 시간 (Buffer)</Text>
+            <View style={styles.rowBetween}>
+              <Text style={styles.sectionTitle}>✨ 여유 시간 (Buffer)</Text>
+              {saveStatus === 'saving' && <Text style={styles.autoSaveText}>저장 중...</Text>}
+              {saveStatus === 'saved'  && <Text style={[styles.autoSaveText, { color: colors.success }]}>✓ 저장됨</Text>}
+            </View>
             <View style={styles.bufferDisplay}>
               <Text style={styles.bufferValue}>{buffer}</Text>
               <Text style={styles.bufferUnit}>분</Text>

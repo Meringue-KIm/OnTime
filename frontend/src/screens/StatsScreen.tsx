@@ -150,6 +150,14 @@ export default function StatsScreen() {
               ? `피드백 ${logsWithFeedback.length}개 입력됨 · ${3 - logsWithFeedback.length}개 더 입력하면 개인화 알람이 시작돼요.`
               : '아직 피드백 기록이 없어요. 출근 후 결과를 입력하면 통계와 개인화 알람이 시작됩니다.'}
         </Text>
+        {logsWithFeedback.length >= 3 && (
+          <View style={styles.insightStat}>
+            <Text style={[styles.insightStatValue, {
+              color: onTimeRate >= 80 ? '#A5D6A7' : onTimeRate >= 50 ? '#FFE082' : '#EF9A9A'
+            }]}>{onTimeRate}%</Text>
+            <Text style={styles.insightStatLabel}>전체 정시 도착률</Text>
+          </View>
+        )}
       </View>
 
       {/* 이번 달 요약 */}
