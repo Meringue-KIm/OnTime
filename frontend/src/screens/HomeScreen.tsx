@@ -14,6 +14,7 @@ import { useNotification } from '../hooks/useNotification';
 import { useLocation } from '../hooks/useLocation';
 import { formatApptTime, extractTimeHHmm, formatKoreanDateTime } from '../utils/timeFormat';
 import { getWeatherNavIcon, getWeatherIonicon } from '../utils/weather';
+import { getWeatherRecommendations } from '../utils/weatherAssistant';
 import { DEFAULT_LOCATION } from '../constants/locations';
 
 const logo = require('../../assets/logo.png');
@@ -357,6 +358,46 @@ export default function HomeScreen() {
         </View>
       )}
 
+      {/* 오늘 준비물 */}
+      {weather && (() => {
+        const rec = getWeatherRecommendations(weather);
+        return (
+          <View style={styles.assistantCard}>
+            <Text style={styles.assistantTitle}>오늘 준비물</Text>
+            <View style={styles.assistantRow}>
+              {/* 옷차림 */}
+              <View style={styles.assistantItem}>
+                <Ionicons name="shirt-outline" size={18} color={colors.primary} />
+                <Text style={styles.assistantLabel}>{rec.outfit}</Text>
+              </View>
+              {/* 우산 */}
+              {rec.umbrella && (
+                <View style={styles.assistantItem}>
+                  <Ionicons name="umbrella-outline" size={18} color={rec.umbrella.urgent ? '#D32F2F' : '#1976D2'} />
+                  <Text style={[styles.assistantLabel, { color: rec.umbrella.urgent ? '#D32F2F' : '#1976D2' }]}>
+                    {rec.umbrella.label}
+                  </Text>
+                </View>
+              )}
+              {/* 일교차 */}
+              {rec.tempGap && (
+                <View style={styles.assistantItem}>
+                  <Ionicons name="thermometer-outline" size={18} color="#E65100" />
+                  <Text style={[styles.assistantLabel, { color: '#E65100' }]}>일교차 커요 · 겉옷 챙기세요</Text>
+                </View>
+              )}
+              {/* 자외선 */}
+              {rec.sunscreen && (
+                <View style={styles.assistantItem}>
+                  <Ionicons name="sunny-outline" size={18} color="#F9A825" />
+                  <Text style={[styles.assistantLabel, { color: '#F9A825' }]}>자외선 강해요 · 선크림 바르세요</Text>
+                </View>
+              )}
+            </View>
+          </View>
+        );
+      })()}
+
       {/* Departure Card */}
       <View style={styles.departureCard}>
         <Text style={styles.departureLabel}>{departureLabel}</Text>
@@ -544,6 +585,11 @@ const styles = StyleSheet.create({
   hourlyItem:         { alignItems: 'center', minWidth: 52, paddingHorizontal: 6 },
   hourlyTime:         { fontSize: 10, color: colors.textSecondary, fontFamily: fonts.regular },
   hourlyTemp:         { fontSize: 12, fontFamily: fonts.bold, color: colors.textPrimary },
+  assistantCard:    { marginHorizontal: 20, marginBottom: 12, backgroundColor: colors.card, borderRadius: 16, padding: 14, ...cardShadow },
+  assistantTitle:   { fontSize: 12, fontFamily: fonts.semiBold, color: colors.textSecondary, marginBottom: 10 },
+  assistantRow:     { gap: 8 },
+  assistantItem:    { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  assistantLabel:   { fontSize: 13, fontFamily: fonts.regular, color: colors.textPrimary, flexShrink: 1 },
   departureCard:    { marginHorizontal: 20, borderRadius: 20, backgroundColor: colors.primary, padding: 20, marginBottom: 16 },
   departureLabel:   { fontSize: 13, fontFamily: fonts.regular, color: 'rgba(255,255,255,0.8)', marginBottom: 4 },
   departureTime:    { fontSize: 44, fontFamily: fonts.extraBold, color: '#fff', letterSpacing: -1 },
