@@ -70,6 +70,12 @@ public class AuthService {
         );
     }
 
+    public java.util.Map<String, Object> getMe(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException(ErrorMessage.USER_NOT_FOUND));
+        return java.util.Map.of("email", user.getEmail(), "createdAt", user.getCreatedAt().toString());
+    }
+
     @Transactional
     public void updateFcmToken(Long userId, String fcmToken) {
         User user = userRepository.findById(userId)

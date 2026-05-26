@@ -220,7 +220,7 @@ export default function StatsScreen() {
             ))}
 
           </View>
-          <Text style={styles.chartNote}>* 피드백을 입력한 날만 집계됩니다</Text>
+          <Text style={styles.chartNote}>* 피드백을 입력한 날만 집계됩니다 · 도착 목표 시간 이전 도착 = 정시</Text>
         </View>
       )}
 
@@ -303,7 +303,11 @@ export default function StatsScreen() {
               ) : (
                 <View style={[styles.tripBadge, { backgroundColor: log.isLate ? colors.danger + '20' : colors.success + '20' }]}>
                   <Text style={[styles.tripStatus, { color: log.isLate ? colors.danger : colors.success }]}>
-                    {log.isLate ? '지각' : '정시'}
+                    {log.isLate
+                      ? `+${log.actualDiffMinutes}분 지각`
+                      : log.actualDiffMinutes === 0
+                        ? '딱 맞게'
+                        : `${Math.abs(log.actualDiffMinutes!)}분 일찍`}
                   </Text>
                 </View>
               )}

@@ -71,6 +71,11 @@ public class AuthController {
         return ResponseEntity.ok().build();
     }
 
+    @GetMapping("/me")
+    public ResponseEntity<java.util.Map<String, Object>> getMe(@AuthenticationPrincipal Long userId) {
+        return ResponseEntity.ok(authService.getMe(userId));
+    }
+
     @PutMapping("/fcmtoken")
     public ResponseEntity<Void> updateFcmToken(
             @AuthenticationPrincipal Long userId,

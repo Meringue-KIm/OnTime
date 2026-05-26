@@ -58,7 +58,28 @@ export default function AppointmentScreen() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const { appointments, loading, fetchAppointments, addAppointment, updateAppointment, completeDone, removeAppointment } = useAppointmentStore();
+
   useEffect(() => { fetchAppointments(); }, []);
+
+  // 로드 완료 후 미완료 지난 약속이 있으면 일괄 완료 처리 제안
+  useEffect(() => {
+    if (loading) return;
+    const expired = appointments.filter(a => !a.isDone && a.dDay < 0);
+    if (expired.length === 0) return;
+    Alert.alert(
+      '지난 약속 정리',
+      `${expired.length}건의 지난 약속이 완료 처리되지 않았어요.\n일괄 완료 처리할까요?`,
+      [
+        { text: '나중에', style: 'cancel' },
+        {
+          text: '완료 처리',
+          onPress: () => {
+            Promise.all(expired.map(a => completeDone(a.id))).catch(() => {});
+          },
+        },
+      ],
+    );
+  }, [loading]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -116,7 +137,7 @@ export default function AppointmentScreen() {
       setWebDate(''); setWebTime('09:00');
       setAlarmMinutes(30);
       setEditingId(null);
-      Alert.alert(isEditing ? '수정 완료' : '등록 완료', isEditing ? '약속이 수정되었습니다.' : '약속이 추가되었습니다.');
+      setShowForm(false);
       return true;
     } catch (e: any) {
       Alert.alert(isEditing ? '수정 실패' : '등록 실패', getErrorMessage(e));
@@ -199,8 +220,9 @@ export default function AppointmentScreen() {
         <View style={styles.listHeader}>
           <Text style={styles.sectionTitle}>등록된 약속</Text>
           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-            <TouchableOpacity onPress={() => setShowDone(v => !v)}>
-              <Text style={styles.toggleBtn}>{showDone ? '활성만' : '전체'}</Text>
+            <TouchableOpacity onPress={() => setShowDone(v => !v)} style={styles.toggleBtnWrap}>
+              <Ionicons name={showDone ? 'eye-off-outline' : 'eye-outline'} size={13} color={colors.primary} />
+              <Text style={styles.toggleBtn}>{showDone ? '예정만 보기' : '완료 포함 보기'}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.addApptBtn} onPress={() => { setShowForm(v => !v); setEditingId(null); }}>
               <Ionicons name={showForm ? 'remove' : 'add'} size={16} color="#fff" />
@@ -388,9 +410,37 @@ export default function AppointmentScreen() {
             </TouchableOpacity>
           ))}
         </View>
+        {(() => {
+          let baseMs: number | null = null;
+          if (Platform.OS === 'web') {
+            if (webDate && webTime) {
+              const d = new Date(`${webDate}T${webTime}:00`);
+              if (!isNaN(d.getTime())) baseMs = d.getTime() - alarmMinutes * 60000;
+            }
+          } else {
+            baseMs = apptDate.getTime() - alarmMinutes * 60000;
+          }
+          if (baseMs && baseMs > Date.now()) {
+            const d = new Date(baseMs);
+            const hh = d.getHours(), mm = d.getMinutes();
+            const ampm = hh < 12 ? '오전' : '오후';
+            const h12 = hh % 12 === 0 ? 12 : hh % 12;
+            const timeStr = `${ampm} ${h12}:${String(mm).padStart(2, '0')}`;
+            return (
+              <View style={styles.alarmPreview}>
+                <Ionicons name="alarm-outline" size={14} color={colors.primary} />
+                <Text style={styles.alarmPreviewText}>
+                  최소 <Text style={{ fontFamily: fonts.bold, color: colors.primary }}>{timeStr}</Text> 이전에 알람이 울려요
+                  <Text style={{ color: colors.textMuted }}> (이동 시간 포함 시 더 일찍)</Text>
+                </Text>
+              </View>
+            );
+          }
+          return null;
+        })()}
         <View style={styles.alarmNote}>
           <Ionicons name="information-circle-outline" size={13} color={colors.textMuted} />
-          <Text style={styles.alarmNoteText}>약속 {alarmMinutes}분 전 + 집에서 목적지까지 이동 시간이 자동으로 합산되어 알람이 울립니다.</Text>
+          <Text style={styles.alarmNoteText}>집에서 목적지까지 이동 시간이 자동 합산돼 출발 알람이 울립니다.</Text>
         </View>
 
         {/* 지도 미리보기 */}
@@ -446,6 +496,7 @@ const styles = StyleSheet.create({
   submitText:         { fontSize: 15, fontFamily: fonts.bold, color: '#fff' },
   listHeader:         { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
   sectionTitle:       { fontSize: 15, fontFamily: fonts.bold, color: colors.textPrimary },
+  toggleBtnWrap:      { flexDirection: 'row', alignItems: 'center', gap: 4 },
   toggleBtn:          { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
   emptyWrap:          { alignItems: 'center', paddingVertical: 16, gap: 6 },
   emptyText:          { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center' },
@@ -462,6 +513,8 @@ const styles = StyleSheet.create({
   alarmOptionActive:  { backgroundColor: colors.primary },
   alarmOptionText:    { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textSecondary },
   alarmOptionTextActive: { color: '#fff' },
+  alarmPreview:       { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, backgroundColor: colors.primaryLight, borderRadius: 8, padding: 9 },
+  alarmPreviewText:   { flex: 1, fontSize: 12, fontFamily: fonts.regular, color: colors.textSecondary, lineHeight: 17 },
   alarmNote:          { flexDirection: 'row', alignItems: 'flex-start', gap: 5, marginTop: 6 },
   alarmNoteText:      { flex: 1, fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted, lineHeight: 16 },
   addApptBtn:         { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: colors.primary, paddingHorizontal: 10, paddingVertical: 6, borderRadius: 20 },

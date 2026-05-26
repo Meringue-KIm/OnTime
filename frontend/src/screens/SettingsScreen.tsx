@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Platform,
@@ -6,7 +6,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
-import { changePassword, deleteAccount } from '../api/auth';
+import { changePassword, deleteAccount, getMe } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 
 export default function SettingsScreen({ navigation }: any) {
@@ -14,6 +14,16 @@ export default function SettingsScreen({ navigation }: any) {
   const [curPw, setCurPw]     = useState('');
   const [newPw, setNewPw]     = useState('');
   const [pwSaving, setPwSaving] = useState(false);
+  const [email, setEmail]     = useState<string | null>(null);
+  const [joinedAt, setJoinedAt] = useState<string | null>(null);
+
+  useEffect(() => {
+    getMe().then(({ data }) => {
+      setEmail(data.email);
+      const d = new Date(data.createdAt);
+      setJoinedAt(`${d.getFullYear()}년 ${d.getMonth() + 1}월 가입`);
+    }).catch(() => {});
+  }, []);
 
   const handleChangePassword = async () => {
     if (!curPw || !newPw) { Alert.alert('비밀번호를 모두 입력해주세요.'); return; }
@@ -55,6 +65,17 @@ export default function SettingsScreen({ navigation }: any) {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.inner}>
+
+        {/* 계정 정보 */}
+        <View style={styles.accountCard}>
+          <View style={styles.accountIconWrap}>
+            <Ionicons name="person-circle-outline" size={38} color={colors.primary} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={styles.accountEmail}>{email ?? '불러오는 중...'}</Text>
+            {joinedAt && <Text style={styles.accountMeta}>{joinedAt}</Text>}
+          </View>
+        </View>
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>비밀번호 변경</Text>
@@ -128,6 +149,10 @@ const styles = StyleSheet.create({
   input:         { backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, fontSize: 14, fontFamily: fonts.regular, color: colors.textPrimary },
   btn:           { backgroundColor: colors.primary, borderRadius: 10, paddingVertical: 13, alignItems: 'center', marginTop: 12 },
   btnText:       { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },
+  accountCard:   { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: colors.card, borderRadius: 16, padding: 16, ...cardShadow },
+  accountIconWrap:{ width: 48, height: 48, borderRadius: 24, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
+  accountEmail:  { fontSize: 15, fontFamily: fonts.semiBold, color: colors.textPrimary },
+  accountMeta:   { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 3 },
   rowItem:       { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10 },
   rowIcon:       { width: 34, height: 34, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
   rowItemText:   { flex: 1, fontSize: 15, fontFamily: fonts.semiBold, color: colors.textPrimary },

@@ -23,6 +23,9 @@ export const deleteAccount = () =>
 export const sendTestAlarm = () =>
   client.post('/alarm/test');
 
+export const getMe = () =>
+  client.get<{ email: string; createdAt: string }>('/auth/me');
+
 export const forgotPassword = (email: string) =>
   client.post('/auth/forgot-password', { email });
 

@@ -3,7 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TouchableOpacity, ActivityIndicator
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import * as Notifications from 'expo-notifications';
 import { colors, fonts, cardShadow } from '../constants/colors';
 import { getWeatherSummary, type WeatherSummary } from '../api/weather';
@@ -73,6 +73,17 @@ export default function HomeScreen() {
     fetchAppointments();
     fetchToday();
   }, []);
+
+  // 탭 재진입 시 today 갱신 (알람 탭에서 버퍼 변경 후 홈 탭으로 전환 시 즉시 반영)
+  useFocusEffect(
+    React.useCallback(() => {
+      const now = Date.now();
+      if (now - lastRefreshRef.current > 30_000) {
+        lastRefreshRef.current = now;
+        fetchToday();
+      }
+    }, [])
+  );
 
   // 로드 실패 시 5초 후 자동 재시도 (서버 콜드스타트 대응)
   useEffect(() => {
@@ -322,7 +333,8 @@ export default function HomeScreen() {
                   ? '현재 위치'
                   : activeRoute?.homeAddress?.split(' ').slice(0, 2).join(' ') ?? '서울'}
               </Text>
-              <Ionicons name={showWeatherInfo ? 'chevron-up' : 'chevron-forward'} size={11} color={colors.textMuted} />
+              <Text style={styles.weatherLocationChange}>지역 변경</Text>
+              <Ionicons name={showWeatherInfo ? 'chevron-up' : 'chevron-down'} size={11} color={colors.primary} />
             </TouchableOpacity>
           </View>
           {showWeatherInfo && (
@@ -621,8 +633,9 @@ const styles = StyleSheet.create({
   weatherTempBlock:   { justifyContent: 'center' },
   weatherCurrentTemp: { fontSize: 30, fontFamily: fonts.extraBold, color: colors.textPrimary, lineHeight: 34 },
   weatherHighLow:     { fontSize: 11, fontFamily: fonts.regular, color: colors.textSecondary, fontStyle: 'italic' },
-  weatherLocationBtn: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2 },
-  weatherLocation:    { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted, fontStyle: 'italic' },
+  weatherLocationBtn:    { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 2, backgroundColor: colors.primaryLight, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 16 },
+  weatherLocation:       { fontSize: 11, fontFamily: fonts.semiBold, color: colors.primary },
+  weatherLocationChange: { fontSize: 10, fontFamily: fonts.regular, color: colors.primary, opacity: 0.7 },
   hourlyRow:          { gap: 4, paddingVertical: 2 },
   hourlyItem:         { alignItems: 'center', minWidth: 52, paddingHorizontal: 6 },
   hourlyTime:         { fontSize: 10, color: colors.textSecondary, fontFamily: fonts.regular },

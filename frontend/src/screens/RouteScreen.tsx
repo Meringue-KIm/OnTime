@@ -13,6 +13,7 @@ if (Platform.OS !== 'web') {
 }
 import { colors, fonts, cardShadow } from '../constants/colors';
 import { useRouteStore } from '../store/routeStore';
+import { useTodayStore } from '../store/todayStore';
 import type { RouteRequest, RouteResponse } from '../api/routes';
 import { extractTimeHHmm } from '../utils/timeFormat';
 import { getErrorMessage } from '../utils/errors';
@@ -39,6 +40,7 @@ export default function RouteScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const { routes, loading, fetchRoutes, saveRoute, activateRoute, removeRoute } = useRouteStore();
+  const { today } = useTodayStore();
 
   const [showForm, setShowForm]     = useState(false);
   const [editingId, setEditingId]   = useState<number | null>(null);
@@ -301,10 +303,19 @@ export default function RouteScreen() {
                     <Ionicons name="flag-outline" size={12} color={colors.primary} />
                     <Text style={styles.routeMetaText}>{extractTimeHHmm(route.arrivalTime)} 도착 목표</Text>
                   </View>
-                  <View style={styles.routeMetaChip}>
-                    <Ionicons name="alarm-outline" size={12} color={colors.primary} />
-                    <Text style={styles.routeMetaText}>여유 {route.alarmBeforeMinutes}분</Text>
-                  </View>
+                  {route.isActive && today?.recommendedDeparture ? (
+                    <View style={[styles.routeMetaChip, { backgroundColor: colors.primary }]}>
+                      <Ionicons name="alarm" size={12} color="#fff" />
+                      <Text style={[styles.routeMetaText, { color: '#fff' }]}>
+                        오늘 {extractTimeHHmm(today.recommendedDeparture)} 알람
+                      </Text>
+                    </View>
+                  ) : (
+                    <View style={styles.routeMetaChip}>
+                      <Ionicons name="alarm-outline" size={12} color={colors.primary} />
+                      <Text style={styles.routeMetaText}>여유 {route.alarmBeforeMinutes}분</Text>
+                    </View>
+                  )}
                   <View style={styles.routeMetaChip}>
                     <Ionicons
                       name={route.transportMode === 'car' ? 'car-outline' : route.transportMode === 'transit' ? 'bus-outline' : 'walk-outline'}
