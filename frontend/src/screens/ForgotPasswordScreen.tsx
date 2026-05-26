@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, TextInput, TouchableOpacity, StyleSheet,
-  Alert, ActivityIndicator, Image, ScrollView, KeyboardAvoidingView, Platform,
+  Alert, ActivityIndicator, Image, ScrollView, KeyboardAvoidingView, Platform, Linking,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -158,6 +158,14 @@ export default function ForgotPasswordScreen({ navigation }: any) {
                     : <Text style={styles.buttonText}>비밀번호 변경</Text>}
                 </TouchableOpacity>
 
+                <TouchableOpacity
+                  style={styles.openEmailBtn}
+                  onPress={() => Linking.openURL('mailto:').catch(() => {})}
+                >
+                  <Ionicons name="mail-outline" size={15} color={colors.primary} />
+                  <Text style={styles.openEmailBtnText}>이메일 앱 열기</Text>
+                </TouchableOpacity>
+
                 <TouchableOpacity style={styles.resendBtn} onPress={() => { setStep(1); setCode(''); }}>
                   <Text style={styles.resendText}>코드 다시 받기</Text>
                 </TouchableOpacity>
@@ -186,6 +194,8 @@ const styles = StyleSheet.create({
   codeInput:   { fontSize: 22, fontFamily: fonts.bold, letterSpacing: 6, textAlign: 'center' },
   button:      { marginTop: 20, backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 15, alignItems: 'center' },
   buttonText:  { color: '#fff', fontSize: 16, fontFamily: fonts.bold },
-  resendBtn:   { marginTop: 14, alignItems: 'center' },
+  openEmailBtn:     { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 14, backgroundColor: colors.primaryLight, borderRadius: 10, paddingVertical: 11 },
+  openEmailBtnText: { fontSize: 14, fontFamily: fonts.semiBold, color: colors.primary },
+  resendBtn:   { marginTop: 10, alignItems: 'center', paddingVertical: 6 },
   resendText:  { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted },
 });

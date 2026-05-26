@@ -54,6 +54,14 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [weatherError, setWeatherError] = useState(false);
   const [bannerDismissed, setBannerDismissed] = useState(false);
+  const BANNER_KEY = 'departure_banner_dismissed_date';
+  const todayStr = new Date().toISOString().slice(0, 10);
+
+  useEffect(() => {
+    AsyncStorage.getItem(BANNER_KEY).then(v => {
+      if (v === todayStr) setBannerDismissed(true);
+    });
+  }, []);
   const [showWeatherInfo, setShowWeatherInfo] = useState(false);
   const [selectedCity, setSelectedCity] = useState<City | null>(null);
 
@@ -199,7 +207,11 @@ export default function HomeScreen() {
     return diff > 0 && diff < 60 * 60 * 1000;
   })();
   const showDepartureBanner = alarmFired || timeBasedBanner;
-  const handleDismissBanner = () => { dismissAlarmBanner(); setBannerDismissed(true); };
+  const handleDismissBanner = () => {
+    dismissAlarmBanner();
+    setBannerDismissed(true);
+    AsyncStorage.setItem(BANNER_KEY, todayStr).catch(() => {});
+  };
 
   const cacheAgeLabel = (() => {
     if (!cachedAt) return '';

@@ -118,6 +118,8 @@ export default function AlarmScreen() {
           alarmBeforeMinutes:   newBuffer,
           activeDays:           newDays.join(','),
           wakeUpBeforeMinutes:  newWakeUp,
+          transportMode:        activeRoute.transportMode as 'car' | 'transit' | 'walk',
+          customTravelMinutes:  activeRoute.customTravelMinutes,
         }, activeRoute.id);
         fetchToday(); // 버퍼/요일 변경 반영된 출발 시간 즉시 갱신
         setSaveStatus('saved');

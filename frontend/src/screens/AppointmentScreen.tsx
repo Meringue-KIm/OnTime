@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   TextInput, Alert, ActivityIndicator, Image, Platform, RefreshControl,
@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { colors, fonts, cardShadow } from '../constants/colors';
 import { useAppointmentStore } from '../store/appointmentStore';
+import { useFocusEffect } from '@react-navigation/native';
 import KakaoMapView from '../components/KakaoMapView';
 import AddressInput from '../components/AddressInput';
 import { getErrorMessage } from '../utils/errors';
@@ -58,25 +59,34 @@ export default function AppointmentScreen() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const { appointments, loading, fetchAppointments, addAppointment, updateAppointment, completeDone, removeAppointment } = useAppointmentStore();
+  const expiredAlertShownRef = useRef(false);
+  const lastFocusDateRef = useRef('');
 
   useEffect(() => { fetchAppointments(); }, []);
 
-  // 로드 완료 후 미완료 지난 약속이 있으면 일괄 완료 처리 제안
+  // 탭 재진입 시 날짜가 바뀌었으면 D-Day 갱신
+  useFocusEffect(
+    React.useCallback(() => {
+      const today = new Date().toISOString().slice(0, 10);
+      if (lastFocusDateRef.current !== today) {
+        lastFocusDateRef.current = today;
+        fetchAppointments();
+      }
+    }, [])
+  );
+
+  // 세션 내 최초 1회 — 미완료 지난 약속 일괄 완료 제안
   useEffect(() => {
-    if (loading) return;
+    if (loading || expiredAlertShownRef.current) return;
     const expired = appointments.filter(a => !a.isDone && a.dDay < 0);
     if (expired.length === 0) return;
+    expiredAlertShownRef.current = true;
     Alert.alert(
       '지난 약속 정리',
       `${expired.length}건의 지난 약속이 완료 처리되지 않았어요.\n일괄 완료 처리할까요?`,
       [
         { text: '나중에', style: 'cancel' },
-        {
-          text: '완료 처리',
-          onPress: () => {
-            Promise.all(expired.map(a => completeDone(a.id))).catch(() => {});
-          },
-        },
+        { text: '완료 처리', onPress: () => Promise.all(expired.map(a => completeDone(a.id))).catch(() => {}) },
       ],
     );
   }, [loading]);

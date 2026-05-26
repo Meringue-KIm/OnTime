@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
-  Alert, ActivityIndicator, Image, Platform, TextInput,
+  Alert, ActivityIndicator, Image, Platform, TextInput, type ScrollView as ScrollViewType,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -60,6 +60,7 @@ export default function RouteScreen() {
   const [customTravelMin, setCustomTravelMin] = useState<string>('');
   const [deletedRoute, setDeletedRoute] = useState<RouteResponse | null>(null);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scrollRef    = useRef<ScrollViewType>(null);
 
   useEffect(() => { fetchRoutes(); }, []);
 
@@ -134,6 +135,7 @@ export default function RouteScreen() {
     try {
       await saveRoute(routeData, editingId ?? undefined);
       setShowForm(false);
+      scrollRef.current?.scrollTo({ y: 0, animated: true });
       if (editingId) {
         Alert.alert('수정 완료', '루트가 수정되었습니다.');
       } else {
@@ -213,7 +215,7 @@ export default function RouteScreen() {
   const sortedRoutes = [...routes].sort((a, b) => Number(b.isActive) - Number(a.isActive));
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
+    <ScrollView ref={scrollRef} style={styles.container} showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
 
       <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
         <Image source={logo} style={styles.logoImg} resizeMode="contain" />

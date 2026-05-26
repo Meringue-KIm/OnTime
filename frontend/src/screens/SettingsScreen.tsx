@@ -10,11 +10,11 @@ import { changePassword, deleteAccount, getMe } from '../api/auth';
 import { useAuthStore } from '../store/authStore';
 
 export default function SettingsScreen({ navigation }: any) {
-  const { logout } = useAuthStore();
+  const { logout, email: storedEmail } = useAuthStore();
   const [curPw, setCurPw]     = useState('');
   const [newPw, setNewPw]     = useState('');
   const [pwSaving, setPwSaving] = useState(false);
-  const [email, setEmail]     = useState<string | null>(null);
+  const [email, setEmail]     = useState<string | null>(storedEmail);
   const [joinedAt, setJoinedAt] = useState<string | null>(null);
 
   useEffect(() => {
@@ -22,7 +22,9 @@ export default function SettingsScreen({ navigation }: any) {
       setEmail(data.email);
       const d = new Date(data.createdAt);
       setJoinedAt(`${d.getFullYear()}년 ${d.getMonth() + 1}월 가입`);
-    }).catch(() => {});
+    }).catch(() => {
+      // 오프라인 시 authStore의 이메일로 fallback (이미 storedEmail로 초기화됨)
+    });
   }, []);
 
   const handleChangePassword = async () => {

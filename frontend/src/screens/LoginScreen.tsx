@@ -27,7 +27,7 @@ export default function LoginScreen({ navigation }: any) {
     setError('');
     try {
       const { data } = await login(email, password);
-      await setTokens(data.accessToken, data.refreshToken);
+      await setTokens(data.accessToken, data.refreshToken, email);
     } catch (e: any) {
       setError(e.response?.data?.message ?? '이메일 또는 비밀번호가 맞지 않습니다.');
     } finally {

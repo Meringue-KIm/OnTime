@@ -70,6 +70,11 @@ export default function StatsScreen() {
   const weeklyData = buildWeeklyData(logs);
   const recentLogs = showAllLogs ? logs : logs.slice(0, 5);
 
+  const thisMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const thisMonthLogs = logsWithFeedback.filter(l => l.logDate.startsWith(thisMonth));
+  const thisMonthOnTime = thisMonthLogs.filter(l => l.isLate === false).length;
+  const thisMonthRate = thisMonthLogs.length > 0 ? Math.round((thisMonthOnTime / thisMonthLogs.length) * 100) : null;
+
   const doSubmitFeedback = async (log: CommuteLog, diffMinutes: number) => {
     try {
       await submitFeedback(log.id, diffMinutes);
@@ -158,6 +163,33 @@ export default function StatsScreen() {
         </View>
       </View>
 
+      {/* 이번 달 요약 */}
+      {thisMonthLogs.length > 0 && (
+        <View style={styles.monthCard}>
+          <Text style={styles.monthTitle}>
+            {new Date().getMonth() + 1}월 요약
+          </Text>
+          <View style={styles.monthRow}>
+            <View style={styles.monthStat}>
+              <Text style={styles.monthStatValue}>{thisMonthLogs.length}일</Text>
+              <Text style={styles.monthStatLabel}>기록된 출근일</Text>
+            </View>
+            <View style={styles.monthDivider} />
+            <View style={styles.monthStat}>
+              <Text style={[styles.monthStatValue, {
+                color: (thisMonthRate ?? 0) >= 80 ? colors.success : (thisMonthRate ?? 0) >= 50 ? '#FFA000' : colors.danger
+              }]}>{thisMonthRate}%</Text>
+              <Text style={styles.monthStatLabel}>이번 달 정시율</Text>
+            </View>
+            <View style={styles.monthDivider} />
+            <View style={styles.monthStat}>
+              <Text style={[styles.monthStatValue, { color: colors.success }]}>{thisMonthOnTime}일</Text>
+              <Text style={styles.monthStatLabel}>정시 도착</Text>
+            </View>
+          </View>
+        </View>
+      )}
+
       {/* 알람 조정 제안 — 5회 이상 기록에서 정시율 60% 미만 */}
       {logsWithFeedback.length >= 5 && onTimeRate < 60 && (
         <View style={styles.suggestionCard}>
@@ -182,17 +214,28 @@ export default function StatsScreen() {
             {formatDate(pendingFeedbackLog.logDate)} 출근 결과를 입력해주세요
           </Text>
           <View style={styles.feedbackBannerBtns}>
-            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, -5)}>
+            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() =>
+              Alert.alert('얼마나 일찍?', '도착 목표 기준 얼마나 일찍 도착했나요?', [
+                { text: '5~10분', onPress: () => doSubmitFeedback(pendingFeedbackLog, -7) },
+                { text: '15~20분', onPress: () => doSubmitFeedback(pendingFeedbackLog, -15) },
+                { text: '30분 이상', onPress: () => doSubmitFeedback(pendingFeedbackLog, -30) },
+                { text: '취소', style: 'cancel' },
+              ])
+            }>
               <Text style={styles.feedbackBannerBtnText}>일찍 🎉</Text>
             </TouchableOpacity>
             <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, 0)}>
               <Text style={styles.feedbackBannerBtnText}>딱 맞게 ✅</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() => doSubmitFeedback(pendingFeedbackLog, 7)}>
+            <TouchableOpacity style={styles.feedbackBannerBtn} onPress={() =>
+              Alert.alert('얼마나 늦었나요?', '도착 목표 기준 얼마나 늦었나요?', [
+                { text: '5~10분', onPress: () => doSubmitFeedback(pendingFeedbackLog, 7) },
+                { text: '15~20분', onPress: () => doSubmitFeedback(pendingFeedbackLog, 17) },
+                { text: '30분 이상', onPress: () => doSubmitFeedback(pendingFeedbackLog, 30) },
+                { text: '취소', style: 'cancel' },
+              ])
+            }>
               <Text style={styles.feedbackBannerBtnText}>늦음 😅</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={[styles.feedbackBannerBtn, { backgroundColor: colors.primaryLight }]} onPress={() => handleFeedback(pendingFeedbackLog)}>
-              <Text style={[styles.feedbackBannerBtnText, { color: colors.primary }]}>세부</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -413,4 +456,11 @@ const styles = StyleSheet.create({
   feedbackBtn:      { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primaryLight },
   cacheNotice:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 20, marginBottom: 8, padding: 10, backgroundColor: '#FFF3E0', borderRadius: 8 },
   cacheNoticeText:  { flex: 1, fontSize: 12, color: colors.warning },
+  monthCard:        { marginHorizontal: 20, marginBottom: 12, backgroundColor: colors.card, borderRadius: 16, padding: 16, ...cardShadow },
+  monthTitle:       { fontSize: 13, fontFamily: fonts.semiBold, color: colors.textSecondary, marginBottom: 12 },
+  monthRow:         { flexDirection: 'row', alignItems: 'center' },
+  monthStat:        { flex: 1, alignItems: 'center', gap: 4 },
+  monthStatValue:   { fontSize: 22, fontFamily: fonts.extraBold, color: colors.textPrimary },
+  monthStatLabel:   { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted },
+  monthDivider:     { width: 1, height: 36, backgroundColor: colors.border },
 });
