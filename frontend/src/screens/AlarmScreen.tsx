@@ -400,7 +400,16 @@ export default function AlarmScreen() {
           {wakeUpEnabled ? (
             <>
               <Text style={[styles.autoSaveText, { marginBottom: 12 }]}>
-                출발 {wakeUpMinutes}분 전에 기상 알람이 울려요
+                출발 {wakeUpMinutes}분 전{(() => {
+                  if (!displayDepartureTime) return '';
+                  const [hh, mm] = displayDepartureTime.split(':').map(Number);
+                  const wMin = ((hh * 60 + mm - wakeUpMinutes) % 1440 + 1440) % 1440;
+                  const wh = Math.floor(wMin / 60);
+                  const wm = wMin % 60;
+                  const ampm = wh < 12 ? '오전' : '오후';
+                  const h12 = wh % 12 === 0 ? 12 : wh % 12;
+                  return ` · ${ampm} ${h12}:${String(wm).padStart(2, '0')}에 기상 알람`;
+                })()}
               </Text>
               <View style={styles.bufferControls}>
                 <TouchableOpacity

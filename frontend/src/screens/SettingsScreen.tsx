@@ -14,9 +14,11 @@ const appVersion = Constants.expoConfig?.version ?? (Constants as any).manifest?
 
 export default function SettingsScreen({ navigation }: any) {
   const { logout, email: storedEmail } = useAuthStore();
-  const [curPw, setCurPw]       = useState('');
-  const [newPw, setNewPw]       = useState('');
-  const [pwSaving, setPwSaving] = useState(false);
+  const [curPw, setCurPw]         = useState('');
+  const [newPw, setNewPw]         = useState('');
+  const [showCurPw, setShowCurPw] = useState(false);
+  const [showNewPw, setShowNewPw] = useState(false);
+  const [pwSaving, setPwSaving]   = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [email, setEmail]     = useState<string | null>(storedEmail);
   const [joinedAt, setJoinedAt] = useState<string | null>(null);
@@ -89,22 +91,32 @@ export default function SettingsScreen({ navigation }: any) {
 
         <View style={styles.card}>
           <Text style={styles.sectionTitle}>비밀번호 변경</Text>
-          <TextInput
-            style={styles.input}
-            placeholder="현재 비밀번호"
-            placeholderTextColor={colors.textMuted}
-            secureTextEntry
-            value={curPw}
-            onChangeText={setCurPw}
-          />
-          <TextInput
-            style={[styles.input, { marginTop: 8 }]}
-            placeholder="새 비밀번호 (8자 이상)"
-            placeholderTextColor={colors.textMuted}
-            secureTextEntry
-            value={newPw}
-            onChangeText={setNewPw}
-          />
+          <View style={styles.pwWrap}>
+            <TextInput
+              style={styles.pwInput}
+              placeholder="현재 비밀번호"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry={!showCurPw}
+              value={curPw}
+              onChangeText={setCurPw}
+            />
+            <TouchableOpacity onPress={() => setShowCurPw(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name={showCurPw ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
+          <View style={[styles.pwWrap, { marginTop: 8 }]}>
+            <TextInput
+              style={styles.pwInput}
+              placeholder="새 비밀번호 (8자 이상)"
+              placeholderTextColor={colors.textMuted}
+              secureTextEntry={!showNewPw}
+              value={newPw}
+              onChangeText={setNewPw}
+            />
+            <TouchableOpacity onPress={() => setShowNewPw(v => !v)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+              <Ionicons name={showNewPw ? 'eye-off-outline' : 'eye-outline'} size={18} color={colors.textMuted} />
+            </TouchableOpacity>
+          </View>
           <TouchableOpacity
             style={[styles.btn, pwSaving && { opacity: 0.6 }]}
             onPress={handleChangePassword}
@@ -175,4 +187,6 @@ const styles = StyleSheet.create({
   divider:       { height: 1, backgroundColor: colors.border, marginVertical: 4 },
   versionWrap:   { alignItems: 'center', paddingVertical: 20 },
   versionText:   { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted },
+  pwWrap:        { flexDirection: 'row', alignItems: 'center', backgroundColor: colors.bg, borderRadius: 10, paddingHorizontal: 14, paddingVertical: 12, gap: 8 },
+  pwInput:       { flex: 1, fontSize: 14, fontFamily: fonts.regular, color: colors.textPrimary },
 });

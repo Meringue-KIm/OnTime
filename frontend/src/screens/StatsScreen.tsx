@@ -322,13 +322,16 @@ export default function StatsScreen() {
                     <Text style={[styles.tripStatus, { color: colors.primary }]}>입력</Text>
                   </>
                 ) : (
-                  <Text style={[styles.tripStatus, { color: log.isLate ? colors.danger : colors.success }]}>
-                    {log.isLate
-                      ? `+${log.actualDiffMinutes}분 지각`
-                      : log.actualDiffMinutes === 0
-                        ? '딱 맞게'
-                        : `${Math.abs(log.actualDiffMinutes!)}분 일찍`}
-                  </Text>
+                  <>
+                    <Text style={[styles.tripStatus, { color: log.isLate ? colors.danger : colors.success }]}>
+                      {log.isLate
+                        ? `+${log.actualDiffMinutes}분 지각`
+                        : log.actualDiffMinutes === 0
+                          ? '딱 맞게'
+                          : `${Math.abs(log.actualDiffMinutes!)}분 일찍`}
+                    </Text>
+                    <Ionicons name="pencil-outline" size={10} color={colors.textMuted} style={{ marginLeft: 2 }} />
+                  </>
                 )}
               </TouchableOpacity>
             </View>

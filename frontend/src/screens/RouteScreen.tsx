@@ -62,6 +62,7 @@ export default function RouteScreen() {
   const [undoSecondsLeft, setUndoSecondsLeft] = useState(0);
   const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const undoIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const undoUsedRef = useRef(false);
   const scrollRef    = useRef<ScrollViewType>(null);
 
   useEffect(() => { fetchRoutes(); }, []);
@@ -191,14 +192,19 @@ export default function RouteScreen() {
           if (target?.isActive) {
             const remaining = routes.filter(r => r.id !== id);
             if (remaining.length > 0) {
-              Alert.alert(
-                '알람이 꺼졌어요',
-                '활성 루트가 삭제되어 알람이 중단됩니다.\n다른 루트를 활성화하시겠습니까?',
-                [
-                  { text: '나중에', style: 'cancel' },
-                  { text: '활성화', onPress: () => handleActivate(remaining[0].id) },
-                ],
-              );
+              undoUsedRef.current = false;
+              setTimeout(() => {
+                if (!undoUsedRef.current) {
+                  Alert.alert(
+                    '알람이 꺼졌어요',
+                    '활성 루트가 삭제되어 알람이 중단됩니다.\n다른 루트를 활성화하시겠습니까?',
+                    [
+                      { text: '나중에', style: 'cancel' },
+                      { text: '활성화', onPress: () => handleActivate(remaining[0].id) },
+                    ],
+                  );
+                }
+              }, 6500);
             }
           }
         } catch (e: any) { Alert.alert('삭제 실패', getErrorMessage(e)); }
@@ -208,6 +214,7 @@ export default function RouteScreen() {
 
   const handleUndo = async () => {
     if (!deletedRoute) return;
+    undoUsedRef.current = true;
     if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
     setDeletedRoute(null);
     try {
@@ -412,6 +419,20 @@ export default function RouteScreen() {
             ))}
           </View>
 
+          {/* 반복 요일 */}
+          <Text style={[styles.inputLabel, { marginTop: 12 }]}>📅 반복 요일</Text>
+          <View style={styles.daysRow}>
+            {['일','월','화','수','목','금','토'].map((d, i) => (
+              <TouchableOpacity
+                key={i}
+                style={[styles.dayBtn, activeDays.includes(i) && styles.dayBtnActive]}
+                onPress={() => setActiveDays(prev => prev.includes(i) ? prev.filter(x => x !== i) : [...prev, i])}
+              >
+                <Text style={[styles.dayText, activeDays.includes(i) && styles.dayTextActive]}>{d}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
           {/* 도착 시간 */}
           <Text style={[styles.inputLabel, { marginTop: 12 }]}>⏰ 도착 희망 시간</Text>
           <TouchableOpacity style={styles.timePickerBtn} onPress={() => setShowTimePicker(true)}>
@@ -473,7 +494,7 @@ export default function RouteScreen() {
           <View style={styles.alarmTabNote}>
             <Ionicons name="alarm-outline" size={13} color={colors.primary} />
             <Text style={styles.alarmTabNoteText}>
-              기본 설정: 여유 {buffer}분 · {activeDays.map(d => ['일','월','화','수','목','금','토'][d]).join('・')} 반복{'\n'}저장 후 알람 탭에서 세부 조정 가능해요.
+              저장하면 위 설정으로 알람이 시작됩니다. 여유 시간·기상 알람은 알람 탭에서 추가 조정 가능해요.
             </Text>
           </View>
 

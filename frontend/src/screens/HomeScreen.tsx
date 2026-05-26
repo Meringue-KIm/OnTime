@@ -200,6 +200,12 @@ export default function HomeScreen() {
     }
   };
 
+  const [tick, setTick] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setTick(t => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
+
   const { alarmFired, dismissAlarmBanner } = useNotification();
 
   // 출발 배너: 알람 탭 응답 OR 출발 시간이 지난 후 1시간 이내 (dismiss 안 한 경우)
@@ -261,8 +267,9 @@ export default function HomeScreen() {
     return '오늘도 수고 많으셨어요! OnTime이 내일도 함께할게요. 🌙';
   })();
 
+  const now = new Date(tick >= 0 ? Date.now() : 0); // tick 참조로 매분 재평가
   const todayAppts = appointments
-    .filter(a => !a.isDone && a.dDay === 0 && new Date(a.appointmentTime) > new Date())
+    .filter(a => !a.isDone && a.dDay === 0 && new Date(a.appointmentTime) > now)
     .sort((a, b) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime());
 
   const nextAppt = appointments
@@ -393,7 +400,7 @@ export default function HomeScreen() {
                 const todayDow = new Date().getDay();
                 const isActiveToday = activeRoute?.activeDays
                   ?.split(',').map(Number).includes(todayDow) ?? false;
-                if (dep > new Date() && isActiveToday) {
+                if (dep > new Date() && isActiveToday && !activeRoute?.isSkippedToday) {
                   return (
                     <View style={[styles.trafficBadge, { backgroundColor: 'rgba(255,255,255,0.25)', marginBottom: 4 }]}>
                       <Ionicons name="alarm-outline" size={13} color="#fff" />
@@ -445,8 +452,8 @@ export default function HomeScreen() {
         )}
       </View>
 
-      {/* 내비게이션 — 출발 배너가 이미 내비 버튼을 포함하므로 배너 없을 때만 표시 */}
-      {activeRoute && !showDepartureBanner && (
+      {/* 내비게이션 — 출발 배너가 이미 내비 버튼을 포함하므로 배너 없을 때만 표시 / 비활성 요일엔 오늘 약속이 있을 때만 표시 */}
+      {activeRoute && !showDepartureBanner && (isActiveToday || todayAppts.length > 0) && (
         <TouchableOpacity style={[styles.navBtn, { marginHorizontal: 20, marginBottom: 12 }]} onPress={handleNavigation}>
           <Ionicons name="navigate" size={16} color="#fff" />
           <Text style={styles.navBtnText}>내비게이션 시작</Text>

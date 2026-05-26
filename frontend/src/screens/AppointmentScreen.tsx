@@ -113,6 +113,11 @@ export default function AppointmentScreen() {
     setAlarmMinutes(item.alarmBeforeMinutes);
     const d = new Date(item.appointmentTime);
     setApptDate(d);
+    if (Platform.OS === 'web') {
+      const pad = (n: number) => String(n).padStart(2, '0');
+      setWebDate(`${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`);
+      setWebTime(`${pad(d.getHours())}:${pad(d.getMinutes())}`);
+    }
     setShowForm(true);
   };
 
@@ -319,8 +324,10 @@ export default function AppointmentScreen() {
             );
           };
 
-          const activeItems = appointments.filter(a => !a.isDone && a.dDay >= 0);
-          const doneItems   = appointments.filter(a => a.isDone || a.dDay < 0);
+          const isExpired = (a: import('../api/appointments').AppointmentResponse) =>
+            a.dDay === 0 && !a.isDone && new Date(a.appointmentTime) <= new Date();
+          const activeItems = appointments.filter(a => !a.isDone && a.dDay >= 0 && !isExpired(a));
+          const doneItems   = appointments.filter(a => a.isDone || a.dDay < 0 || isExpired(a));
 
           if (!showDone) {
             if (activeItems.length === 0 && doneItems.length > 0) {
