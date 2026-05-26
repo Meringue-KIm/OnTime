@@ -65,7 +65,7 @@ export default function StatsScreen() {
   };
 
   const handleFeedback = (log: CommuteLog) => {
-    if (log.isLate !== null) return;
+    if (log.actualDiffMinutes !== null) return;
     Alert.alert(
       '출근 결과 입력',
       `${formatDate(log.logDate)}\n도착 목표 시간 기준으로 어떠셨나요?`,

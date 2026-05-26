@@ -111,6 +111,10 @@ export default function RouteScreen() {
       return;
     }
     const parsedCustomMin = customTravelMin.trim() ? parseInt(customTravelMin.trim(), 10) : undefined;
+    if (transport === 'transit' && parsedCustomMin !== undefined && (isNaN(parsedCustomMin) || parsedCustomMin < 1)) {
+      Alert.alert('이동 시간 오류', '직접 입력한 이동 시간은 1분 이상이어야 합니다.');
+      return;
+    }
     const routeData: RouteRequest = {
       homeAddress: homeAddr.trim(), homeLat, homeLng,
       workAddress: workAddr.trim(), workLat, workLng,

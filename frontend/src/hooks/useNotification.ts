@@ -141,7 +141,7 @@ export function useNotification(): UseNotificationResult {
             text: '5분 후 다시 알림',
             onPress: () => {
               Notifications.scheduleNotificationAsync({
-                content: { title: '출발할 시간이에요! (스누즈)', body, sound: true },
+                content: { title: '출발할 시간이에요! (스누즈)', body, sound: true, data: { type: 'departure' } },
                 trigger: { seconds: 300, channelId: 'alarm' } as any,
               });
             },

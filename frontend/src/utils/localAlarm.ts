@@ -19,6 +19,7 @@ function alarmContent(h: number, m: number) {
     body: `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')} 출발 — OnTime 알람`,
     sound: true,
     priority: Notifications.AndroidNotificationPriority.MAX,
+    data: { type: 'departure' },
   };
 }
 

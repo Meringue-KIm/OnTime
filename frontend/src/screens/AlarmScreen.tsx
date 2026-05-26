@@ -85,7 +85,7 @@ export default function AlarmScreen() {
     if (activeRoute.activeDays) {
       setActiveDays(activeRoute.activeDays.split(',').map(Number));
     }
-    if (activeRoute.wakeUpBeforeMinutes) {
+    if (activeRoute.wakeUpBeforeMinutes != null) {
       setWakeUpEnabled(true);
       setWakeUpMinutes(activeRoute.wakeUpBeforeMinutes);
     } else {
