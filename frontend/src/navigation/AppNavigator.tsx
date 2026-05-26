@@ -1,11 +1,13 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View, Image, StyleSheet, Platform } from 'react-native';
-import { NavigationContainer } from '@react-navigation/native';
+import { NavigationContainer, createNavigationContainerRef } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuthStore } from '../store/authStore';
+
+export const navigationRef = createNavigationContainerRef<any>();
 import { useRouteStore } from '../store/routeStore';
 import { useAppointmentStore } from '../store/appointmentStore';
 import { useTodayStore } from '../store/todayStore';
@@ -41,7 +43,7 @@ export default function AppNavigator() {
   useEffect(() => {
     pingServer();
     loadToken();
-    AsyncStorage.getItem('app_intro_seen').then(v => setIntroSeen(!!v));
+    AsyncStorage.getItem('onboarding_done').then(v => setIntroSeen(!!v));
   }, []);
 
   // 로그인 상태가 되면 FCM 토큰 즉시 재등록 — 앱 재설치/토큰 만료 대응
@@ -62,10 +64,25 @@ export default function AppNavigator() {
     }
   }, [isLoggedIn, isLoading]);
 
+  // 알림 탭 → 화면 라우팅
+  useEffect(() => {
+    const sub = Notifications.addNotificationResponseReceivedListener((response) => {
+      const type = response.notification.request.content.data?.type as string | undefined;
+      if (!navigationRef.isReady()) return;
+      if (type === 'feedback') {
+        navigationRef.navigate('Main', { screen: 'Stats' });
+      } else if (type === 'departure') {
+        navigationRef.navigate('Main', { screen: 'Home' });
+      }
+      // wakeup: 앱만 열리면 충분, 별도 이동 불필요
+    });
+    return () => sub.remove();
+  }, []);
+
   if (isLoading || introSeen === null) return <SplashScreen />;
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {isLoggedIn ? (
           <>

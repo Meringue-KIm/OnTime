@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View, Text, ScrollView, StyleSheet, TouchableOpacity,
   Alert, ActivityIndicator, Image, Platform, TextInput,
@@ -56,6 +56,8 @@ export default function RouteScreen() {
   const [activeDays, setActiveDays] = useState([1, 2, 3, 4, 5]);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [customTravelMin, setCustomTravelMin] = useState<string>('');
+  const [deletedRoute, setDeletedRoute] = useState<RouteResponse | null>(null);
+  const undoTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => { fetchRoutes(); }, []);
 
@@ -161,6 +163,11 @@ export default function RouteScreen() {
       { text: '삭제', style: 'destructive', onPress: async () => {
         try {
           await removeRoute(id);
+          if (target) {
+            setDeletedRoute(target);
+            if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+            undoTimerRef.current = setTimeout(() => setDeletedRoute(null), 6000);
+          }
           if (target?.isActive) {
             const remaining = routes.filter(r => r.id !== id);
             if (remaining.length > 0) {
@@ -179,6 +186,28 @@ export default function RouteScreen() {
     ]);
   };
 
+  const handleUndo = async () => {
+    if (!deletedRoute) return;
+    if (undoTimerRef.current) clearTimeout(undoTimerRef.current);
+    setDeletedRoute(null);
+    try {
+      await saveRoute({
+        homeAddress: deletedRoute.homeAddress,
+        homeLat:     deletedRoute.homeLat,
+        homeLng:     deletedRoute.homeLng,
+        workAddress: deletedRoute.workAddress,
+        workLat:     deletedRoute.workLat,
+        workLng:     deletedRoute.workLng,
+        arrivalTime: deletedRoute.arrivalTime,
+        alarmBeforeMinutes:  deletedRoute.alarmBeforeMinutes,
+        activeDays:          deletedRoute.activeDays ?? '1,2,3,4,5',
+        transportMode:       deletedRoute.transportMode as 'car' | 'transit' | 'walk',
+        customTravelMinutes: deletedRoute.customTravelMinutes,
+        wakeUpBeforeMinutes: deletedRoute.wakeUpBeforeMinutes,
+      });
+    } catch { Alert.alert('복구 실패', '루트를 복구하지 못했습니다. 직접 다시 입력해주세요.'); }
+  };
+
   const sortedRoutes = [...routes].sort((a, b) => Number(b.isActive) - Number(a.isActive));
 
   return (
@@ -192,6 +221,19 @@ export default function RouteScreen() {
       </View>
 
       {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 40 }} />}
+
+      {/* 삭제 취소 배너 */}
+      {deletedRoute && (
+        <View style={styles.undoBanner}>
+          <Ionicons name="trash-outline" size={15} color={colors.warning} />
+          <Text style={styles.undoBannerText} numberOfLines={1}>
+            루트가 삭제됐어요
+          </Text>
+          <TouchableOpacity onPress={handleUndo} style={styles.undoBtn}>
+            <Text style={styles.undoBtnText}>되돌리기</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* 루트 없음 — 폼 자동 열림 안내 */}
       {!loading && routes.length === 0 && !showForm && (
@@ -493,4 +535,8 @@ const styles = StyleSheet.create({
   cancelText:           { fontSize: 14, fontWeight: '600', color: colors.textSecondary },
   saveBtn:              { flex: 2, paddingVertical: 14, borderRadius: 12, backgroundColor: colors.primary, alignItems: 'center' },
   saveBtnText:          { fontSize: 14, fontWeight: '700', color: '#fff' },
+  undoBanner:           { flexDirection: 'row', alignItems: 'center', gap: 8, marginHorizontal: 20, marginBottom: 8, padding: 12, backgroundColor: '#FFF3E0', borderRadius: 10 },
+  undoBannerText:       { flex: 1, fontSize: 13, fontFamily: fonts.regular, color: colors.textPrimary },
+  undoBtn:              { paddingHorizontal: 12, paddingVertical: 5, backgroundColor: colors.warning, borderRadius: 16 },
+  undoBtnText:          { fontSize: 12, fontFamily: fonts.semiBold, color: '#fff' },
 });

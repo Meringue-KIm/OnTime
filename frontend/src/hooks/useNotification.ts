@@ -34,9 +34,10 @@ interface UseNotificationResult {
 export function useNotification(): UseNotificationResult {
   const [notifPermission, setNotifPermission] = useState<'granted' | 'denied' | 'unknown'>('unknown');
   const [alarmFired, setAlarmFired] = useState(false);
-  const soundRef = useRef<Audio.Sound | null>(null);
-  const rampRef  = useRef<ReturnType<typeof setInterval> | null>(null);
-  const stopRef  = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const soundRef       = useRef<Audio.Sound | null>(null);
+  const rampRef        = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stopRef        = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastAlarmAt    = useRef<number>(0);  // 중복 발화 방지
 
   const stopAlarm = async () => {
     if (rampRef.current)  { clearInterval(rampRef.current); rampRef.current = null; }
@@ -85,10 +86,22 @@ export function useNotification(): UseNotificationResult {
     const sub = Notifications.addNotificationReceivedListener(async (notification) => {
       if (Platform.OS === 'web') return;
       const type = notification.request.content.data?.type as string | undefined;
-      // 기상·피드백 알람은 사운드 없이 조용히 표시
-      if (type === 'wakeup' || type === 'feedback') return;
 
-      // 출발 알람: 로컬 알람 취소 + 사운드 재생
+      // 기상 알람: 포그라운드에서도 Alert으로 알려줌
+      if (type === 'wakeup') {
+        const body = notification.request.content.body ?? '';
+        Alert.alert('기상 시간이에요! ☀️', body || '출발 준비를 시작하세요.');
+        return;
+      }
+
+      // 피드백 알람: 조용히 표시
+      if (type === 'feedback') return;
+
+      // 출발 알람: 중복 방지 (30초 이내 이미 울렸으면 skip)
+      const now = Date.now();
+      if (now - lastAlarmAt.current < 30_000) return;
+      lastAlarmAt.current = now;
+
       cancelLocalAlarm().catch(() => {});
       await stopAlarm();
       try {

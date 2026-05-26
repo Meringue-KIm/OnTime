@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, ActivityIndicator, Image, TouchableOpacity, Alert, RefreshControl } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const logo = require('../../assets/logo.png');
 import { Ionicons } from '@expo/vector-icons';
@@ -10,19 +11,33 @@ import { getLogs, submitFeedback, type CommuteLog } from '../api/logs';
 import { formatDate } from '../utils/timeFormat';
 import { extractTimeHHmm } from '../utils/timeFormat';
 
+const LOGS_CACHE_KEY = 'stats_logs_cache';
+
 export default function StatsScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
   const [logs, setLogs] = useState<CommuteLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(false);
+  const [usingCache, setUsingCache] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchLogs = (): Promise<void> => {
     setLoadError(false);
     return getLogs()
-      .then(({ data }) => setLogs(data))
-      .catch(() => setLoadError(true))
+      .then(({ data }) => {
+        setLogs(data);
+        setUsingCache(false);
+        AsyncStorage.setItem(LOGS_CACHE_KEY, JSON.stringify(data)).catch(() => {});
+      })
+      .catch(async () => {
+        setLoadError(true);
+        const cached = await AsyncStorage.getItem(LOGS_CACHE_KEY).catch(() => null);
+        if (cached) {
+          setLogs(JSON.parse(cached));
+          setUsingCache(true);
+        }
+      })
       .finally(() => setLoading(false));
   };
 
@@ -102,15 +117,22 @@ export default function StatsScreen() {
         </TouchableOpacity>
       </View>
 
-      {loadError && (
+      {loadError && !usingCache && (
         <View style={styles.errorInline}>
           <Ionicons name="cloud-offline-outline" size={36} color={colors.textMuted} />
           <Text style={styles.errorText}>서버에 연결할 수 없습니다.</Text>
-          <Text style={[styles.errorText, { fontSize: 12 }]}>당겨서 새로고침하거나 잠시 후 자동으로 재시도합니다.{'\n'}이전 기록은 화면을 당기면 복원됩니다.</Text>
+          <Text style={[styles.errorText, { fontSize: 12 }]}>당겨서 새로고침하거나 잠시 후 자동으로 재시도합니다.</Text>
         </View>
       )}
 
-      {!loadError && (
+      {usingCache && (
+        <View style={styles.cacheNotice}>
+          <Ionicons name="cloud-offline-outline" size={13} color={colors.warning} />
+          <Text style={styles.cacheNoticeText}>오프라인 · 마지막 저장 기록을 표시 중입니다. 당겨서 새로고침하세요.</Text>
+        </View>
+      )}
+
+      {(!loadError || usingCache) && (
       <>
       {/* Insight Card */}
       <View style={styles.insightCard}>
@@ -119,9 +141,11 @@ export default function StatsScreen() {
         </View>
         <Text style={styles.insightTitle}>나의 정시 도착률</Text>
         <Text style={styles.insightDesc}>
-          {logsWithFeedback.length > 0
+          {logsWithFeedback.length >= 3
             ? `피드백 입력 ${logsWithFeedback.length}회 중 ${onTimeCount}번 정시 도착했어요.`
-            : '아직 피드백 기록이 없어요. 출근 후 결과를 입력하면 통계가 쌓입니다.'}
+            : logsWithFeedback.length > 0
+              ? `피드백 ${logsWithFeedback.length}개 입력됨 · ${3 - logsWithFeedback.length}개 더 입력하면 개인화 알람이 시작돼요.`
+              : '아직 피드백 기록이 없어요. 출근 후 결과를 입력하면 통계와 개인화 알람이 시작됩니다.'}
         </Text>
         <View style={styles.insightStat}>
           <Text style={styles.insightStatValue}>{onTimeRate}%</Text>
@@ -207,6 +231,9 @@ export default function StatsScreen() {
           <View style={styles.emptyGoalWrap}>
             <Ionicons name="analytics-outline" size={32} color={colors.textMuted} />
             <Text style={styles.emptyGoalText}>출근 후 결과를 입력하면{'\n'}달성률이 표시됩니다.</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('Alarm')} style={styles.emptyGoalBtn}>
+              <Text style={styles.emptyGoalBtnText}>알람 설정하러 가기 →</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <View style={styles.goalRow}>
@@ -370,6 +397,8 @@ const styles = StyleSheet.create({
   goalStatValue:    { fontSize: 20, fontWeight: '700', marginTop: 2 },
   emptyText:        { fontSize: 13, color: colors.textMuted, textAlign: 'center', paddingVertical: 12 },
   emptyGoalWrap:    { alignItems: 'center', paddingVertical: 20, gap: 10 },
+  emptyGoalBtn:     { marginTop: 4, paddingVertical: 8, paddingHorizontal: 16, borderRadius: 20, backgroundColor: colors.primaryLight },
+  emptyGoalBtnText: { fontSize: 13, color: colors.primary, fontFamily: fonts.semiBold },
   emptyGoalText:    { fontSize: 13, color: colors.textMuted, textAlign: 'center', lineHeight: 20 },
   tripItem:         { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
   tripIconWrap:     { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
@@ -378,4 +407,6 @@ const styles = StyleSheet.create({
   tripBadge:        { paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 },
   tripStatus:       { fontSize: 12, fontWeight: '600' },
   feedbackBtn:      { flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: colors.primaryLight },
+  cacheNotice:      { flexDirection: 'row', alignItems: 'center', gap: 6, marginHorizontal: 20, marginBottom: 8, padding: 10, backgroundColor: '#FFF3E0', borderRadius: 8 },
+  cacheNoticeText:  { flex: 1, fontSize: 12, color: colors.warning },
 });

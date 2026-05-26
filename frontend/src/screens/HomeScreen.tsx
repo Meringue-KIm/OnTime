@@ -233,10 +233,15 @@ export default function HomeScreen() {
     return '오늘도 수고 많으셨어요! OnTime이 내일도 함께할게요. 🌙';
   })();
 
-  const upcomingAppts = appointments
-    .filter(a => !a.isDone && a.dDay >= 0)
-    .sort((a, b) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime())
-    .slice(0, 3);
+  const todayAppts = appointments
+    .filter(a => !a.isDone && a.dDay === 0)
+    .sort((a, b) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime());
+
+  const nextAppt = appointments
+    .filter(a => !a.isDone && a.dDay > 0)
+    .sort((a, b) => new Date(a.appointmentTime).getTime() - new Date(b.appointmentTime).getTime())[0];
+
+  const upcomingCount = appointments.filter(a => !a.isDone && a.dDay >= 0).length;
 
   return (
     <ScrollView
@@ -549,29 +554,37 @@ export default function HomeScreen() {
 
       {/* Schedule */}
       <View style={[styles.card, { marginBottom: 28 }]}>
-        <Text style={styles.cardLabel}>다가오는 약속</Text>
-        {upcomingAppts.length === 0 ? (
+        <View style={styles.rowBetween}>
+          <Text style={styles.cardLabel}>오늘 약속</Text>
+          <TouchableOpacity onPress={() => navigation.navigate('Appointment')} style={styles.apptMoreBtn}>
+            {upcomingCount > 0 && <Text style={styles.apptMoreCount}>전체 {upcomingCount}건</Text>}
+            <Ionicons name="chevron-forward" size={14} color={colors.primary} />
+          </TouchableOpacity>
+        </View>
+        {todayAppts.length === 0 ? (
           <View style={styles.emptyApptWrap}>
-            <Text style={styles.emptyText}>예정된 약속이 없습니다.</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('Appointment')}>
-              <Text style={styles.emptyApptLink}>약속 추가하기 →</Text>
-            </TouchableOpacity>
+            <Text style={styles.emptyText}>오늘 예정된 약속이 없습니다.</Text>
+            {nextAppt ? (
+              <Text style={styles.nextApptHint}>
+                다음 약속: {formatKoreanDateTime(nextAppt.appointmentTime)} · {nextAppt.title || nextAppt.destAddress}
+              </Text>
+            ) : (
+              <TouchableOpacity onPress={() => navigation.navigate('Appointment')}>
+                <Text style={styles.emptyApptLink}>약속 추가하기 →</Text>
+              </TouchableOpacity>
+            )}
           </View>
         ) : (
-          upcomingAppts.map((item) => (
+          todayAppts.slice(0, 2).map((item) => (
             <View key={item.id} style={styles.scheduleItem}>
               <View style={styles.scheduleIconWrap}>
                 <Ionicons name="calendar-outline" size={18} color={colors.primary} />
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={styles.scheduleTitle}>{item.title || item.destAddress}</Text>
-                <Text style={styles.scheduleLocation} numberOfLines={1}>
-                  {item.title ? `${item.destAddress} · ` : ''}{item.dDay === 0 ? 'D-Day' : `D-${item.dDay}`}
-                </Text>
+                {item.title && <Text style={styles.scheduleLocation} numberOfLines={1}>{item.destAddress}</Text>}
               </View>
-              <Text style={styles.scheduleTime}>
-                {item.dDay === 0 ? formatApptTime(item.appointmentTime) : formatKoreanDateTime(item.appointmentTime)}
-              </Text>
+              <Text style={styles.scheduleTime}>{formatApptTime(item.appointmentTime)}</Text>
             </View>
           ))
         )}
@@ -653,6 +666,9 @@ const styles = StyleSheet.create({
   emptyText:        { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', paddingVertical: 4 },
   emptyApptWrap:    { alignItems: 'center', paddingVertical: 8 },
   emptyApptLink:    { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary, marginTop: 6 },
+  apptMoreBtn:      { flexDirection: 'row', alignItems: 'center', gap: 3 },
+  apptMoreCount:    { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
+  nextApptHint:     { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 4, textAlign: 'center' },
   scheduleItem:     { flexDirection: 'row', alignItems: 'center', gap: 12, paddingVertical: 10, borderTopWidth: 1, borderTopColor: colors.border },
   scheduleIconWrap: { width: 36, height: 36, borderRadius: 10, backgroundColor: colors.primaryLight, alignItems: 'center', justifyContent: 'center' },
   scheduleTitle:    { fontSize: 14, fontFamily: fonts.semiBold, color: colors.textPrimary },

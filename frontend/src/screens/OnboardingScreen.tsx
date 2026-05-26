@@ -33,7 +33,7 @@ const FEATURES = [
 
 export default function OnboardingScreen({ navigation }: any) {
   const handleStart = async () => {
-    await AsyncStorage.setItem('app_intro_seen', 'true');
+    await AsyncStorage.setItem('onboarding_done', 'true');
     navigation.replace('Main');
   };
 

@@ -341,6 +341,19 @@ export default function AlarmScreen() {
               thumbColor="#fff"
             />
           </View>
+          <View style={styles.alarmDiffRow}>
+            <View style={styles.alarmDiffItem}>
+              <Ionicons name="alarm-outline" size={15} color={colors.primary} />
+              <Text style={styles.alarmDiffLabel}>기상 알람</Text>
+              <Text style={styles.alarmDiffDesc}>출발 N분 전{'\n'}조용히 푸시 알림</Text>
+            </View>
+            <Ionicons name="arrow-forward" size={14} color={colors.textMuted} />
+            <View style={styles.alarmDiffItem}>
+              <Ionicons name="notifications-outline" size={15} color="#E65100" />
+              <Text style={[styles.alarmDiffLabel, { color: '#E65100' }]}>출발 알람</Text>
+              <Text style={styles.alarmDiffDesc}>출발 시각{'\n'}소리+진동 알람</Text>
+            </View>
+          </View>
           {wakeUpEnabled ? (
             <>
               <Text style={[styles.autoSaveText, { marginBottom: 12 }]}>
@@ -357,7 +370,7 @@ export default function AlarmScreen() {
               </View>
             </>
           ) : (
-            <Text style={[styles.autoSaveText, { marginTop: -10 }]}>
+            <Text style={[styles.autoSaveText, { marginTop: 4 }]}>
               출발 전 미리 기상 알람을 받으려면 켜주세요
             </Text>
           )}
@@ -401,15 +414,19 @@ export default function AlarmScreen() {
             />
           </View>
         ) : (
-          <View style={[styles.settingRow, { alignItems: 'flex-start' }]}>
+          <TouchableOpacity
+            style={[styles.settingRow, { alignItems: 'flex-start' }]}
+            onPress={() => Linking.openURL('app-settings:').catch(() => Linking.openSettings())}
+          >
             <View style={styles.settingIconWrap}>
               <Ionicons name="settings-outline" size={18} color={colors.primary} />
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.settingLabel}>소리 · 진동 설정</Text>
-              <Text style={styles.settingSub}>iOS 설정 → 알림 → OnTime에서 소리와 진동을 변경할 수 있습니다.</Text>
+              <Text style={styles.settingSub}>탭해서 iOS 설정 → OnTime으로 이동 · 소리와 진동을 변경할 수 있습니다.</Text>
             </View>
-          </View>
+            <Ionicons name="chevron-forward" size={16} color={colors.textMuted} style={{ marginTop: 2 }} />
+          </TouchableOpacity>
         )}
       </View>
 
@@ -462,6 +479,10 @@ const styles = StyleSheet.create({
   settingSub:          { fontSize: 12, fontFamily: fonts.regular, color: colors.textMuted, marginTop: 2 },
   noRouteMsg:          { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', marginTop: 10, lineHeight: 20 },
   noRouteMsgLink:      { fontSize: 13, fontFamily: fonts.semiBold, color: colors.primary, marginTop: 12 },
+  alarmDiffRow:        { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, marginBottom: 14, backgroundColor: colors.bg, borderRadius: 10, paddingVertical: 10 },
+  alarmDiffItem:       { alignItems: 'center', gap: 3, flex: 1 },
+  alarmDiffLabel:      { fontSize: 12, fontFamily: fonts.semiBold, color: colors.primary },
+  alarmDiffDesc:       { fontSize: 11, fontFamily: fonts.regular, color: colors.textMuted, textAlign: 'center', lineHeight: 15 },
   testDesc:            { fontSize: 13, fontFamily: fonts.regular, color: colors.textMuted, marginBottom: 12 },
   testBtn:             { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, backgroundColor: colors.primary, borderRadius: 12, paddingVertical: 13 },
   testBtnText:         { color: '#fff', fontFamily: fonts.semiBold, fontSize: 14 },
