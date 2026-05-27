@@ -70,6 +70,7 @@ export default function HomeScreen() {
   const { appointments, fetchAppointments } = useAppointmentStore();
   const { coords: gpsCoords, status: locationStatus } = useLocation();
   const lastRefreshRef = useRef<number>(0);
+  const hourlyScrollRef = useRef<ScrollView>(null);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -189,6 +190,21 @@ export default function HomeScreen() {
       .then(({ data }) => { setWeather(data); setWeatherError(false); })
       .catch(() => setWeatherError(true));
   }, [selectedCity, gpsCoords?.lat, gpsCoords?.lng, activeRoute?.homeLat, activeRoute?.homeLng, weatherRefreshToken]);
+
+  // 날씨 로드 후 현재 시간 슬롯을 맨 왼쪽으로 스크롤
+  useEffect(() => {
+    if (!weather?.hourly?.length) return;
+    const nowHour = new Date().getHours();
+    const idx = weather.hourly.reduce((best, item, i) => {
+      const h = parseInt(item.time.split(':')[0], 10);
+      const bestH = parseInt(weather.hourly[best].time.split(':')[0], 10);
+      return Math.abs(h - nowHour) < Math.abs(bestH - nowHour) ? i : best;
+    }, 0);
+    const ITEM_W = 56; // minWidth(52) + gap(4)
+    setTimeout(() => {
+      hourlyScrollRef.current?.scrollTo({ x: Math.max(0, idx * ITEM_W - 4), animated: false });
+    }, 200);
+  }, [weather]);
 
   const handleSelectCity = (city: City | null) => {
     setSelectedCity(city);
@@ -538,7 +554,7 @@ export default function HomeScreen() {
               </View>
             </View>
           )}
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyRow}>
+          <ScrollView ref={hourlyScrollRef} horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.hourlyRow}>
             {(() => {
               const nowHour = new Date().getHours();
               const currentIdx = weather.hourly.reduce((best, item, i) => {

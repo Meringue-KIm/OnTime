@@ -28,8 +28,9 @@ public class AuthService {
     private final StringRedisTemplate redisTemplate;
     private final EmailService emailService;
 
-    private static final String RESET_PREFIX = "pwd_reset:";
-    private static final Duration RESET_TTL  = Duration.ofMinutes(10);
+    private static final String RESET_PREFIX     = "pwd_reset:";
+    private static final String BLACKLIST_PREFIX = "blacklist:";
+    private static final Duration RESET_TTL      = Duration.ofMinutes(10);
 
     @Transactional
     public void signup(SignupRequest request) {
@@ -91,6 +92,13 @@ public class AuthService {
             throw new IllegalArgumentException("현재 비밀번호가 일치하지 않습니다.");
         }
         user.changePassword(passwordEncoder.encode(newPassword));
+    }
+
+    public void blacklistToken(String token) {
+        long remainingMs = jwtProvider.getRemainingMs(token);
+        if (remainingMs > 0) {
+            redisTemplate.opsForValue().set(BLACKLIST_PREFIX + token, "1", Duration.ofMillis(remainingMs));
+        }
     }
 
     @Transactional

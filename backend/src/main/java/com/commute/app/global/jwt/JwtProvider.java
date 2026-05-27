@@ -55,6 +55,15 @@ public class JwtProvider {
         }
     }
 
+    public long getRemainingMs(String token) {
+        try {
+            Date expiration = parseClaims(token).getExpiration();
+            return Math.max(0, expiration.getTime() - System.currentTimeMillis());
+        } catch (JwtException | IllegalArgumentException e) {
+            return 0;
+        }
+    }
+
     private Claims parseClaims(String token) {
         return Jwts.parser().verifyWith(key).build().parseSignedClaims(token).getPayload();
     }

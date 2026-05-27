@@ -16,12 +16,14 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Component
@@ -67,7 +69,7 @@ public class AlarmScheduler {
             Optional<WeatherInfo> weatherOpt = weatherService.getWeather(
                     route.getHomeLat(), route.getHomeLng());
             int weatherBuffer = weatherOpt.map(WeatherInfo::bufferMinutes).orElse(0);
-            int personalBuffer = calcPersonalBuffer(route.getUser().getId());
+            int personalBuffer = calcPersonalBuffer(route.getUser().getId(), today.getDayOfWeek());
 
             LocalTime departureTime = route.getArrivalTime()
                     .minusMinutes(drivingMinutes + route.getAlarmBeforeMinutes() + weatherBuffer + personalBuffer);
@@ -213,13 +215,19 @@ public class AlarmScheduler {
         return sb.toString();
     }
 
-    private int calcPersonalBuffer(Long userId) {
-        List<com.commute.app.domain.log.entity.CommuteLog> recentLogs =
-                logRepository.findTop7ByUserIdAndActualDiffMinutesIsNotNullOrderByLogDateDesc(userId);
-        if (recentLogs.size() < 3) return 0;
-        double avg = recentLogs.stream()
-                .mapToInt(com.commute.app.domain.log.entity.CommuteLog::getActualDiffMinutes)
-                .average().orElse(0);
+    private int calcPersonalBuffer(Long userId, DayOfWeek dayOfWeek) {
+        List<CommuteLog> logs = logRepository.findTop20ByUserIdAndActualDiffMinutesIsNotNullOrderByLogDateDesc(userId);
+        if (logs.size() < 3) return 0;
+
+        List<Integer> sameDayDiffs = logs.stream()
+                .filter(l -> l.getLogDate().getDayOfWeek() == dayOfWeek)
+                .map(CommuteLog::getActualDiffMinutes)
+                .collect(Collectors.toList());
+
+        List<Integer> diffs = sameDayDiffs.size() >= 2 ? sameDayDiffs
+                : logs.stream().map(CommuteLog::getActualDiffMinutes).collect(Collectors.toList());
+
+        double avg = diffs.stream().mapToInt(i -> i).average().orElse(0);
         return Math.max(-10, Math.min(20, (int) Math.round(avg)));
     }
 

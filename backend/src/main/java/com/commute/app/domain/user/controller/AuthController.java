@@ -40,8 +40,11 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout() {
-        // 클라이언트에서 토큰 삭제로 처리 (추후 Redis 블랙리스트 적용 가능)
+    public ResponseEntity<Void> logout(
+            @org.springframework.web.bind.annotation.RequestHeader(value = "Authorization", required = false) String authorization) {
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            authService.blacklistToken(authorization.substring(7));
+        }
         return ResponseEntity.ok().build();
     }
 
