@@ -43,3 +43,14 @@ certbot/
 *.log
 *.orig
 firebase_b64.txt
+HANDOFF.md
+
+# ========================
+# Claude
+# ========================
+CLAUDE.md
+AGENTS.md
+.claude/
+frontend/CLAUDE.md
+frontend/AGENTS.md
+frontend/.claude/
