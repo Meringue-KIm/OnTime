@@ -5,7 +5,7 @@ services:
     environment:
       POSTGRES_DB: commute_db
       POSTGRES_USER: commute
-      POSTGRES_PASSWORD: commute1234
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-local_dev_password}
     ports:
       - "5432:5432"
     volumes:
