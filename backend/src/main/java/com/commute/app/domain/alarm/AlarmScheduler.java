@@ -118,7 +118,11 @@ public class AlarmScheduler {
         List<Appointment> appointments = appointmentRepository
                 .findByIsDoneFalseAndAppointmentTimeAfter(now);
 
+        // cold start 대비: 최대 1분 지연까지 복구 (출발 알람과 동일한 윈도우)
+        java.util.Set<Long> alarmedAppts = new java.util.HashSet<>();
+
         for (Appointment appt : appointments) {
+            if (alarmedAppts.contains(appt.getId())) continue;
             String fcmToken = appt.getUser().getFcmToken();
             if (fcmToken == null || fcmToken.isBlank()) continue;
 
@@ -151,11 +155,13 @@ public class AlarmScheduler {
             LocalDateTime alarmAt = appt.getAppointmentTime()
                     .minusMinutes(appt.getAlarmBeforeMinutes() + travelMinutes);
 
-            if (now.equals(alarmAt)) {
+            boolean inWindow = !now.isBefore(alarmAt) && !now.isAfter(alarmAt.plusMinutes(1));
+            if (inWindow) {
                 String title = "약속 시간이 다가와요!";
                 String body  = buildAppointmentAlarmBody(appt.getDestAddress(),
                                                          appt.getAlarmBeforeMinutes(), travelMinutes);
                 fcmService.sendPushNotification(fcmToken, title, body);
+                alarmedAppts.add(appt.getId());
                 log.info("약속 알람 발송 — apptId={}, 약속시각={}, 이동={}분", appt.getId(),
                          appt.getAppointmentTime(), travelMinutes);
             }

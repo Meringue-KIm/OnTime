@@ -66,12 +66,17 @@ export default function AppointmentScreen() {
 
   useEffect(() => { fetchAppointments(); }, []);
 
-  // 탭 재진입 시 날짜가 바뀌었으면 D-Day 갱신
+  // 탭 재진입 시 D-Day 갱신 (날짜 변경 또는 5분 초과)
+  const lastFocusTimeRef = useRef(0);
   useFocusEffect(
     React.useCallback(() => {
       const today = new Date().toISOString().slice(0, 10);
-      if (lastFocusDateRef.current !== today) {
+      const now = Date.now();
+      const dateChanged = lastFocusDateRef.current !== today;
+      const stale = now - lastFocusTimeRef.current > 5 * 60 * 1000;
+      if (dateChanged || stale) {
         lastFocusDateRef.current = today;
+        lastFocusTimeRef.current = now;
         fetchAppointments();
       }
     }, [])
