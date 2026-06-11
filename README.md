@@ -8,9 +8,13 @@
 
 ## 화면 미리보기
 
-| 로그인 | 홈 | 알람 설정 | 통계 |
+| 로그인 | 회원가입 | 홈 | 경로 |
 |---|---|---|---|
-| ![로그인](docs/screenshots/login.png) | ![홈](docs/screenshots/home.png) | ![알람](docs/screenshots/alarm.png) | ![통계](docs/screenshots/stats.png) |
+| ![로그인](docs/screenshots/login.png) | ![회원가입](docs/screenshots/signup.png) | ![홈](docs/screenshots/home.png) | ![경로](docs/screenshots/route.png) |
+
+| 알람 | 약속 | 통계 |
+|---|---|---|
+| ![알람](docs/screenshots/alarm.png) | ![약속](docs/screenshots/appointment.png) | ![통계](docs/screenshots/stats.png) |
 
 ---
 
